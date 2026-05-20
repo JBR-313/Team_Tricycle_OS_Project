@@ -1,0 +1,37 @@
+[
+    {
+        "pid":1,
+        "arrival_time":0,
+        "cpu_burst":60,
+        "priority":3,
+        "type":"cpu_bound"
+    },
+    {
+        "pid":2,
+        "arrival_time":1,
+        "cpu_burst":50,
+        "priority":3,
+        "type":"cpu_bound"
+    },
+    {
+        "pid":3,
+        "arrival_time":5,
+        "cpu_burst":4,
+        "priority":1,
+        "type":"interactive"
+    },
+    {
+        "pid":4,
+        "arrival_time":6,
+        "cpu_burst":3,
+        "priority":1,
+        "type":"interactive"
+    },
+    {
+        "pid":5,
+        "arrival_time":7,
+        "cpu_burst":2,
+        "priority":1,
+        "type":"interactive"
+    }
+]
