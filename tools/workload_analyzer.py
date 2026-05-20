@@ -173,7 +173,7 @@ def main():
     # Project root
     # -------------------------------------------------
     project_root = (
-        Path(__file__).resolve().parent
+        Path(__file__).resolve().parent.parent
     )
 
     # -------------------------------------------------
