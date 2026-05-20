@@ -1,0 +1,14 @@
+{
+    "workload_name": "interactive_heavy",
+    "num_processes": 7,
+    "avg_burst": 1.43,
+    "min_burst": 1,
+    "max_burst": 2,
+    "burst_variance": 0.29,
+    "short_job_ratio": 1.0,
+    "long_job_ratio": 0.0,
+    "interactive_ratio": 1.0,
+    "priority_range": 0,
+    "arrival_spread": 6,
+    "target_metric": "response_time"
+}
