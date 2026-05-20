@@ -1,229 +1,377 @@
-# Visual Scheduler
+# LLM Sched Copilot
 
-**An LLM-Assisted xv6 Scheduling Algorithm Lab**
+**The LLM-Assisted Scheduler for xv6**
 
-## 1. Project Summary
-Visual Scheduler is an educational LLM-for-OS project that extends xv6 with multiple Scheduling Algorithms and visualizes how each algorithm affects process execution.
+LLM Sched Copilot is an **LLM-for-OS** project that uses an LLM as a high-level decision support layer for xv6 CPU scheduling.
 
-The system allows an LLM to analyze workload characteristics and recommend a suitable Scheduling Algorithm. 
-However, the LLM does not directly control the scheduler. Actual scheduling is performed inside xv6, and the recommendation is evaluated using Scheduling Metrics such as waiting time, response time, turnaround time, throughput, and starvation occurrence.
+The LLM analyzes workload summaries and Scheduling Trace Logs, recommends a suitable **Scheduling Algorithm**, suggests algorithm parameters, proposes runtime corrections when scheduling problems are detected, and explains the execution result in natural language.
 
-## 2. Motivation
+The LLM does **not** replace the xv6 scheduler.  
+xv6 remains the execution authority.  
+The Metrics Evaluator verifies the LLM's judgment using concrete scheduling metrics.  
+The GUI visualizes the whole process as an observability dashboard.
 
-Scheduling is one of the most important concepts in operating systems, but it is difficult to understand only by reading source code or terminal output.
+> **LLM suggests. Algorithm Guard checks. xv6 executes. Metrics verify. GUI explains.**
 
-In xv6, the default scheduler is simple enough for students to study, but the actual behavior of scheduling is still dynamic and hard to observe directly. 
-Processes move between states, wait in the ready queue, receive CPU time, get preempted, and eventually terminate. Different Scheduling Algorithms can produce very different results even with the same workload.
+---
 
-For example, FCFS can suffer from the convoy effect, Priority Scheduling can cause starvation, and Round Robin can improve response time depending on the time quantum. These behaviors are easier to understand when students can visually observe the scheduling trace and compare Scheduling Metrics.
-
-Visual Scheduler aims to help students learn OS scheduling by combining:
-
-- xv6-based Scheduling Algorithm implementation
-- LLM-based Scheduling Algorithm recommendation
-- Scheduling Trace visualization
-- Metrics-based comparison between algorithms
-
-The goal is not to build a production-level scheduler, but to build an educational Scheduling Algorithm Lab where students can experiment with different algorithms and understand why each algorithm behaves differently.
-
-## 3. Project Direction: LLM for OS
+## 1. Project Direction
 
 This project follows **Direction B: LLM for OS**.
 
-The LLM is integrated into an operating-system scheduling experiment environment. It analyzes workload characteristics and recommends a suitable Scheduling Algorithm. However, the LLM does not directly execute scheduling decisions. The actual scheduling is performed inside xv6.
+The project integrates an LLM into a classical OS problem: **CPU Scheduling**.
 
-This project is not a simple LLM chatbot or a Python-only scheduling calculator. The core OS component is the xv6 scheduler, which is extended with multiple Scheduling Algorithms. The LLM acts as an advisor that provides scheduling hints, and the system verifies the recommendation using actual Scheduling Metrics.
+Instead of using the LLM as a simple chatbot, this project uses the LLM as a scheduling decision support layer:
 
-In this design:
+- The LLM interprets workload characteristics.
+- The LLM recommends a Scheduling Algorithm and parameters.
+- The LLM proposes runtime corrections when trace monitoring detects problems.
+- The LLM explains Scheduling Trace Logs and Scheduling Metrics.
+- The LLM generates feedback rules for future recommendations.
 
-- xv6 performs the actual scheduling.
-- The LLM recommends a Scheduling Algorithm based on workload characteristics.
-- Scheduling Traces are collected from xv6.
-- The GUI visualizes process execution and Scheduling Metrics.
-- The evaluator checks whether the LLM recommendation was actually useful.
+The actual Scheduling Algorithm execution is performed by xv6.
 
-The LLM recommendation is treated as a hypothesis, not as the final answer.
+---
 
-## 4. Core Architecture
+## 2. Core Idea
 
-User-defined Workload
+Traditional xv6 scheduling behavior is usually visible only through terminal logs or source code.  
+This project turns that low-level behavior into a trace-verified scheduling workflow.
+
+```text
+User Workload / Goal
         ↓
-LLM Scheduling Advisor
+Workload Analyzer
         ↓
-Scheduling Algorithm Recommendation
+LLM Workload Interpreter
         ↓
-xv6 Scheduler
-  RR / FCFS / Priority / MLFQ / SJF-SRTF Prediction
+LLM Scheduling Algorithm Advisor
+        ↓
+Algorithm Guard
+        ↓
+xv6 Scheduling Algorithm Execution
         ↓
 Scheduling Trace Collector
         ↓
 Metrics Evaluator
         ↓
-Visual Comparison GUI
+Runtime Correction / Trace Explanation / Feedback Rule
+        ↓
+GUI Observability Dashboard
+```
 
-## 5. Main Pipeline
+The main question of this project is:
 
-1. **Workload Definition**
-   - The user defines processes with arrival time, burst time, priority, and workload type.
-
-2. **LLM Scheduling Algorithm Recommendation**
-   - The LLM analyzes the workload and recommends a suitable Scheduling Algorithm.
-
-3. **xv6 Scheduling Execution**
-   - xv6 executes the workload using the selected Scheduling Algorithm.
-
-4. **Scheduling Trace Collection**
-   - The system collects scheduling events such as dispatch, preemption, waiting, wakeup, and termination.
-
-5. **Visualization**
-   - The GUI visualizes the ready queue, running process, process state transitions, and Gantt chart.
-
-6. **Metrics-based Evaluation**
-   - The system compares Scheduling Algorithms using waiting time, response time, turnaround time, throughput, and starvation occurrence.
-
-## 6. Main Features
-
-### 6.1 Multiple Scheduling Algorithms in xv6
-
-Visual Scheduler extends xv6 with multiple Scheduling Algorithms.
-
-Planned algorithms include:
-
-- Round Robin
-- FCFS
-- Priority Scheduling
-- MLFQ
-- Optional: SJF / SRTF with burst prediction
-
-The default xv6 Round Robin scheduler is preserved as the baseline. Additional Scheduling Algorithms are implemented so that students can compare how each algorithm behaves under the same workload.
+> Can an LLM help choose, tune, correct, and explain xv6 Scheduling Algorithms using workload summaries and Scheduling Trace Logs?
 
 ---
 
-### 6.2 Scheduling Algorithm Control Interface
+## 3. System Principle
 
-The system provides a way to choose which Scheduling Algorithm xv6 should use.
+The system separates responsibility clearly.
 
-Planned control features:
+| Component | Responsibility |
+|---|---|
+| LLM | Interprets workload, recommends Scheduling Algorithm, proposes correction, explains result |
+| Algorithm Guard | Checks whether the LLM output is valid and safe to apply |
+| xv6 | Executes the selected Scheduling Algorithm |
+| Trace Monitor | Collects Scheduling Trace Logs and detects runtime events |
+| Metrics Evaluator | Verifies the scheduling result with numerical metrics |
+| GUI | Visualizes recommendation, execution, correction, metrics, and explanation |
 
-- `setscheduler`
-- `getscheduler`
-- `setpriority`
-- `getpriority`
-
-These interfaces allow users to run the same workload under different Scheduling Algorithms and compare the results.
-
-## 7. Scheduling Algorithms
-
-Visual Scheduler plans to support the following Scheduling Algorithms.
-
-### Round Robin
-
-Round Robin is the default baseline Scheduling Algorithm in xv6. It gives runnable processes CPU time in turn and prevents a single process from monopolizing the CPU.
-
-### FCFS
-
-FCFS executes processes in arrival order. It is simple, but it can suffer from the convoy effect when a long CPU-bound process blocks shorter processes.
-
-### Priority Scheduling
-
-Priority Scheduling selects processes based on priority values. It can improve the response of important processes, but low-priority processes may suffer from starvation.
-
-### MLFQ
-
-MLFQ uses multiple queues with different priorities and time quantums. It can favor interactive processes while demoting long CPU-bound processes. Aging can be used to reduce starvation.
-
-### SJF / SRTF with Burst Prediction
-
-SJF and SRTF are theoretically powerful because they prioritize the process with the shortest next CPU burst. 
-However, the next CPU burst cannot be known exactly in a real OS. In this project, SJF/SRTF may be implemented as an optional educational Scheduling Algorithm using burst prediction. 
-The LLM may be used as a burst-prediction hint oracle, and its predictions can be compared with traditional exponential averaging.
-
-## 8. LLM Role
-
-The LLM is used as a **Scheduling Advisor**, not as the scheduler itself.
-
-The LLM can:
-
-- Analyze workload characteristics
-- Recommend a suitable Scheduling Algorithm
-- Explain why the algorithm may fit the workload
-- Predict CPU burst hints for SJF/SRTF experiments
-- Explain Scheduling Traces and Scheduling Metrics
+The LLM is a **decision support layer**, not the kernel scheduler.
 
 The LLM cannot:
 
-- Directly choose the next process at every timer tick
-- Modify xv6 kernel state directly
-- Perform context switches
-- Replace the xv6 scheduler
-- Apply unverified recommendations automatically
-
-The LLM recommendation is treated as a hypothesis. The system verifies it by running the workload inside xv6 and comparing the resulting Scheduling Metrics.
-
-## 9. OS Concepts Used
-
-This project directly uses the following operating-system concepts:
-
-- **Process**
-  - Each process has a PID, state, arrival time, burst time, priority, and runtime information.
-
-- **Process State**
-  - Processes move through states such as READY, RUNNING, WAITING, and TERMINATED.
-
-- **CPU Scheduling**
-  - The project implements and compares multiple Scheduling Algorithms inside xv6.
-
-- **Ready Queue**
-  - The system tracks which processes are waiting for CPU allocation.
-
-- **Preemption**
-  - Round Robin, MLFQ, and SRTF demonstrate preemptive scheduling behavior.
-
-- **System Calls**
-  - Additional system calls may be added to control the selected Scheduling Algorithm or process priority.
-
-- **Starvation and Aging**
-  - Priority Scheduling and MLFQ can demonstrate starvation, and aging can be used as a mitigation technique.
-
-- **Scheduling Metrics**
-  - The system calculates waiting time, response time, turnaround time, throughput, and starvation occurrence.
-
-## 10. Evaluation Plan
-
-Visual Scheduler is evaluated from three perspectives:
-
-1. Scheduling correctness
-2. LLM recommendation quality
-3. Educational usefulness
+- choose the next process at every timer tick
+- directly modify kernel state
+- directly perform context switches
+- apply unverified recommendations automatically
+- replace xv6 Scheduling Algorithms
 
 ---
 
-### 10.1 Scheduling Correctness
+## 4. Supported Scheduling Algorithms
 
-We evaluate whether each Scheduling Algorithm is implemented correctly.
+The project targets the following Scheduling Algorithms.
 
-Evaluation items:
+### 4.1 Round Robin
 
-- Correct process selection
-- Correct preemption behavior
-- Correct priority handling
-- Correct queue behavior for MLFQ
-- Correct process state transitions
-- Correct Scheduling Trace generation
+Round Robin is the baseline Scheduling Algorithm.  
+It gives runnable processes CPU time in turn and prevents a single process from monopolizing the CPU.
 
-For each test workload, we check whether the actual execution order matches the expected behavior of the selected Scheduling Algorithm.
+### 4.2 FCFS
+
+FCFS executes processes in arrival order.  
+It is simple, but it can suffer from the convoy effect when a long CPU-bound process arrives before short jobs.
+
+### 4.3 Priority Scheduling + Aging
+
+Priority Scheduling selects a process based on priority.  
+It can improve the response of important processes, but low-priority processes may suffer from starvation.
+
+Aging is used to reduce starvation by gradually increasing the effective priority of waiting processes.
+
+### 4.4 MLFQ
+
+MLFQ uses multiple queues with different time quantums.  
+It can favor short or interactive jobs while demoting long CPU-bound jobs.
+
+LLM Sched Copilot can suggest MLFQ parameters such as:
+
+- number of queues
+- time quantum for each queue
+- aging threshold
+- boost interval
+
+### 4.5 SJF / SRTF + Burst Prediction
+
+SJF and SRTF are powerful Scheduling Algorithms because they favor short CPU bursts.
+
+However, a real OS cannot know the exact next CPU burst in advance.  
+Therefore, this project treats burst prediction as an experimental feature.
+
+Possible predictors:
+
+- traditional exponential averaging
+- LLM-assisted burst prediction
+- LLM-assisted predictor parameter tuning
+
+The LLM must not receive the actual future CPU burst as input.
 
 ---
 
-### 10.2 Scheduling Metrics
+## 5. LLM Roles
 
-The system compares Scheduling Algorithms using the following metrics:
+The LLM works in three phases.
 
-- Average waiting time
-- Average response time
-- Average turnaround time
-- Throughput
-- Starvation occurrence
+---
+
+### 5.1 Before Running
+
+#### 5.1.1 Workload Interpreter
+
+The LLM receives a workload summary generated from observable workload information.
+
+It may infer:
+
+- workload type
+- CPU-bound tendency
+- interactive tendency
+- burst variance
+- priority distribution
+- starvation risk
+- target metric
+
+Example output:
+
+```json
+{
+  "workload_type": "interactive_heavy",
+  "target_metric": "avg_response_time",
+  "main_risks": ["poor_response_time", "starvation"],
+  "reason": "The workload contains multiple short interactive jobs mixed with long CPU-bound jobs."
+}
+```
+
+The LLM does not know exact future execution results.
+
+#### 5.1.2 Scheduling Algorithm Advisor
+
+The LLM recommends a Scheduling Algorithm and parameters.
+
+Example output:
+
+```json
+{
+  "recommended_scheduling_algorithm": "MLFQ",
+  "params": {
+    "queues": 3,
+    "quantum": [2, 4, 8],
+    "aging_threshold": 30,
+    "boost_interval": 100
+  },
+  "target_metric": "avg_response_time",
+  "risk": ["starvation if aging is too weak"],
+  "reason": "MLFQ can favor short interactive jobs while still allowing long CPU-bound jobs to make progress."
+}
+```
+
+The recommendation is sent to the Algorithm Guard before execution.
+
+---
+
+### 5.2 Running
+
+#### 5.2.1 Runtime Correction Proposer
+
+During execution, the Trace Monitor watches the Scheduling Trace Log.
+
+If a scheduling problem is detected, the system summarizes the event and asks the LLM for a correction.
+
+Example detected events:
+
+- starvation warning
+- poor response time
+- too many preemptions
+- long CPU-bound domination
+- high waiting time
+- burst prediction failure
+
+Example correction output:
+
+```json
+{
+  "correction_type": "parameter_update",
+  "current_scheduling_algorithm": "MLFQ",
+  "new_params": {
+    "quantum": [2, 4, 8],
+    "aging_threshold": 20,
+    "boost_interval": 80
+  },
+  "reason": "The previous aging threshold was too high, so low-priority processes waited too long."
+}
+```
+
+Possible correction types:
+
+- parameter update
+- Scheduling Algorithm change
+- process hint update
+- aging threshold adjustment
+- time quantum adjustment
+
+The correction is also checked by the Algorithm Guard.
+
+The correction is applied from the next scheduling point, not by interrupting every timer tick with an LLM call.
+
+---
+
+### 5.3 After Running
+
+#### 5.3.1 Trace Explainer
+
+After execution, the system summarizes:
+
+- Scheduling Trace Log
+- Scheduling Metrics
+- detected runtime events
+- comparison with other Scheduling Algorithms
+
+Then the LLM explains the result in natural language.
+
+Example output:
+
+```json
+{
+  "summary": "FCFS performed poorly on this workload.",
+  "detected_pattern": "convoy_effect",
+  "main_reason": "A long CPU-bound process arrived first and delayed short interactive jobs.",
+  "evidence": [
+    "P1 ran from tick 0 to tick 40.",
+    "P2 arrived at tick 5 but first ran at tick 41.",
+    "Average response time was much higher than MLFQ."
+  ],
+  "suggestion": "MLFQ or Round Robin would reduce response time for short jobs."
+}
+```
+
+The Trace Explainer helps users understand not only what happened, but why it happened.
+
+#### 5.3.2 Feedback Rule Generator
+
+If the LLM recommendation was poor, the system asks the LLM to generate a feedback rule.
+
+Example:
+
+```json
+{
+  "failed_case": {
+    "llm_selected": "FCFS",
+    "actual_best": "MLFQ",
+    "regret_score": 0.42
+  },
+  "feedback_rule": "If burst variance is high and many interactive jobs arrive after a long CPU-bound job, avoid FCFS and prefer MLFQ or Round Robin."
+}
+```
+
+The feedback rule can be used in later LLM prompts.
+
+---
+
+## 6. Algorithm Guard
+
+The Algorithm Guard prevents invalid or unsafe LLM output from being applied.
+
+It checks:
+
+- whether the recommended Scheduling Algorithm is implemented
+- whether the parameters are in valid ranges
+- whether required information exists
+- whether burst prediction is available when SJF/SRTF is requested
+- whether the correction type is supported
+- whether the output follows the required JSON schema
+
+Example decisions:
+
+```json
+{
+  "guard_result": "accepted",
+  "reason": "MLFQ is implemented and all parameters are valid."
+}
+```
+
+```json
+{
+  "guard_result": "rejected",
+  "reason": "SRTF requires burst prediction, but no predictor output was provided.",
+  "fallback_scheduling_algorithm": "MLFQ"
+}
+```
+
+---
+
+## 7. Scheduling Trace Log
+
+The Scheduling Trace Log records important scheduling events.
+
+Example:
+
+```text
+[SCHED] tick=12 algo=RR event=DISPATCH pid=3 state=RUNNING queue=0
+[SCHED] tick=16 algo=RR event=PREEMPT pid=3 state=RUNNABLE queue=0
+[SCHED] tick=17 algo=RR event=DISPATCH pid=4 state=RUNNING queue=0
+[SCHED] tick=45 algo=RR event=EXIT pid=4 state=ZOMBIE queue=0
+```
+
+Target events:
+
+- ARRIVE
+- DISPATCH
+- PREEMPT
+- SLEEP
+- WAKEUP
+- EXIT
+- QUEUE_CHANGE
+- CORRECTION_APPLIED
+
+---
+
+## 8. Metrics Evaluator
+
+The Metrics Evaluator verifies whether the LLM recommendation was actually useful.
+
+Metrics:
+
+- average waiting time
+- average response time
+- average turnaround time
+- throughput
+- max waiting time
+- starvation occurrence
+- preemption count
+- burst prediction error
+- regret score
 
 Definitions:
 
@@ -234,46 +382,247 @@ waiting time = turnaround_time - total_cpu_burst_time
 throughput = completed_process_count / total_execution_time
 ```
 
-## 11. Tech Stack
+Recommendation judgment:
 
-### Operating System Environment
+```text
+SUCCESS      = LLM selected the best or near-best Scheduling Algorithm
+NEAR-SUCCESS = LLM result is close to the best result
+FAIL         = LLM result is clearly worse than the best result
+```
+
+---
+
+## 9. GUI Observability Dashboard
+
+The GUI is not the core scheduler.  
+It is the observability dashboard that visualizes the whole LLM-assisted scheduling process.
+
+The GUI shows:
+
+- workload summary
+- LLM Scheduling Algorithm recommendation
+- Algorithm Guard result
+- live or replayed Scheduling Trace Log
+- Gantt chart
+- ready queue timeline
+- process state table
+- runtime correction event
+- before/after metrics
+- Trace Explainer result
+- Feedback Rule Generator result
+
+Main dashboard message:
+
+> **LLM suggests. xv6 executes. Metrics verify. GUI explains.**
+
+---
+
+## 10. Example Demo Scenario
+
+### Scenario: Starvation under Priority Scheduling
+
+1. User goal:
+   - interactive jobs should respond quickly
+   - no process should starve
+
+2. LLM recommendation:
+   - Priority Scheduling + weak aging
+
+3. xv6 execution:
+   - low-priority process waits too long
+
+4. Trace Monitor:
+   - starvation warning detected
+
+5. LLM correction:
+   - reduce aging threshold
+   - or change Scheduling Algorithm to MLFQ
+
+6. Algorithm Guard:
+   - validates the correction
+
+7. xv6:
+   - applies correction from the next scheduling point
+
+8. Metrics Evaluator:
+   - max waiting time decreases
+   - starvation disappears
+
+9. GUI:
+   - shows before/after Gantt chart
+   - shows metrics improvement
+   - shows natural-language trace explanation
+
+---
+
+## 11. Data Files
+
+Planned data files:
+
+```text
+workloads/*.json
+outputs/workload_summary.json
+outputs/recommendation.json
+outputs/guard_decision.json
+outputs/trace.jsonl
+outputs/metrics.json
+outputs/runtime_events.json
+outputs/correction.json
+outputs/trace_explanation.json
+outputs/feedback_rules.md
+```
+
+---
+
+## 12. Planned Repository Structure
+
+```text
+.
+├── README.md
+├── docs/
+│   ├── architecture.md
+│   ├── trace_format.md
+│   ├── data_format.md
+│   └── evaluation_plan.md
+├── workloads/
+│   ├── convoy_effect.json
+│   ├── interactive_heavy.json
+│   ├── priority_starvation.json
+│   └── mixed_workload.json
+├── tools/
+│   ├── workload_analyzer.py
+│   ├── llm_advisor.py
+│   ├── algorithm_guard.py
+│   ├── trace_parser.py
+│   ├── metrics.py
+│   ├── event_detector.py
+│   ├── runtime_correction.py
+│   ├── trace_explainer.py
+│   └── feedback_generator.py
+├── dashboard/
+│   └── dashboard.py
+└── xv6-riscv/
+```
+
+---
+
+## 13. OS Concepts Used
+
+This project directly uses the following OS concepts:
+
+- process
+- process state
+- CPU scheduling
+- ready queue
+- preemption
+- context switch
+- system calls
+- priority
+- starvation
+- aging
+- Scheduling Metrics
+- trace-based observability
+
+---
+
+## 14. Tech Stack
+
+### OS Environment
 
 - xv6-riscv
 - QEMU
 - RISC-V toolchain
-- WSL or Linux environment
+- WSL or Linux
 
-### Kernel / OS Implementation
+### xv6 Implementation
 
 - C
-- xv6 kernel source code
+- xv6 scheduler
 - xv6 system calls
 - xv6 user programs
 
-### Host-side Tooling
+### Host-side Tools
 
 - Python
-- Trace parser
-- Metrics evaluator
-- JSON-based data format
+- JSON / JSONL
+- trace parser
+- Metrics Evaluator
+- LLM API client
 
-### Visualization
-
-Planned options:
+### GUI
 
 - Streamlit
-- Plotly or matplotlib for Gantt chart
-- pandas for table-based metrics display
-
-Streamlit is preferred for the first prototype because it allows fast GUI development.
+- pandas
+- Plotly or matplotlib
 
 ### LLM Backend
 
 - Upstage Solar Pro 3 API
 
-The LLM is used for Scheduling Algorithm recommendation and explanation. API keys must not be committed to GitHub.
+API keys must not be committed to GitHub.
 
-### Version Control
+---
 
-- Git
-- GitHub
+## 15. Development Roadmap
+
+### Phase 1 — Basic Trace and Metrics
+
+- implement Scheduling Trace Log
+- parse trace into structured data
+- calculate basic Scheduling Metrics
+- visualize Gantt chart
+
+### Phase 2 — Multiple Scheduling Algorithms
+
+- preserve Round Robin baseline
+- implement FCFS
+- implement Priority Scheduling + Aging
+- implement MLFQ
+- add Scheduling Algorithm control interface
+
+### Phase 3 — LLM Scheduling Algorithm Advisor
+
+- generate workload summary
+- call Solar Pro 3 API
+- receive Scheduling Algorithm recommendation JSON
+- validate recommendation with Algorithm Guard
+
+### Phase 4 — Runtime Correction
+
+- detect starvation and poor response time
+- request LLM correction
+- validate correction
+- apply correction from the next scheduling point
+- compare before/after metrics
+
+### Phase 5 — Trace Explainer and Feedback Rule Generator
+
+- summarize trace and metrics
+- generate natural-language explanation
+- generate feedback rules from failed recommendations
+- display explanation in GUI
+
+### Phase 6 — Optional Burst Prediction Experiment
+
+- implement traditional exponential averaging
+- test LLM-assisted burst prediction
+- compare predicted burst and actual burst
+- compare SJF/SRTF performance with different predictors
+
+---
+
+## 16. Limitations
+
+- The LLM is not called at every timer tick.
+- The LLM does not directly choose the next process.
+- The LLM does not directly modify xv6 kernel state.
+- Runtime correction is applied only after validation.
+- Runtime correction takes effect from the next scheduling point.
+- Future CPU bursts are not given to the LLM as answers.
+- Controlled workloads may be used for reproducible experiments.
+
+---
+
+## 17. One-sentence Summary
+
+**LLM Sched Copilot is an LLM-for-OS system where an LLM recommends, corrects, and explains xv6 Scheduling Algorithms, while xv6 executes them and metrics verify the result.**
