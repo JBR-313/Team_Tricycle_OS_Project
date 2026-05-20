@@ -1,0 +1,510 @@
+"""Algorithm Guard (Role B).
+
+Validates LLM recommendations before passing to scheduler.
+
+Pipeline position:
+    recommendation.json (from llm_advisor)
+        ↓
+    algorithm_guard.py (this module)
+        ↓
+    guard_decision.json (to scheduler_simulator / xv6)
+
+The guard ensures:
+  1. JSON schema is valid
+  2. Algorithm is supported
+  3. Metric is supported
+  4. Algorithm-metric pair makes OS sense
+  5. Parameters are in valid ranges
+  6. Confidence is acceptable
+
+This protects the system from unsound LLM recommendations.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any, Optional
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+SUPPORTED_ALGORITHMS = ["FCFS", "RR", "PRIORITY", "MLFQ"]
+SUPPORTED_METRICS = [
+    "response_time",
+    "turnaround_time",
+    "waiting_time",
+    "throughput",
+    "starvation",
+]
+
+# Alias mappings (normalize input metric names)
+METRIC_ALIASES = {
+    "avg_response_time": "response_time",
+    "avg_turnaround_time": "turnaround_time",
+    "avg_waiting_time": "waiting_time",
+    "avg_starvation": "starvation",
+    "response": "response_time",
+    "turnaround": "turnaround_time",
+    "waiting": "waiting_time",
+}
+
+# Algorithm-Metric Compatibility Matrix (0.0 to 1.0)
+# Higher = better fit for this metric; lower = risky or ineffective.
+COMPATIBILITY_MATRIX = {
+    "FCFS": {
+        "response_time": 0.2,  # convoy effect → poor response
+        "turnaround_time": 0.5,
+        "waiting_time": 0.3,  # convoy effect
+        "throughput": 0.8,
+        "starvation": 0.9,
+    },
+    "RR": {
+        "response_time": 0.9,  # excellent
+        "turnaround_time": 0.7,
+        "waiting_time": 0.7,
+        "throughput": 0.8,
+        "starvation": 0.95,
+    },
+    "PRIORITY": {
+        "response_time": 0.7,
+        "turnaround_time": 0.6,
+        "waiting_time": 0.7,
+        "throughput": 0.6,
+        "starvation": 0.2,  # ⚠️ HIGH RISK: low-priority starvation
+    },
+    "MLFQ": {
+        "response_time": 0.95,  # excellent
+        "turnaround_time": 0.8,
+        "waiting_time": 0.9,
+        "throughput": 0.85,
+        "starvation": 0.95,  # with aging
+    },
+}
+
+# Reject if score is below this; warn if below WARN threshold.
+COMPAT_REJECT_THRESHOLD = 0.4
+COMPAT_WARN_THRESHOLD = 0.6
+CONFIDENCE_REJECT_THRESHOLD = 0.3
+CONFIDENCE_WARN_THRESHOLD = 0.5
+
+# Per-algorithm parameter ranges (min, max) and safe defaults.
+# Out-of-range params do NOT reject the recommendation — guard overrides with
+# the default and emits a warning, so Role C always receives valid params.
+PARAM_RANGES = {
+    "FCFS": {},
+    "RR": {"quantum": (1, 100)},
+    "PRIORITY": {"aging_threshold": (1, 10000)},
+    "MLFQ": {
+        "queues": (2, 5),
+        "aging_threshold": (1, 10000),
+        "boost_interval": (10, 10000),
+        # quantum is a list — checked separately
+    },
+}
+
+DEFAULT_PARAMS = {
+    "FCFS": {},
+    "RR": {"quantum": 10},
+    "PRIORITY": {"aging_threshold": 100},
+    "MLFQ": {
+        "queues": 3,
+        "quantum": [2, 4, 8],
+        "aging_threshold": 100,
+        "boost_interval": 100,
+    },
+}
+
+MLFQ_QUANTUM_RANGE = (1, 100)
+
+# Context-aware fallback selection
+# If we must reject, what's the best alternative given the metric?
+FALLBACK_BY_METRIC = {
+    "response_time": "MLFQ",
+    "turnaround_time": "MLFQ",  # best turnaround among the 4 implemented algos
+    "waiting_time": "MLFQ",
+    "throughput": "RR",
+    "starvation": "MLFQ",  # aging prevents starvation
+}
+
+
+class GuardError(RuntimeError):
+    """Raised when guard validation fails critically."""
+
+
+def load_recommendation(path: Path) -> dict:
+    if not path.is_file():
+        raise SystemExit(
+            f"[algorithm_guard] recommendation.json not found: {path}\n"
+            f"  Run tools/llm_advisor.py first to generate it."
+        )
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise SystemExit(f"[algorithm_guard] {path} is not valid JSON: {exc}")
+    return data
+
+
+def validate_schema(rec: dict) -> tuple[bool, Optional[str]]:
+    """Check that required fields exist and have correct types.
+    Returns (is_valid, error_message).
+    """
+    if not isinstance(rec, dict):
+        return False, f"Input is not a JSON object: {type(rec)}"
+
+    if "algorithm" not in rec:
+        return False, "Missing required field: 'algorithm'"
+    if not isinstance(rec["algorithm"], str):
+        return False, f"'algorithm' must be string, got {type(rec['algorithm'])}"
+
+    if "reason" not in rec:
+        return False, "Missing required field: 'reason'"
+    if not isinstance(rec["reason"], str) or not rec["reason"].strip():
+        return False, "'reason' must be a non-empty string"
+
+    if "target_metric" in rec and rec["target_metric"] is not None:
+        if not isinstance(rec["target_metric"], str):
+            return False, f"'target_metric' must be string, got {type(rec['target_metric'])}"
+
+    if "confidence" in rec and rec["confidence"] is not None:
+        if not isinstance(rec["confidence"], (int, float)):
+            return False, (
+                f"'confidence' must be number between 0 and 1, got {type(rec['confidence'])}"
+            )
+        if not (0 <= rec["confidence"] <= 1):
+            return False, f"'confidence' out of range [0, 1]: {rec['confidence']}"
+
+    return True, None
+
+
+def normalize_algorithm(algo: str) -> Optional[str]:
+    """Normalize algorithm name to uppercase. Return normalized or None if invalid."""
+    algo = str(algo).strip().upper()
+    if algo in SUPPORTED_ALGORITHMS:
+        return algo
+    return None
+
+
+def normalize_metric(metric: str) -> Optional[str]:
+    """Normalize metric name, apply aliases. Return normalized or None if invalid."""
+    metric = str(metric).strip().lower()
+
+    if metric in METRIC_ALIASES:
+        metric = METRIC_ALIASES[metric]
+
+    if metric in SUPPORTED_METRICS:
+        return metric
+
+    return None
+
+
+def check_algorithm(rec: dict) -> str:
+    """Validate algorithm. Returns normalized name or raises GuardError."""
+    algo = rec.get("algorithm", "").strip()
+    normalized = normalize_algorithm(algo)
+
+    if normalized is None:
+        raise GuardError(
+            f"Algorithm '{algo}' is not supported. Must be one of {SUPPORTED_ALGORITHMS}."
+        )
+
+    return normalized
+
+
+def check_metric(rec: dict) -> tuple[str, Optional[str]]:
+    """Validate metric. Returns (metric, info_message or None)."""
+    metric = rec.get("target_metric")
+
+    if metric is None or metric == "unspecified":
+        return "unspecified", "target_metric not specified; cannot validate algorithm-metric fit."
+
+    metric_str = str(metric).strip()
+    normalized = normalize_metric(metric_str)
+
+    if normalized is None:
+        raise GuardError(
+            f"Metric '{metric_str}' is not supported. Must be one of {SUPPORTED_METRICS}."
+        )
+
+    return normalized, None
+
+
+def normalize_params(algo: str, params: Any) -> tuple[dict, list[str]]:
+    """Validate user params for `algo` and merge with defaults.
+
+    Strategy: out-of-range or missing values are silently replaced with the
+    safe default. Each substitution adds a warning message.
+    """
+    warnings: list[str] = []
+    defaults = DEFAULT_PARAMS.get(algo, {})
+
+    if params is None:
+        params = {}
+    elif not isinstance(params, dict):
+        warnings.append(
+            f"'params' must be an object; got {type(params).__name__}. Using defaults."
+        )
+        return dict(defaults), warnings
+
+    if algo == "FCFS":
+        if params:
+            warnings.append(
+                f"FCFS does not accept parameters; ignoring {sorted(params)}."
+            )
+        return {}, warnings
+
+    ranges = PARAM_RANGES.get(algo, {})
+    out = dict(defaults)
+
+    for key, val in params.items():
+        # MLFQ.quantum is a list and validated separately
+        if algo == "MLFQ" and key == "quantum":
+            continue
+        if key not in ranges:
+            warnings.append(f"{algo}: unknown param '{key}' ignored.")
+            continue
+        lo, hi = ranges[key]
+        if not isinstance(val, int) or isinstance(val, bool) or not (lo <= val <= hi):
+            warnings.append(
+                f"{algo}.{key}={val!r} out of range [{lo}, {hi}]; "
+                f"using default {defaults[key]}."
+            )
+            continue
+        out[key] = val
+
+    if algo == "MLFQ":
+        q = params.get("quantum")
+        q_lo, q_hi = MLFQ_QUANTUM_RANGE
+        if q is None:
+            pass  # default already in `out`
+        elif not isinstance(q, list) or not all(
+            isinstance(v, int) and not isinstance(v, bool) and q_lo <= v <= q_hi
+            for v in q
+        ):
+            warnings.append(
+                f"MLFQ.quantum={q!r} invalid (must be list of ints in "
+                f"[{q_lo}, {q_hi}]); using default {defaults['quantum']}."
+            )
+        elif len(q) != out["queues"]:
+            warnings.append(
+                f"MLFQ.quantum length {len(q)} != queues {out['queues']}; "
+                f"using default {defaults['quantum']}."
+            )
+        else:
+            out["quantum"] = q
+
+    return out, warnings
+
+
+def compatibility_score(algo: str, metric: str) -> float:
+    """Return algorithm-metric compatibility score. 0.5 if metric unspecified."""
+    if metric == "unspecified":
+        return 0.5
+    return COMPATIBILITY_MATRIX.get(algo, {}).get(metric, 0.5)
+
+
+def decide(
+    algo: str,
+    metric: str,
+    compat_score: float,
+    confidence: Optional[float],
+    metric_info: Optional[str],
+) -> tuple[str, list[str]]:
+    """Decide guard_result and collect warnings/errors.
+
+    Returns (result, messages) where result is one of:
+      - "accepted"              : all checks passed
+      - "accepted_with_warning" : passes but with caveats
+      - "rejected"              : compat or confidence below reject threshold
+    """
+    messages: list[str] = []
+    rejected = False
+
+    if metric_info:
+        messages.append(metric_info)
+
+    # Compatibility (only meaningful when metric is specified)
+    if metric != "unspecified":
+        if compat_score < COMPAT_REJECT_THRESHOLD:
+            messages.append(
+                f"Algorithm {algo} is incompatible with metric {metric} "
+                f"(score={compat_score} < {COMPAT_REJECT_THRESHOLD})."
+            )
+            rejected = True
+        elif compat_score < COMPAT_WARN_THRESHOLD:
+            messages.append(
+                f"Algorithm {algo} is acceptable but not ideal for {metric} "
+                f"(score={compat_score})."
+            )
+
+    # Confidence
+    if confidence is None:
+        messages.append("Confidence not specified; assumed 0.5.")
+    elif confidence < CONFIDENCE_REJECT_THRESHOLD:
+        messages.append(
+            f"Confidence too low ({confidence} < {CONFIDENCE_REJECT_THRESHOLD})."
+        )
+        rejected = True
+    elif confidence < CONFIDENCE_WARN_THRESHOLD:
+        messages.append(f"Low confidence ({confidence}); proceed cautiously.")
+
+    if rejected:
+        return "rejected", messages
+    if messages:
+        return "accepted_with_warning", messages
+    return "accepted", []
+
+
+def choose_fallback(metric: str, current_algo: str) -> str:
+    """Choose fallback algorithm based on metric and current choice.
+
+    Strategy:
+      1. If metric-specific fallback exists, use it (unless it's current_algo)
+      2. Otherwise fallback to RR (safest baseline)
+    """
+    if metric in FALLBACK_BY_METRIC:
+        fallback = FALLBACK_BY_METRIC[metric]
+        if fallback != current_algo:
+            return fallback
+
+    return "RR"  # ultimate safe fallback
+
+
+def guard(rec: dict) -> dict:
+    """Run all guard validations. Returns guard_decision dict."""
+    timestamp = datetime.now(timezone.utc).isoformat()
+
+    # Layer 1: Schema
+    schema_ok, schema_err = validate_schema(rec)
+    if schema_err:
+        return {
+            "guard_result": "rejected",
+            "reason": f"Schema validation failed: {schema_err}",
+            "algorithm": rec.get("algorithm", "unknown"),
+            "fallback_algorithm": "RR",
+            "params": dict(DEFAULT_PARAMS["RR"]),
+            "_meta": {
+                "source": "tools/algorithm_guard.py",
+                "generated_at": timestamp,
+            },
+        }
+
+    try:
+        # Layer 2: Algorithm
+        algo = check_algorithm(rec)
+
+        # Layer 3: Metric
+        metric, metric_info = check_metric(rec)
+
+        # Layer 4: Compatibility score
+        compat_score = compatibility_score(algo, metric)
+
+        # Layer 5: Confidence
+        confidence = rec.get("confidence")
+
+        # Layer 6: Params (override out-of-range with defaults, never reject)
+        params, param_warnings = normalize_params(algo, rec.get("params"))
+
+        # Decide
+        result, messages = decide(algo, metric, compat_score, confidence, metric_info)
+        messages.extend(param_warnings)
+
+        # If we ended up "accepted" with only param warnings, upgrade to warn.
+        if result == "accepted" and param_warnings:
+            result = "accepted_with_warning"
+
+        # Build output
+        guard_decision: dict[str, Any] = {
+            "guard_result": result,
+            "algorithm": algo,
+            "params": params,
+            "target_metric": metric,
+            "compatibility_score": compat_score,
+            "confidence_score": confidence if confidence is not None else 0.5,
+        }
+
+        if result == "accepted":
+            guard_decision["reason"] = (
+                f"Accepted: {algo} is suitable for {metric} "
+                f"(compat={compat_score:.2f}, confidence={confidence})."
+            )
+        elif result == "accepted_with_warning":
+            guard_decision["reason"] = (
+                f"Accepted with warnings: {algo} for {metric} "
+                f"(compat={compat_score:.2f}, confidence={confidence})."
+            )
+            guard_decision["warnings"] = messages
+        else:  # rejected
+            fallback = choose_fallback(metric, algo)
+            guard_decision["fallback_algorithm"] = fallback
+            # Replace params with fallback's defaults
+            guard_decision["params"] = dict(DEFAULT_PARAMS.get(fallback, {}))
+            guard_decision["reason"] = (
+                f"Rejected {algo} for {metric}: {'; '.join(messages)}. "
+                f"Falling back to {fallback}."
+            )
+            guard_decision["warnings"] = messages
+
+        guard_decision["_meta"] = {
+            "source": "tools/algorithm_guard.py",
+            "generated_at": timestamp,
+            "recommendation_source": "recommendation.json",
+        }
+
+        return guard_decision
+
+    except GuardError as exc:
+        fallback = choose_fallback(
+            rec.get("target_metric", "response_time"),
+            rec.get("algorithm", "UNKNOWN"),
+        )
+        return {
+            "guard_result": "rejected",
+            "reason": f"Guard validation failed: {exc}",
+            "algorithm": rec.get("algorithm", "unknown"),
+            "fallback_algorithm": fallback,
+            "params": dict(DEFAULT_PARAMS.get(fallback, {})),
+            "_meta": {
+                "source": "tools/algorithm_guard.py",
+                "generated_at": timestamp,
+            },
+        }
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Algorithm Guard (Role B)")
+    parser.add_argument(
+        "--in",
+        dest="in_path",
+        default=str(PROJECT_ROOT / "recommendation.json"),
+        help="path to recommendation.json",
+    )
+    parser.add_argument(
+        "--out",
+        dest="out_path",
+        default=str(PROJECT_ROOT / "guard_decision.json"),
+        help="path to write guard_decision.json",
+    )
+    args = parser.parse_args()
+
+    rec = load_recommendation(Path(args.in_path))
+    decision = guard(rec)
+
+    out_path = Path(args.out_path)
+    out_path.write_text(
+        json.dumps(decision, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+
+    result = decision.get("guard_result", "unknown")
+    algo = decision.get("algorithm", "unknown")
+    fallback_info = f" → fallback: {decision.get('fallback_algorithm')}" if result == "rejected" else ""
+    print(f"[algorithm_guard] {result.upper()} (algo={algo}){fallback_info} → {out_path}")
+
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
