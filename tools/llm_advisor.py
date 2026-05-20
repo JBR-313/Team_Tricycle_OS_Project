@@ -26,7 +26,6 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import csv
 import json
 import sys
 from datetime import datetime, timezone
@@ -150,97 +149,119 @@ def validate(rec: dict) -> dict:
 # Feedback mode (Prompt Feedback Loop)
 # ---------------------------------------------------------------------------
 #
-# Pipeline position (architecture_diagram.md W8):
+# Pipeline position (architecture_diagram.md, AFTER RUNNING phase):
 #
-#     evaluation_result.csv  -->  llm_advisor.py --mode feedback
-#                                          |
-#                                          v
-#                              prompt_feedback_rules.md
+#     outputs/metrics.json  -->  llm_advisor.py --mode feedback
+#       (+ recommendation.json, optional)        |
+#                                                v
+#                                  outputs/feedback_rules.md
 #
-# Trigger: Role A's evaluator.py writes "fail" rows when the advisor picked an
-# algorithm clearly worse than the best one. "near-success" rows are accepted
-# without prompt update.
+# Trigger: metrics.py writes a `judgment` field ∈ {SUCCESS, NEAR-SUCCESS, FAIL}.
+# Only `FAIL` (regret_score > 0.30, OR starvation_occurred = true) triggers a
+# rules update — SUCCESS / NEAR-SUCCESS leave the rules file untouched.
+# See docs/evaluation_plan.md for the full judgment criteria.
 
-FEEDBACK_SYSTEM_PROMPT = """You are the Prompt Feedback Generator for an \
+FEEDBACK_SYSTEM_PROMPT = """You are the Feedback Rule Generator for an \
 LLM-based CPU scheduling advisor.
 
-You receive a list of FAILED recommendations: cases where the advisor LLM \
-picked algorithm A but evaluation later showed B would have been clearly \
-better for the target metric.
+You receive ONE failed evaluation: the advisor recommended an algorithm whose \
+measured performance fell into the FAIL bucket (regret_score > 0.30, OR \
+starvation occurred). Your job is to write a prompt-engineering rule that \
+prevents the same mistake in future recommendations.
 
-Write concise prompt-engineering rules in Markdown that will be re-injected \
-into the advisor's system prompt next time it runs. Each rule should:
+Each rule should:
   - begin with a condition tied to workload or metric characteristics
   - end with a directive ("prefer X over Y", "avoid X when ...", etc.)
-  - be specific (cite the metric and the algorithm pair when possible)
+  - be specific (cite the metric and the algorithm by name)
   - avoid restating textbook algorithm definitions
 
-Use a flat bullet list. No preamble, no closing remarks, no code fences.
+Write the output as a flat Markdown bullet list (one or more bullets). No \
+preamble, no closing remarks, no code fences.
 """
 
-# Tolerate variation in column naming from Role A's evaluator.
-_FAIL_VALUES = {"fail", "failed", "FAIL"}
-_STATUS_KEYS = ("status", "result", "verdict", "outcome")
-_SELECTED_KEYS = ("llm_selected", "recommended", "algorithm", "advisor_algorithm")
-_BEST_KEYS = ("actual_best", "best", "best_algorithm", "ground_truth")
-_METRIC_KEYS = ("target_metric", "metric")
-_WORKLOAD_KEYS = ("workload_id", "workload", "id", "scenario")
-_REGRET_KEYS = ("regret_score", "regret")
+FAIL_VERDICTS = {"fail", "failed"}
 
 
-def _pick(row: dict, keys: tuple[str, ...], default: str = "?") -> str:
-    for k in keys:
-        v = row.get(k)
-        if v not in (None, ""):
-            return str(v)
-    return default
-
-
-def read_fail_cases(csv_path: Path) -> list[dict]:
-    if not csv_path.is_file():
+def load_metrics(metrics_path: Path) -> dict:
+    if not metrics_path.is_file():
         raise SystemExit(
-            f"[feedback] evaluation_result.csv not found: {csv_path}\n"
-            f"  Role A's evaluator.py must produce it first."
+            f"[feedback] metrics.json not found: {metrics_path}\n"
+            f"  Role A's metrics.py must produce it first."
         )
-    rows = list(csv.DictReader(csv_path.open(encoding="utf-8")))
-    fails = []
-    for row in rows:
-        status = _pick(row, _STATUS_KEYS, default="").strip().lower()
-        if status in _FAIL_VALUES or status == "fail":
-            fails.append(row)
-    return fails
+    try:
+        data = json.loads(metrics_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise SystemExit(f"[feedback] {metrics_path} is not valid JSON: {exc}")
+    if not isinstance(data, dict):
+        raise SystemExit(
+            f"[feedback] expected metrics.json to be a JSON object, got "
+            f"{type(data).__name__}"
+        )
+    return data
 
 
-def build_feedback_user_prompt(fails: list[dict]) -> str:
-    lines = ["Failed recommendations to learn from:\n"]
-    for i, row in enumerate(fails, 1):
-        lines.append(
-            f"{i}. workload={_pick(row, _WORKLOAD_KEYS)} "
-            f"target_metric={_pick(row, _METRIC_KEYS)} "
-            f"llm_selected={_pick(row, _SELECTED_KEYS)} "
-            f"actual_best={_pick(row, _BEST_KEYS)} "
-            f"regret={_pick(row, _REGRET_KEYS)}"
-        )
+def load_recommendation_context(rec_path: Path) -> dict | None:
+    """Optional: pull algorithm/target_metric from recommendation.json so the
+    feedback prompt has more context. Missing/invalid file is non-fatal."""
+    if not rec_path.is_file():
+        return None
+    try:
+        rec = json.loads(rec_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return None
+    return rec if isinstance(rec, dict) else None
+
+
+def build_feedback_user_prompt(metrics: dict, rec: dict | None) -> str:
+    algo = metrics.get("scheduling_algorithm", "?")
+    target_metric = (rec or {}).get("target_metric", "?")
+
+    lines = [
+        "Failed evaluation to learn from:\n",
+        f"- recommended algorithm: {algo}",
+        f"- target metric         : {target_metric}",
+        f"- judgment              : {metrics.get('judgment', '?')}",
+        f"- regret_score          : {metrics.get('regret_score', '?')}",
+        f"- starvation_occurred   : {metrics.get('starvation_occurred', '?')}",
+        f"- avg_response_time     : {metrics.get('avg_response_time', '?')}",
+        f"- avg_waiting_time      : {metrics.get('avg_waiting_time', '?')}",
+        f"- avg_turnaround_time   : {metrics.get('avg_turnaround_time', '?')}",
+        f"- throughput            : {metrics.get('throughput', '?')}",
+        f"- max_waiting_time      : {metrics.get('max_waiting_time', '?')}",
+        f"- preemption_count      : {metrics.get('preemption_count', '?')}",
+    ]
+    if rec and rec.get("reason"):
+        lines.append(f"- advisor reasoning     : {rec['reason']}")
+    if rec and rec.get("params"):
+        lines.append(f"- advisor params        : {json.dumps(rec['params'])}")
+
     lines.append(
-        "\nProduce the Markdown rule list now. Group similar cases into one rule."
+        "\nWrite the Markdown rule(s) now. Focus on what conditions in the "
+        "workload should have steered the advisor away from this algorithm."
     )
     return "\n".join(lines)
 
 
-def run_feedback(eval_csv: Path, rules_out: Path) -> int:
-    fails = read_fail_cases(eval_csv)
-    if not fails:
+def run_feedback(metrics_path: Path, rules_out: Path, rec_path: Path) -> int:
+    metrics = load_metrics(metrics_path)
+    judgment = str(metrics.get("judgment", "")).strip().lower()
+
+    if judgment not in FAIL_VERDICTS:
         print(
-            f"[feedback] no fail rows in {eval_csv}; "
-            f"prompt rules not updated (near-success / success accepted)."
+            f"[feedback] judgment={metrics.get('judgment')!r} in {metrics_path}; "
+            f"rules not updated (only FAIL triggers an update)."
         )
         return 0
 
-    print(f"[feedback] found {len(fails)} fail case(s); querying Solar Pro 3...")
+    rec = load_recommendation_context(rec_path)
+    if rec is None:
+        print(f"[feedback] note: {rec_path} unavailable; running without it.")
+
+    print("[feedback] judgment=FAIL; querying Solar Pro 3 for a rule...")
     try:
         client = SolarClient()
         rules_md = client.complete(
-            prompt=build_feedback_user_prompt(fails),
+            prompt=build_feedback_user_prompt(metrics, rec),
             system=FEEDBACK_SYSTEM_PROMPT,
             temperature=0.2,
         )
@@ -249,11 +270,12 @@ def run_feedback(eval_csv: Path, rules_out: Path) -> int:
 
     timestamp = datetime.now(timezone.utc).isoformat()
     header = (
-        f"<!-- Generated by tools/llm_advisor.py (feedback mode) "
-        f"at {timestamp} from {eval_csv.name} ({len(fails)} fail cases) -->\n\n"
+        f"<!-- Generated by tools/llm_advisor.py (feedback mode) at {timestamp} "
+        f"from {metrics_path.name} (judgment=FAIL) -->\n\n"
     )
+    rules_out.parent.mkdir(parents=True, exist_ok=True)
     rules_out.write_text(header + rules_md.strip() + "\n", encoding="utf-8")
-    print(f"[feedback] wrote {len(fails)} fail case(s) → {rules_out}")
+    print(f"[feedback] wrote rules → {rules_out}")
     return 0
 
 
@@ -286,6 +308,7 @@ def run_advise(in_path: Path, out_path: Path, feedback_path: Path) -> int:
         "workload_summary": str(in_path),
     }
 
+    out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(
         json.dumps(rec, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
     )
@@ -302,37 +325,47 @@ def main() -> int:
         "--mode",
         choices=["advise", "feedback"],
         default="advise",
-        help="advise: recommend an algorithm; feedback: write rules from fail cases",
+        help="advise: recommend an algorithm; feedback: write rules from FAIL judgment",
     )
     parser.add_argument(
         "--in",
         dest="in_path",
-        default=str(PROJECT_ROOT / "workload_summary.json"),
+        default=str(PROJECT_ROOT / "outputs" / "workload_summary.json"),
         help="[advise] path to workload_summary.json",
     )
     parser.add_argument(
         "--out",
         dest="out_path",
-        default=str(PROJECT_ROOT / "recommendation.json"),
+        default=str(PROJECT_ROOT / "outputs" / "recommendation.json"),
         help="[advise] path to write recommendation.json",
     )
     parser.add_argument(
         "--feedback",
         dest="feedback_path",
-        default=str(PROJECT_ROOT / "prompt_feedback_rules.md"),
-        help="path to prompt_feedback_rules.md "
+        default=str(PROJECT_ROOT / "outputs" / "feedback_rules.md"),
+        help="path to feedback_rules.md "
         "(advise: input if it exists; feedback: output)",
     )
     parser.add_argument(
-        "--eval",
-        dest="eval_path",
-        default=str(PROJECT_ROOT / "evaluation_result.csv"),
-        help="[feedback] path to evaluation_result.csv",
+        "--metrics",
+        dest="metrics_path",
+        default=str(PROJECT_ROOT / "outputs" / "metrics.json"),
+        help="[feedback] path to metrics.json (produced by metrics.py)",
+    )
+    parser.add_argument(
+        "--rec",
+        dest="rec_context_path",
+        default=str(PROJECT_ROOT / "outputs" / "recommendation.json"),
+        help="[feedback] recommendation.json used for added context (optional)",
     )
     args = parser.parse_args()
 
     if args.mode == "feedback":
-        return run_feedback(Path(args.eval_path), Path(args.feedback_path))
+        return run_feedback(
+            Path(args.metrics_path),
+            Path(args.feedback_path),
+            Path(args.rec_context_path),
+        )
     return run_advise(
         Path(args.in_path), Path(args.out_path), Path(args.feedback_path)
     )

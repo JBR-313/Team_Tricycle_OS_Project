@@ -478,13 +478,13 @@ def main() -> int:
     parser.add_argument(
         "--in",
         dest="in_path",
-        default=str(PROJECT_ROOT / "recommendation.json"),
+        default=str(PROJECT_ROOT / "outputs" / "recommendation.json"),
         help="path to recommendation.json",
     )
     parser.add_argument(
         "--out",
         dest="out_path",
-        default=str(PROJECT_ROOT / "guard_decision.json"),
+        default=str(PROJECT_ROOT / "outputs" / "guard_decision.json"),
         help="path to write guard_decision.json",
     )
     args = parser.parse_args()
@@ -493,6 +493,7 @@ def main() -> int:
     decision = guard(rec)
 
     out_path = Path(args.out_path)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(
         json.dumps(decision, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
