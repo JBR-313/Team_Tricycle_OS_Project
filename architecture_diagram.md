@@ -74,7 +74,7 @@ flowchart TD
         R5["🔄 Runtime Correction Proposer
         tools/runtime_correction.py · LLM
         ─────────────────
-        Proposes correction → Algorithm Guard → next tick"]
+        Proposes correction → Algorithm Guard → Next Scheduling Point"]
 
         R0A -->|"trace.jsonl"| R1
         R0B -->|"trace.jsonl"| R1
@@ -347,7 +347,7 @@ flowchart TD
         R5["🔄 런타임 보정 제안기
         tools/runtime_correction.py · LLM
         ─────────────────
-        보정 제안 → 알고리즘 가드 → 다음 틱 적용"]
+        보정 제안 → 알고리즘 가드 → Next Scheduling Point 적용"]
 
         R0A -->|"trace.jsonl"| R1
         R0B -->|"trace.jsonl"| R1
