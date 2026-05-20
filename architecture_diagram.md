@@ -1,94 +1,129 @@
-# Visual Scheduler — Architecture Diagram
+# LLM Sched Copilot — Architecture Diagram
 
 ---
 
 ## ─── ENGLISH VERSION ───────────────────────────────────────────────────────
 
-### 1. Execution Flow
+### 1. Three-Phase Execution Flow
 
 ```mermaid
 flowchart TD
-    W0["📁 Workload Definition
-    workloads/*.json
-    ─────────────────
-    Role A"]
+    subgraph BEFORE ["⬛ BEFORE RUNNING"]
+        direction TB
+        B0["📁 Workload Definition
+        workloads/*.json"]
 
-    W1["🔍 Workload Analyzer
-    tools/workload_analyzer.py
-    ─────────────────
-    Role A"]
+        B1["🔍 Workload Analyzer
+        tools/workload_analyzer.py
+        ─────────────────
+        Summarizes observable workload characteristics"]
 
-    W2["🤖 LLM Scheduling Advisor
-    tools/llm_advisor.py · Solar Pro 3 API
-    ─────────────────
-    Role B"]
+        B2["🧠 LLM Workload Interpreter
+        tools/llm_advisor.py · Solar Pro 3 API
+        ─────────────────
+        Infers workload type, risks, target metric"]
 
-    W3["🛡️ Algorithm Guard
-    tools/algorithm_guard.py
-    ─────────────────
-    Role B  ·  validate / warn / override"]
+        B3["🤖 LLM Scheduling Algorithm Advisor
+        tools/llm_advisor.py · Solar Pro 3 API
+        ─────────────────
+        Recommends Scheduling Algorithm + parameters"]
 
-    W4A["⚙️ xv6 Scheduler
-    xv6-riscv/  ·  optional
-    ─────────────────
-    Role C  ·  RR · FCFS · Priority · MLFQ"]
+        B4["🛡️ Algorithm Guard
+        tools/algorithm_guard.py
+        ─────────────────
+        Validates LLM output — accept / warn / reject"]
 
-    W4B["🖥️ Scheduler Simulator
-    tools/scheduler_simulator.py
-    ─────────────────
-    Role C  ·  host-side simulation"]
+        B0 --> B1
+        B1 -->|"workload_summary.json"| B2
+        B2 -->|"workload_interpretation"| B3
+        B3 -->|"recommendation.json"| B4
+    end
 
-    W5["📋 Trace Collector
-    built into xv6 / simulator
-    ─────────────────
-    Role C  ·  ARRIVE · DISPATCH · PREEMPT · EXIT"]
+    subgraph RUNNING ["🟩 RUNNING"]
+        direction TB
+        R0A["⚙️ xv6 Scheduling Algorithm Execution
+        xv6-riscv/kernel/
+        ─────────────────
+        Final target · RR · FCFS · Priority · MLFQ"]
 
-    W6["📊 Metrics Evaluator
-    tools/metrics.py
-    ─────────────────
-    Role A  ·  WT · RT · TAT · Throughput · Starvation"]
+        R0B["🖥️ Scheduler Simulator
+        tools/scheduler_simulator.py
+        ─────────────────
+        Development fallback · host-side simulation"]
 
-    W7["🏆 LLM Recommendation Evaluator
-    tools/evaluator.py
-    ─────────────────
-    Role A  ·  success · near-success · fail"]
+        R1["📋 Scheduling Trace Collector
+        built into xv6 / simulator
+        ─────────────────
+        ARRIVE · DISPATCH · PREEMPT · SLEEP · WAKEUP · EXIT"]
 
-    W8["🔄 Prompt Feedback
-    tools/llm_advisor.py  ·  feedback mode
-    ─────────────────
-    Role B  ·  updates prompt rules on fail only"]
+        R2["🔎 Trace Parser
+        tools/trace_parser.py
+        ─────────────────
+        Parses trace.jsonl into structured records"]
 
-    W9["🖼️ Dashboard
-    dashboard/dashboard.py
-    ─────────────────
-    Role D  ·  Gantt · Queue · Metrics · Comparison"]
+        R3["📊 Metrics Evaluator
+        tools/metrics.py
+        ─────────────────
+        WT · RT · TAT · Throughput · Starvation · Preemptions"]
 
-    W0  -->|"workload.json"| W1
-    W1  -->|"workload_summary.json"| W2
-    W2  -->|"recommendation.json"| W3
-    W3  -->|"guard_decision.json ✓"| W4A
-    W3  -->|"guard_decision.json ✓"| W4B
-    W4A -->|"trace.jsonl"| W5
-    W4B -->|"trace.jsonl"| W5
-    W5  -->|"trace.jsonl"| W6
-    W6  -->|"all_metrics.csv"| W7
-    W2  -.->|"recommendation.json"| W7
-    W7  -->|"evaluation_result.csv"| W8
-    W8  -.->|"prompt_feedback_rules.md  ·  fail only"| W2
-    W6  -->|"all_metrics.csv"| W9
-    W7  -->|"evaluation_result.csv"| W9
-    W5  -->|"trace.jsonl"| W9
-    W2  -.->|"recommendation.json"| W9
+        R4["🚨 Event Detector
+        tools/event_detector.py
+        ─────────────────
+        Starvation · Poor RT · Long CPU-bound domination"]
 
-    classDef roleA fill:#E6F1FB,stroke:#185FA5,color:#0C447C
-    classDef roleB fill:#EEEDFE,stroke:#534AB7,color:#3C3489
-    classDef roleC fill:#E1F5EE,stroke:#0F6E56,color:#085041
-    classDef roleD fill:#FAEEDA,stroke:#854F0B,color:#633806
+        R5["🔄 Runtime Correction Proposer
+        tools/runtime_correction.py · LLM
+        ─────────────────
+        Proposes correction → Algorithm Guard → next tick"]
 
-    class W0,W1,W6,W7 roleA
-    class W2,W3,W8 roleB
-    class W4A,W4B,W5 roleC
-    class W9 roleD
+        R0A -->|"trace.jsonl"| R1
+        R0B -->|"trace.jsonl"| R1
+        R1  -->|"trace.jsonl"| R2
+        R2  -->|"parsed records"| R3
+        R2  -->|"parsed records"| R4
+        R4  -->|"runtime_events.json"| R5
+        R5  -->|"correction.json → Guard → next scheduling point"| R0A
+        R5  -->|"correction.json → Guard → next scheduling point"| R0B
+    end
+
+    subgraph AFTER ["🟦 AFTER RUNNING"]
+        direction TB
+        A1["💬 Trace Explainer
+        tools/trace_explainer.py · LLM
+        ─────────────────
+        Natural-language explanation of trace + metrics"]
+
+        A2["📝 Feedback Rule Generator
+        tools/feedback_generator.py · LLM
+        ─────────────────
+        Generates rules when LLM recommendation failed"]
+
+        A3["🖼️ GUI Observability Dashboard
+        dashboard/dashboard.py
+        ─────────────────
+        Gantt · Queue · Metrics · Correction · Explanation"]
+
+        A1 --> A3
+        A2 --> A3
+        A2 -.->|"feedback_rules.md · next run"| B3
+    end
+
+    B4 -->|"guard_decision.json ✓"| R0A
+    B4 -->|"guard_decision.json ✓"| R0B
+    R3 -->|"metrics.json"| A1
+    R3 -->|"metrics.json"| A2
+    R3 -->|"metrics.json"| A3
+    R1 -->|"trace.jsonl"| A1
+    R1 -->|"trace.jsonl"| A3
+    R4 -->|"runtime_events.json"| A3
+
+    classDef before fill:#E6F1FB,stroke:#185FA5,color:#0C447C
+    classDef running fill:#E1F5EE,stroke:#0F6E56,color:#085041
+    classDef after  fill:#EEEDFE,stroke:#534AB7,color:#3C3489
+
+    class B0,B1,B2,B3,B4 before
+    class R0A,R0B,R1,R2,R3,R4,R5 running
+    class A1,A2,A3 after
 ```
 
 ---
@@ -101,21 +136,26 @@ flowchart LR
         WJ["workloads/*.json"]
     end
 
-    subgraph TOOLS ["🛠️ tools/"]
-        WA["workload_analyzer.py · A"]
-        LA["llm_advisor.py · B"]
-        AG["algorithm_guard.py · B"]
-        SS["scheduler_simulator.py · C"]
-        ME["metrics.py · A"]
-        EV["evaluator.py · A"]
+    subgraph BEFORE_TOOLS ["⬛ Before Running"]
+        WA["workload_analyzer.py"]
+        LI["llm_advisor.py (Interpreter)"]
+        LA["llm_advisor.py (Advisor)"]
+        AG["algorithm_guard.py"]
     end
 
-    subgraph XV6 ["🐧 xv6-riscv/  (optional)"]
-        XS["kernel/proc.c + scheduler.c · C"]
+    subgraph RUNNING_TOOLS ["🟩 Running"]
+        XV["xv6 Scheduling Algorithm Execution"]
+        SS["scheduler_simulator.py"]
+        TP["trace_parser.py"]
+        ME["metrics.py"]
+        ED["event_detector.py"]
+        RC["runtime_correction.py"]
     end
 
-    subgraph DASH ["📊 dashboard/"]
-        DB["dashboard.py · D"]
+    subgraph AFTER_TOOLS ["🟦 After Running"]
+        TE["trace_explainer.py"]
+        FG["feedback_generator.py"]
+        DB["dashboard.py"]
     end
 
     subgraph FILES ["📄 Data Files"]
@@ -123,71 +163,83 @@ flowchart LR
         rc["recommendation.json"]
         gd["guard_decision.json"]
         tr["trace.jsonl"]
-        mc["all_metrics.csv"]
-        ev["evaluation_result.csv"]
-        fb["prompt_feedback_rules.md"]
+        mt["metrics.json"]
+        re["runtime_events.json"]
+        co["correction.json"]
+        te["trace_explanation.json"]
+        fb["feedback_rules.md"]
     end
 
-    WJ -->|reads| WA
-    WA -->|writes| ws
-    ws -->|reads| LA
-    LA -->|writes| rc
-    rc -->|reads| AG
-    AG -->|writes| gd
-    gd -->|reads| SS
-    gd -->|reads| XS
-    SS -->|writes| tr
-    XS -->|writes| tr
-    tr -->|reads| ME
-    ME -->|writes| mc
-    rc -->|reads| EV
-    mc -->|reads| EV
-    EV -->|writes| ev
-    EV -->|writes  ·  fail only| fb
-    fb -.->|reads  ·  next run| LA
-    tr -->|reads| DB
-    mc -->|reads| DB
-    rc -->|reads| DB
-    ev -->|reads| DB
+    WJ  -->|reads|  WA
+    WA  -->|writes| ws
+    ws  -->|reads|  LI
+    LI  -->|reads|  LA
+    LA  -->|writes| rc
+    rc  -->|reads|  AG
+    AG  -->|writes| gd
+    gd  -->|reads|  XV
+    gd  -->|reads|  SS
+    XV  -->|writes| tr
+    SS  -->|writes| tr
+    tr  -->|reads|  TP
+    TP  -->|reads|  ME
+    TP  -->|reads|  ED
+    ME  -->|writes| mt
+    ED  -->|writes| re
+    re  -->|reads|  RC
+    RC  -->|writes| co
+    co  -->|reads → Guard → next point| XV
+    co  -->|reads → Guard → next point| SS
+    tr  -->|reads|  TE
+    mt  -->|reads|  TE
+    mt  -->|reads|  FG
+    TE  -->|writes| te
+    FG  -->|writes| fb
+    fb  -.->|reads · next run| LA
+    tr  -->|reads|  DB
+    mt  -->|reads|  DB
+    rc  -->|reads|  DB
+    re  -->|reads|  DB
+    te  -->|reads|  DB
+    fb  -->|reads|  DB
 
-    classDef roleA fill:#E6F1FB,stroke:#185FA5,color:#0C447C
-    classDef roleB fill:#EEEDFE,stroke:#534AB7,color:#3C3489
-    classDef roleC fill:#E1F5EE,stroke:#0F6E56,color:#085041
-    classDef roleD fill:#FAEEDA,stroke:#854F0B,color:#633806
-    classDef data  fill:#F1EFE8,stroke:#888780,color:#2C2C2A
+    classDef before fill:#E6F1FB,stroke:#185FA5,color:#0C447C
+    classDef running fill:#E1F5EE,stroke:#0F6E56,color:#085041
+    classDef after  fill:#EEEDFE,stroke:#534AB7,color:#3C3489
+    classDef data   fill:#F1EFE8,stroke:#888780,color:#2C2C2A
 
-    class WA,ME,EV roleA
-    class LA,AG roleB
-    class SS,XS roleC
-    class DB roleD
-    class ws,rc,gd,tr,mc,ev,fb data
+    class WA,LI,LA,AG before
+    class XV,SS,TP,ME,ED,RC running
+    class TE,FG,DB after
+    class ws,rc,gd,tr,mt,re,co,te,fb data
 ```
 
 ---
 
 ### 3. Data Format Reference
 
-| File | Format | Producer | Consumer | Role |
-|------|--------|----------|----------|------|
-| `workloads/*.json` | JSON array | Manual / Role A | `workload_analyzer.py` | A |
-| `workload_summary.json` | JSON object | `workload_analyzer.py` | `llm_advisor.py` | A |
-| `recommendation.json` | JSON object | `llm_advisor.py` | `algorithm_guard.py`, `evaluator.py`, dashboard | B |
-| `guard_decision.json` | JSON object | `algorithm_guard.py` | `scheduler_simulator.py`, xv6 | B |
-| `trace.jsonl` | JSON Lines | xv6 / `scheduler_simulator.py` | `metrics.py`, dashboard | C |
-| `all_metrics.csv` | CSV | `metrics.py` | `evaluator.py`, dashboard | A |
-| `evaluation_result.csv` | CSV | `evaluator.py` | dashboard | A |
-| `prompt_feedback_rules.md` | Markdown | `evaluator.py` | `llm_advisor.py` (next run, fail only) | B |
+| File | Format | Producer | Consumer |
+|------|--------|----------|----------|
+| `workloads/*.json` | JSON array | Manual | `workload_analyzer.py` |
+| `workload_summary.json` | JSON object | `workload_analyzer.py` | `llm_advisor.py` |
+| `recommendation.json` | JSON object | `llm_advisor.py` | `algorithm_guard.py`, dashboard |
+| `guard_decision.json` | JSON object | `algorithm_guard.py` | xv6 / `scheduler_simulator.py` |
+| `trace.jsonl` | JSON Lines | xv6 / `scheduler_simulator.py` | `trace_parser.py`, `trace_explainer.py`, dashboard |
+| `metrics.json` | JSON object | `metrics.py` | `trace_explainer.py`, `feedback_generator.py`, dashboard |
+| `runtime_events.json` | JSON object | `event_detector.py` | `runtime_correction.py`, dashboard |
+| `correction.json` | JSON object | `runtime_correction.py` | `algorithm_guard.py` → xv6 / simulator |
+| `trace_explanation.json` | JSON object | `trace_explainer.py` | dashboard |
+| `feedback_rules.md` | Markdown | `feedback_generator.py` | `llm_advisor.py` (next run, fail only) |
 
 ---
 
-### 4. Role Legend
+### 4. Phase Legend
 
-| Role | Color | Responsibility |
-|------|-------|----------------|
-| **A** | Blue | Workload definition · Metrics calculation · LLM recommendation evaluation |
-| **B** | Purple | LLM advisor · Algorithm guard (validate/warn/override) · Prompt feedback |
-| **C** | Teal | Scheduler engine · xv6 integration · Trace generation |
-| **D** | Amber | Dashboard · Visualization · Integration · Documentation |
+| Phase | Color | Modules |
+|-------|-------|---------|
+| **Before Running** | Blue | Workload Analyzer · LLM Workload Interpreter · LLM Scheduling Algorithm Advisor · Algorithm Guard |
+| **Running** | Teal | xv6 Scheduling Algorithm Execution · Scheduler Simulator · Trace Collector · Trace Parser · Metrics Evaluator · Event Detector · Runtime Correction Proposer |
+| **After Running** | Purple | Trace Explainer · Feedback Rule Generator · GUI Observability Dashboard |
 
 ---
 
@@ -204,222 +256,179 @@ throughput      = completed_process_count / total_execution_time
 
 ### 6. Key Design Rules
 
-- **LLM does NOT control the scheduler directly.** It outputs `recommendation.json` only.
-- **Algorithm Guard** validates that the recommended algorithm exists in xv6 and is logically consistent with the target metric. It may warn or override.
-- **Feedback loop** fires only on `fail` evaluation — `near-success` is accepted without prompt update.
+- **LLM is not the scheduler.** It outputs `recommendation.json` and `correction.json` only.
+- **xv6 is the execution authority.** All Scheduling Algorithm execution happens inside xv6 (or the simulator as a fallback).
+- **Algorithm Guard** validates every LLM output — recommendation and runtime correction — before it is applied.
+- **Runtime correction** is applied from the next scheduling point, not mid-tick.
+- **Future CPU bursts** must not be given to the LLM as input.
+- **Feedback loop** fires only on `FAIL` evaluation.
 - **RR baseline** must always be preserved as a comparison reference.
-- **API key** lives in `.env` only — never committed to Git. Add `.env` to `.gitignore`.
-- **xv6 kernel C** follows K&R style with tabs for indentation.
+- **API key** lives in `.env` only — never committed to Git.
+- **All module interfaces** use JSON or JSON Lines (JSONL). Do not use CSV for new interfaces.
 
 ---
 
-### 7. How Each Teammate Should Use This Diagram
+### 7. One-Line Summary
 
-**Role A — Workload / Metrics / Evaluation**
-Use the execution flow to locate your three modules: workload definition (step 1), metrics calculation (after trace arrives), and LLM recommendation evaluation (final verdict). Every file you write must match the Data Format Reference table exactly so that downstream modules B, C, and D can consume it without any conversion.
-
-**Role B — LLM Advisor / Algorithm Guard / Prompt Feedback**
-Your modules form the decision layer. `llm_advisor.py` reads `workload_summary.json` and must output `recommendation.json` in the agreed schema — a scheduling algorithm recommendation, not a direct scheduler command. `algorithm_guard.py` then validates that output: it checks whether the recommended algorithm is implemented in xv6 and whether it is logically consistent with the target metric, and may warn or override if not. When `evaluator.py` returns `fail`, your feedback module rewrites `prompt_feedback_rules.md`, which is re-injected into the next LLM prompt. The LLM must never touch xv6 state directly.
-
-**Role C — Scheduler Engine / Trace Generation**
-You own the xv6 kernel modifications and the host-side simulator. Both paths must emit `trace.jsonl` in the exact event format agreed in Phase 0 (`ARRIVE`, `DISPATCH`, `PREEMPT`, `EXIT`). The simulator is the default development path; xv6 integration is optional but uses the same output format. Never change the trace schema without first coordinating with Role A (metrics parser) and Role D (dashboard reader).
-
-**Role D — Dashboard / Integration / Documentation**
-`dashboard.py` is the only module that consumes all four data files simultaneously (`trace.jsonl`, `all_metrics.csv`, `recommendation.json`, `evaluation_result.csv`). Use the module interaction diagram to verify file paths and reading order before coding. Keep this architecture diagram current as the system evolves — it is the team's single source of truth for interfaces between modules.
+> **LLM suggests. Algorithm Guard checks. xv6 executes. Metrics verify. GUI explains.**
 
 ---
 ---
 
 ## ─── 한글 버전 ──────────────────────────────────────────────────────────────
 
-### 1. 실행 흐름
+### 1. 3단계 실행 흐름
 
 ```mermaid
 flowchart TD
-    W0["📁 워크로드 정의
-    workloads/*.json
-    ─────────────────
-    담당 A"]
+    subgraph BEFORE ["⬛ 실행 전 (BEFORE RUNNING)"]
+        direction TB
+        B0["📁 워크로드 정의
+        workloads/*.json"]
 
-    W1["🔍 워크로드 분석기
-    tools/workload_analyzer.py
-    ─────────────────
-    담당 A"]
+        B1["🔍 워크로드 분석기
+        tools/workload_analyzer.py
+        ─────────────────
+        관찰 가능한 워크로드 특성을 요약"]
 
-    W2["🤖 LLM 스케줄링 어드바이저
-    tools/llm_advisor.py · Solar Pro 3 API
-    ─────────────────
-    담당 B"]
+        B2["🧠 LLM 워크로드 인터프리터
+        tools/llm_advisor.py · Solar Pro 3 API
+        ─────────────────
+        워크로드 유형 · 위험 · 목표 메트릭 추론"]
 
-    W3["🛡️ 알고리즘 가드
-    tools/algorithm_guard.py
-    ─────────────────
-    담당 B  ·  검증 / 경고 / 오버라이드"]
+        B3["🤖 LLM 스케줄링 알고리즘 어드바이저
+        tools/llm_advisor.py · Solar Pro 3 API
+        ─────────────────
+        스케줄링 알고리즘 + 파라미터 추천"]
 
-    W4A["⚙️ xv6 스케줄러
-    xv6-riscv/  ·  선택적 통합
-    ─────────────────
-    담당 C  ·  RR · FCFS · Priority · MLFQ"]
+        B4["🛡️ 알고리즘 가드
+        tools/algorithm_guard.py
+        ─────────────────
+        LLM 출력 검증 — 수락 / 경고 / 거부"]
 
-    W4B["🖥️ 스케줄러 시뮬레이터
-    tools/scheduler_simulator.py
-    ─────────────────
-    담당 C  ·  호스트 측 시뮬레이션"]
+        B0 --> B1
+        B1 -->|"workload_summary.json"| B2
+        B2 -->|"워크로드 해석"| B3
+        B3 -->|"recommendation.json"| B4
+    end
 
-    W5["📋 트레이스 수집기
-    xv6 내장 / 시뮬레이터
-    ─────────────────
-    담당 C  ·  ARRIVE · DISPATCH · PREEMPT · EXIT"]
+    subgraph RUNNING ["🟩 실행 중 (RUNNING)"]
+        direction TB
+        R0A["⚙️ xv6 스케줄링 알고리즘 실행
+        xv6-riscv/kernel/
+        ─────────────────
+        최종 목표 · RR · FCFS · Priority · MLFQ"]
 
-    W6["📊 메트릭 평가기
-    tools/metrics.py
-    ─────────────────
-    담당 A  ·  WT · RT · TAT · 처리량 · 기아 현상"]
+        R0B["🖥️ 스케줄러 시뮬레이터
+        tools/scheduler_simulator.py
+        ─────────────────
+        개발 대체 경로 · 호스트 측 시뮬레이션"]
 
-    W7["🏆 LLM 추천 평가기
-    tools/evaluator.py
-    ─────────────────
-    담당 A  ·  success · near-success · fail"]
+        R1["📋 스케줄링 트레이스 수집기
+        xv6 내장 / 시뮬레이터
+        ─────────────────
+        ARRIVE · DISPATCH · PREEMPT · SLEEP · WAKEUP · EXIT"]
 
-    W8["🔄 프롬프트 피드백
-    tools/llm_advisor.py  ·  피드백 모드
-    ─────────────────
-    담당 B  ·  fail 시에만 프롬프트 규칙 갱신"]
+        R2["🔎 트레이스 파서
+        tools/trace_parser.py
+        ─────────────────
+        trace.jsonl을 구조화된 레코드로 파싱"]
 
-    W9["🖼️ 대시보드
-    dashboard/dashboard.py
-    ─────────────────
-    담당 D  ·  Gantt · 큐 · 메트릭 · 비교"]
+        R3["📊 메트릭 평가기
+        tools/metrics.py
+        ─────────────────
+        WT · RT · TAT · 처리량 · 기아 · 선점 횟수"]
 
-    W0  -->|"workload.json"| W1
-    W1  -->|"workload_summary.json"| W2
-    W2  -->|"recommendation.json"| W3
-    W3  -->|"guard_decision.json ✓"| W4A
-    W3  -->|"guard_decision.json ✓"| W4B
-    W4A -->|"trace.jsonl"| W5
-    W4B -->|"trace.jsonl"| W5
-    W5  -->|"trace.jsonl"| W6
-    W6  -->|"all_metrics.csv"| W7
-    W2  -.->|"recommendation.json"| W7
-    W7  -->|"evaluation_result.csv"| W8
-    W8  -.->|"prompt_feedback_rules.md  ·  fail 시에만"| W2
-    W6  -->|"all_metrics.csv"| W9
-    W7  -->|"evaluation_result.csv"| W9
-    W5  -->|"trace.jsonl"| W9
-    W2  -.->|"recommendation.json"| W9
+        R4["🚨 이벤트 감지기
+        tools/event_detector.py
+        ─────────────────
+        기아 · 응답 시간 불량 · CPU 독점 감지"]
 
-    classDef roleA fill:#E6F1FB,stroke:#185FA5,color:#0C447C
-    classDef roleB fill:#EEEDFE,stroke:#534AB7,color:#3C3489
-    classDef roleC fill:#E1F5EE,stroke:#0F6E56,color:#085041
-    classDef roleD fill:#FAEEDA,stroke:#854F0B,color:#633806
+        R5["🔄 런타임 보정 제안기
+        tools/runtime_correction.py · LLM
+        ─────────────────
+        보정 제안 → 알고리즘 가드 → 다음 틱 적용"]
 
-    class W0,W1,W6,W7 roleA
-    class W2,W3,W8 roleB
-    class W4A,W4B,W5 roleC
-    class W9 roleD
+        R0A -->|"trace.jsonl"| R1
+        R0B -->|"trace.jsonl"| R1
+        R1  -->|"trace.jsonl"| R2
+        R2  -->|"파싱된 레코드"| R3
+        R2  -->|"파싱된 레코드"| R4
+        R4  -->|"runtime_events.json"| R5
+        R5  -->|"correction.json → 가드 → 다음 스케줄링 시점"| R0A
+        R5  -->|"correction.json → 가드 → 다음 스케줄링 시점"| R0B
+    end
+
+    subgraph AFTER ["🟦 실행 후 (AFTER RUNNING)"]
+        direction TB
+        A1["💬 트레이스 설명기
+        tools/trace_explainer.py · LLM
+        ─────────────────
+        트레이스 + 메트릭을 자연어로 설명"]
+
+        A2["📝 피드백 규칙 생성기
+        tools/feedback_generator.py · LLM
+        ─────────────────
+        LLM 추천 실패 시 규칙 생성"]
+
+        A3["🖼️ GUI 관측 대시보드
+        dashboard/dashboard.py
+        ─────────────────
+        Gantt · 큐 · 메트릭 · 보정 · 설명"]
+
+        A1 --> A3
+        A2 --> A3
+        A2 -.->|"feedback_rules.md · 다음 실행"| B3
+    end
+
+    B4 -->|"guard_decision.json ✓"| R0A
+    B4 -->|"guard_decision.json ✓"| R0B
+    R3 -->|"metrics.json"| A1
+    R3 -->|"metrics.json"| A2
+    R3 -->|"metrics.json"| A3
+    R1 -->|"trace.jsonl"| A1
+    R1 -->|"trace.jsonl"| A3
+    R4 -->|"runtime_events.json"| A3
+
+    classDef before fill:#E6F1FB,stroke:#185FA5,color:#0C447C
+    classDef running fill:#E1F5EE,stroke:#0F6E56,color:#085041
+    classDef after  fill:#EEEDFE,stroke:#534AB7,color:#3C3489
+
+    class B0,B1,B2,B3,B4 before
+    class R0A,R0B,R1,R2,R3,R4,R5 running
+    class A1,A2,A3 after
 ```
 
 ---
 
-### 2. 모듈 상호작용 — 파일 입출력
+### 2. 데이터 형식 레퍼런스
 
-```mermaid
-flowchart LR
-    subgraph INPUT ["📂 입력 데이터"]
-        WJ["workloads/*.json"]
-    end
-
-    subgraph TOOLS ["🛠️ tools/"]
-        WA["workload_analyzer.py · A"]
-        LA["llm_advisor.py · B"]
-        AG["algorithm_guard.py · B"]
-        SS["scheduler_simulator.py · C"]
-        ME["metrics.py · A"]
-        EV["evaluator.py · A"]
-    end
-
-    subgraph XV6 ["🐧 xv6-riscv/  (선택)"]
-        XS["kernel/proc.c + scheduler.c · C"]
-    end
-
-    subgraph DASH ["📊 dashboard/"]
-        DB["dashboard.py · D"]
-    end
-
-    subgraph FILES ["📄 중간 데이터 파일"]
-        ws["workload_summary.json"]
-        rc["recommendation.json"]
-        gd["guard_decision.json"]
-        tr["trace.jsonl"]
-        mc["all_metrics.csv"]
-        ev["evaluation_result.csv"]
-        fb["prompt_feedback_rules.md"]
-    end
-
-    WJ -->|읽기| WA
-    WA -->|쓰기| ws
-    ws -->|읽기| LA
-    LA -->|쓰기| rc
-    rc -->|읽기| AG
-    AG -->|쓰기| gd
-    gd -->|읽기| SS
-    gd -->|읽기| XS
-    SS -->|쓰기| tr
-    XS -->|쓰기| tr
-    tr -->|읽기| ME
-    ME -->|쓰기| mc
-    rc -->|읽기| EV
-    mc -->|읽기| EV
-    EV -->|쓰기| ev
-    EV -->|쓰기  ·  fail 시에만| fb
-    fb -.->|읽기  ·  다음 실행| LA
-    tr -->|읽기| DB
-    mc -->|읽기| DB
-    rc -->|읽기| DB
-    ev -->|읽기| DB
-
-    classDef roleA fill:#E6F1FB,stroke:#185FA5,color:#0C447C
-    classDef roleB fill:#EEEDFE,stroke:#534AB7,color:#3C3489
-    classDef roleC fill:#E1F5EE,stroke:#0F6E56,color:#085041
-    classDef roleD fill:#FAEEDA,stroke:#854F0B,color:#633806
-    classDef data  fill:#F1EFE8,stroke:#888780,color:#2C2C2A
-
-    class WA,ME,EV roleA
-    class LA,AG roleB
-    class SS,XS roleC
-    class DB roleD
-    class ws,rc,gd,tr,mc,ev,fb data
-```
+| 파일 | 형식 | 생성 모듈 | 소비 모듈 |
+|------|------|-----------|-----------|
+| `workloads/*.json` | JSON 배열 | 수동 | `workload_analyzer.py` |
+| `workload_summary.json` | JSON 객체 | `workload_analyzer.py` | `llm_advisor.py` |
+| `recommendation.json` | JSON 객체 | `llm_advisor.py` | `algorithm_guard.py`, 대시보드 |
+| `guard_decision.json` | JSON 객체 | `algorithm_guard.py` | xv6 / `scheduler_simulator.py` |
+| `trace.jsonl` | JSON Lines | xv6 / `scheduler_simulator.py` | `trace_parser.py`, `trace_explainer.py`, 대시보드 |
+| `metrics.json` | JSON 객체 | `metrics.py` | `trace_explainer.py`, `feedback_generator.py`, 대시보드 |
+| `runtime_events.json` | JSON 객체 | `event_detector.py` | `runtime_correction.py`, 대시보드 |
+| `correction.json` | JSON 객체 | `runtime_correction.py` | `algorithm_guard.py` → xv6 / 시뮬레이터 |
+| `trace_explanation.json` | JSON 객체 | `trace_explainer.py` | 대시보드 |
+| `feedback_rules.md` | 마크다운 | `feedback_generator.py` | `llm_advisor.py` (다음 실행, fail 시에만) |
 
 ---
 
-### 3. 데이터 형식 레퍼런스
+### 3. 단계별 범례
 
-| 파일 | 형식 | 생성 모듈 | 소비 모듈 | 담당 |
-|------|------|-----------|-----------|------|
-| `workloads/*.json` | JSON 배열 | 수동 / 담당 A | `workload_analyzer.py` | A |
-| `workload_summary.json` | JSON 객체 | `workload_analyzer.py` | `llm_advisor.py` | A |
-| `recommendation.json` | JSON 객체 | `llm_advisor.py` | `algorithm_guard.py`, `evaluator.py`, 대시보드 | B |
-| `guard_decision.json` | JSON 객체 | `algorithm_guard.py` | `scheduler_simulator.py`, xv6 | B |
-| `trace.jsonl` | JSON Lines | xv6 / `scheduler_simulator.py` | `metrics.py`, 대시보드 | C |
-| `all_metrics.csv` | CSV | `metrics.py` | `evaluator.py`, 대시보드 | A |
-| `evaluation_result.csv` | CSV | `evaluator.py` | 대시보드 | A |
-| `prompt_feedback_rules.md` | 마크다운 | `evaluator.py` | `llm_advisor.py` (다음 실행, fail 시에만) | B |
+| 단계 | 색상 | 모듈 |
+|------|------|------|
+| **실행 전** | 파란색 | 워크로드 분석기 · LLM 워크로드 인터프리터 · LLM 스케줄링 알고리즘 어드바이저 · 알고리즘 가드 |
+| **실행 중** | 청록색 | xv6 스케줄링 알고리즘 실행 · 스케줄러 시뮬레이터 · 트레이스 수집기 · 트레이스 파서 · 메트릭 평가기 · 이벤트 감지기 · 런타임 보정 제안기 |
+| **실행 후** | 보라색 | 트레이스 설명기 · 피드백 규칙 생성기 · GUI 관측 대시보드 |
 
 ---
 
-### 4. 역할 범례
-
-| 역할 | 색상 | 담당 업무 |
-|------|------|-----------|
-| **A** | 파란색 | 워크로드 정의 · 메트릭 계산 · LLM 추천 평가 |
-| **B** | 보라색 | LLM 어드바이저 · 알고리즘 가드(검증/경고/오버라이드) · 프롬프트 피드백 |
-| **C** | 청록색 | 스케줄러 엔진 · xv6 연동 · 트레이스 생성 |
-| **D** | 황색 | 대시보드 · 시각화 · 통합 · 문서화 |
-
----
-
-### 5. 메트릭 정의
+### 4. 메트릭 정의
 
 ```
 응답 시간 (response_time)   = first_run_time − arrival_time
@@ -430,27 +439,20 @@ flowchart LR
 
 ---
 
-### 6. 핵심 개발 규칙
+### 5. 핵심 설계 규칙
 
-- **LLM은 스케줄러를 직접 제어하지 않는다.** `recommendation.json`만 출력하며, 실제 실행은 xv6 또는 시뮬레이터가 담당한다.
-- **알고리즘 가드**는 추천 알고리즘이 xv6에 실제로 구현되어 있는지, 목표 메트릭과 논리적으로 일치하는지 검증한다. 문제가 있으면 경고하거나 오버라이드한다.
-- **피드백 루프**는 `fail` 평가 시에만 동작한다. `near-success`는 피드백 없이 수용한다.
+- **LLM은 스케줄러가 아니다.** `recommendation.json`과 `correction.json`만 출력한다.
+- **xv6가 실행 권한을 갖는다.** 모든 스케줄링 알고리즘 실행은 xv6(또는 시뮬레이터)에서 이루어진다.
+- **알고리즘 가드**는 LLM의 모든 출력(추천 및 런타임 보정)을 적용 전 검증한다.
+- **런타임 보정**은 다음 스케줄링 시점에 적용된다. 매 타이머 틱마다 LLM을 호출하지 않는다.
+- **미래 CPU 버스트**는 LLM에게 입력으로 제공하지 않는다.
+- **피드백 루프**는 `FAIL` 평가 시에만 동작한다.
 - **RR 베이스라인**은 항상 비교 기준으로 보존되어야 한다.
-- **API 키**는 `.env`에만 저장하고 절대 Git에 커밋하지 않는다. `.env`를 `.gitignore`에 추가할 것.
-- **xv6 커널 C 코드**는 K&R 스타일을 따르며, 들여쓰기는 탭을 사용한다.
+- **API 키**는 `.env`에만 저장하고 절대 Git에 커밋하지 않는다.
+- **모든 모듈 인터페이스**는 JSON 또는 JSON Lines(JSONL)를 사용한다.
 
 ---
 
-### 7. 각 팀원이 개발할 때 이 다이어그램을 어떻게 사용해야 하는가
+### 6. 한 줄 요약
 
-**담당 A — 워크로드 / 메트릭 / 평가**
-실행 흐름 다이어그램에서 자신이 맡은 세 단계를 확인한다. 워크로드 정의(첫 단계), 트레이스 도착 후 메트릭 계산, LLM 추천 성공 여부를 판정하는 최종 평가 단계가 그것이다. 자신이 출력하는 파일 형식이 데이터 형식 레퍼런스 테이블과 반드시 일치해야 한다. 다운스트림 모듈(B, C, D)이 변환 없이 바로 소비할 수 있어야 한다.
-
-**담당 B — LLM 어드바이저 / 알고리즘 가드 / 프롬프트 피드백**
-시스템의 판단 계층을 담당한다. `llm_advisor.py`는 `workload_summary.json`을 읽고 합의된 스키마의 `recommendation.json`을 출력해야 한다. 이 출력은 스케줄러에 대한 직접 명령이 아닌 알고리즘 추천이다. `algorithm_guard.py`는 그 출력을 검증하여, 추천 알고리즘이 xv6에 구현되어 있지 않거나 목표 메트릭과 맞지 않으면 경고 또는 오버라이드한다. `evaluator.py`가 `fail`을 반환하면 피드백 모듈이 `prompt_feedback_rules.md`를 재작성하고, 다음 LLM 호출 시 이를 다시 읽는다. LLM이 xv6 상태를 직접 건드리는 일은 절대 없어야 한다.
-
-**담당 C — 스케줄러 엔진 / 트레이스 생성**
-xv6 커널 수정과 호스트 측 시뮬레이터 전체를 담당한다. 두 경로 모두 Phase 0에서 합의한 이벤트 형식(`ARRIVE`, `DISPATCH`, `PREEMPT`, `EXIT`)으로 `trace.jsonl`을 출력해야 한다. 시뮬레이터가 기본 개발 경로이며, xv6 통합은 선택이지만 동일한 출력 형식을 사용한다. 트레이스 스키마를 변경할 때는 반드시 먼저 담당 A(메트릭 파서)와 담당 D(대시보드)에 공유할 것.
-
-**담당 D — 대시보드 / 통합 / 문서화**
-`dashboard.py`는 네 가지 데이터 파일(`trace.jsonl`, `all_metrics.csv`, `recommendation.json`, `evaluation_result.csv`)을 동시에 읽는 유일한 소비자다. 모듈 상호작용 다이어그램으로 파일 경로와 읽기 순서를 코딩 전에 반드시 확인할 것. 시스템이 발전하면서 이 아키텍처 다이어그램을 최신 상태로 유지하는 것도 담당 D의 역할이다. 이 다이어그램은 모듈 간 인터페이스에 대한 팀의 단일 진실 공급원(Single Source of Truth)이다.
+> **LLM이 제안한다. 알고리즘 가드가 검증한다. xv6가 실행한다. 메트릭이 검증한다. GUI가 설명한다.**
