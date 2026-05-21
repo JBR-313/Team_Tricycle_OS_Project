@@ -1,177 +1,291 @@
 [
     {
-        "pid":1,
-        "arrival_time":0,
-        "cpu_burst":1,
-        "priority":1,
-        "type":"interactive"
+        "pid": 1,
+        "arrival_time": 0,
+        "cpu_bursts": [
+            1
+        ],
+        "io_bursts": [],
+        "priority": 1,
+        "label": "interactive"
     },
     {
-        "pid":2,
-        "arrival_time":1,
-        "cpu_burst":2,
-        "priority":1,
-        "type":"interactive"
+        "pid": 2,
+        "arrival_time": 1,
+        "cpu_bursts": [
+            1,
+            1
+        ],
+        "io_bursts": [
+            3
+        ],
+        "priority": 1,
+        "label": "interactive"
     },
     {
-        "pid":3,
-        "arrival_time":2,
-        "cpu_burst":1,
-        "priority":1,
-        "type":"interactive"
+        "pid": 3,
+        "arrival_time": 2,
+        "cpu_bursts": [
+            1
+        ],
+        "io_bursts": [],
+        "priority": 1,
+        "label": "interactive"
     },
     {
-        "pid":4,
-        "arrival_time":3,
-        "cpu_burst":2,
-        "priority":1,
-        "type":"interactive"
+        "pid": 4,
+        "arrival_time": 3,
+        "cpu_bursts": [
+            1,
+            1
+        ],
+        "io_bursts": [
+            3
+        ],
+        "priority": 1,
+        "label": "interactive"
     },
     {
-        "pid":5,
-        "arrival_time":4,
-        "cpu_burst":1,
-        "priority":1,
-        "type":"interactive"
+        "pid": 5,
+        "arrival_time": 4,
+        "cpu_bursts": [
+            1
+        ],
+        "io_bursts": [],
+        "priority": 1,
+        "label": "interactive"
     },
     {
-        "pid":6,
-        "arrival_time":5,
-        "cpu_burst":2,
-        "priority":1,
-        "type":"interactive"
+        "pid": 6,
+        "arrival_time": 5,
+        "cpu_bursts": [
+            1,
+            1
+        ],
+        "io_bursts": [
+            3
+        ],
+        "priority": 1,
+        "label": "interactive"
     },
     {
-        "pid":7,
-        "arrival_time":6,
-        "cpu_burst":1,
-        "priority":1,
-        "type":"interactive"
+        "pid": 7,
+        "arrival_time": 6,
+        "cpu_bursts": [
+            1
+        ],
+        "io_bursts": [],
+        "priority": 1,
+        "label": "interactive"
     },
     {
-        "pid":8,
-        "arrival_time":7,
-        "cpu_burst":2,
-        "priority":1,
-        "type":"interactive"
+        "pid": 8,
+        "arrival_time": 7,
+        "cpu_bursts": [
+            1,
+            1
+        ],
+        "io_bursts": [
+            3
+        ],
+        "priority": 1,
+        "label": "interactive"
     },
     {
-        "pid":9,
-        "arrival_time":8,
-        "cpu_burst":1,
-        "priority":1,
-        "type":"interactive"
+        "pid": 9,
+        "arrival_time": 8,
+        "cpu_bursts": [
+            1
+        ],
+        "io_bursts": [],
+        "priority": 1,
+        "label": "interactive"
     },
     {
-        "pid":10,
-        "arrival_time":9,
-        "cpu_burst":1,
-        "priority":1,
-        "type":"interactive"
+        "pid": 10,
+        "arrival_time": 9,
+        "cpu_bursts": [
+            1
+        ],
+        "io_bursts": [],
+        "priority": 1,
+        "label": "interactive"
     },
     {
-        "pid":11,
-        "arrival_time":10,
-        "cpu_burst":2,
-        "priority":1,
-        "type":"interactive"
+        "pid": 11,
+        "arrival_time": 10,
+        "cpu_bursts": [
+            1,
+            1
+        ],
+        "io_bursts": [
+            3
+        ],
+        "priority": 1,
+        "label": "interactive"
     },
     {
-        "pid":12,
-        "arrival_time":11,
-        "cpu_burst":2,
-        "priority":1,
-        "type":"interactive"
+        "pid": 12,
+        "arrival_time": 11,
+        "cpu_bursts": [
+            1,
+            1
+        ],
+        "io_bursts": [
+            3
+        ],
+        "priority": 1,
+        "label": "interactive"
     },
     {
-        "pid":13,
-        "arrival_time":12,
-        "cpu_burst":2,
-        "priority":1,
-        "type":"interactive"
+        "pid": 13,
+        "arrival_time": 12,
+        "cpu_bursts": [
+            1,
+            1
+        ],
+        "io_bursts": [
+            3
+        ],
+        "priority": 1,
+        "label": "interactive"
     },
     {
-        "pid":14,
-        "arrival_time":13,
-        "cpu_burst":1,
-        "priority":1,
-        "type":"interactive"
+        "pid": 14,
+        "arrival_time": 13,
+        "cpu_bursts": [
+            1
+        ],
+        "io_bursts": [],
+        "priority": 1,
+        "label": "interactive"
     },
     {
-        "pid":15,
-        "arrival_time":14,
-        "cpu_burst":2,
-        "priority":1,
-        "type":"interactive"
+        "pid": 15,
+        "arrival_time": 14,
+        "cpu_bursts": [
+            1,
+            1
+        ],
+        "io_bursts": [
+            3
+        ],
+        "priority": 1,
+        "label": "interactive"
     },
     {
-        "pid":16,
-        "arrival_time":15,
-        "cpu_burst":1,
-        "priority":1,
-        "type":"interactive"
+        "pid": 16,
+        "arrival_time": 15,
+        "cpu_bursts": [
+            1
+        ],
+        "io_bursts": [],
+        "priority": 1,
+        "label": "interactive"
     },
     {
-        "pid":17,
-        "arrival_time":16,
-        "cpu_burst":2,
-        "priority":1,
-        "type":"interactive"
+        "pid": 17,
+        "arrival_time": 16,
+        "cpu_bursts": [
+            1,
+            1
+        ],
+        "io_bursts": [
+            3
+        ],
+        "priority": 1,
+        "label": "interactive"
     },
     {
-        "pid":18,
-        "arrival_time":17,
-        "cpu_burst":1,
-        "priority":1,
-        "type":"interactive"
+        "pid": 18,
+        "arrival_time": 17,
+        "cpu_bursts": [
+            1
+        ],
+        "io_bursts": [],
+        "priority": 1,
+        "label": "interactive"
     },
     {
-        "pid":19,
-        "arrival_time":18,
-        "cpu_burst":2,
-        "priority":1,
-        "type":"interactive"
+        "pid": 19,
+        "arrival_time": 18,
+        "cpu_bursts": [
+            1,
+            1
+        ],
+        "io_bursts": [
+            3
+        ],
+        "priority": 1,
+        "label": "interactive"
     },
     {
-        "pid":20,
-        "arrival_time":19,
-        "cpu_burst":1,
-        "priority":1,
-        "type":"interactive"
+        "pid": 20,
+        "arrival_time": 19,
+        "cpu_bursts": [
+            1
+        ],
+        "io_bursts": [],
+        "priority": 1,
+        "label": "interactive"
     },
     {
-        "pid":21,
-        "arrival_time":20,
-        "cpu_burst":2,
-        "priority":1,
-        "type":"interactive"
+        "pid": 21,
+        "arrival_time": 20,
+        "cpu_bursts": [
+            1,
+            1
+        ],
+        "io_bursts": [
+            3
+        ],
+        "priority": 1,
+        "label": "interactive"
     },
     {
-        "pid":22,
-        "arrival_time":21,
-        "cpu_burst":2,
-        "priority":1,
-        "type":"interactive"
+        "pid": 22,
+        "arrival_time": 21,
+        "cpu_bursts": [
+            1,
+            1
+        ],
+        "io_bursts": [
+            3
+        ],
+        "priority": 1,
+        "label": "interactive"
     },
     {
-        "pid":23,
-        "arrival_time":22,
-        "cpu_burst":1,
-        "priority":1,
-        "type":"interactive"
+        "pid": 23,
+        "arrival_time": 22,
+        "cpu_bursts": [
+            1
+        ],
+        "io_bursts": [],
+        "priority": 1,
+        "label": "interactive"
     },
     {
-        "pid":24,
-        "arrival_time":23,
-        "cpu_burst":2,
-        "priority":1,
-        "type":"interactive"
+        "pid": 24,
+        "arrival_time": 23,
+        "cpu_bursts": [
+            1,
+            1
+        ],
+        "io_bursts": [
+            3
+        ],
+        "priority": 1,
+        "label": "interactive"
     },
     {
-        "pid":25,
-        "arrival_time":24,
-        "cpu_burst":1,
-        "priority":1,
-        "type":"interactive"
+        "pid": 25,
+        "arrival_time": 24,
+        "cpu_bursts": [
+            1
+        ],
+        "io_bursts": [],
+        "priority": 1,
+        "label": "interactive"
     }
 ]
