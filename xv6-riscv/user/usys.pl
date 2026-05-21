@@ -42,3 +42,7 @@ entry("getpid");
 entry("sbrk");
 entry("pause");
 entry("uptime");
+entry("setscheduler");
+entry("getscheduler");
+entry("setpriority");
+entry("getpriority");

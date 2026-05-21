@@ -101,6 +101,11 @@ void            yield(void);
 int             either_copyout(int user_dst, uint64 dst, void *src, uint64 len);
 int             either_copyin(void *dst, int user_src, uint64 src, uint64 len);
 void            procdump(void);
+// scheduler API
+int             get_sched_mode(void);
+void            set_sched_mode(int);
+int             get_proc_priority(int);
+int             set_proc_priority(int, int);
 
 // swtch.S
 void            swtch(struct context*, struct context*);
@@ -142,6 +147,7 @@ void            trapinit(void);
 void            trapinithart(void);
 extern struct spinlock tickslock;
 void            prepare_return(void);
+void            timer_yield_or_tick(struct proc*);
 
 // uart.c
 void            uartinit(void);

@@ -107,3 +107,45 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+// Set the global scheduling algorithm.
+// mode: SCHED_RR=0, SCHED_FCFS=1, SCHED_PRIORITY=2, SCHED_MLFQ=3
+uint64
+sys_setscheduler(void)
+{
+  int mode;
+  argint(0, &mode);
+  if(mode < SCHED_RR || mode > SCHED_MLFQ)
+    return -1;
+  set_sched_mode(mode);
+  return 0;
+}
+
+// Return the current scheduling algorithm.
+uint64
+sys_getscheduler(void)
+{
+  return get_sched_mode();
+}
+
+// Set the scheduling priority of a process.
+// Lower number = higher priority.  Valid range: 0–20.
+uint64
+sys_setpriority(void)
+{
+  int pid, priority;
+  argint(0, &pid);
+  argint(1, &priority);
+  if(priority < 0 || priority > 20)
+    return -1;
+  return set_proc_priority(pid, priority);
+}
+
+// Return the scheduling priority of a process, or -1 if not found.
+uint64
+sys_getpriority(void)
+{
+  int pid;
+  argint(0, &pid);
+  return get_proc_priority(pid);
+}

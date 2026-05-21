@@ -79,6 +79,12 @@ struct trapframe {
   /* 280 */ uint64 t6;
 };
 
+// Scheduler mode constants
+#define SCHED_RR       0
+#define SCHED_FCFS     1
+#define SCHED_PRIORITY 2
+#define SCHED_MLFQ     3
+
 enum procstate { UNUSED, USED, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 
 // Per-process state
@@ -104,4 +110,12 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
+
+  // Scheduler fields (all protected by p->lock except ticks_in_level on CPUS=1)
+  int priority;       // scheduling priority: lower number = higher priority
+  int ctime;          // creation tick (used by FCFS/Priority for arrival order)
+  int rtime;          // total CPU ticks consumed
+  int queue_level;    // MLFQ queue level: 0=highest, 2=lowest
+  int ticks_in_level; // ticks used in current MLFQ quantum
+  int wait_ticks;     // ticks spent RUNNABLE without being scheduled
 };
