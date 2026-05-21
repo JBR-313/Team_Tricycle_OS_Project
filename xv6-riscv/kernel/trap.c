@@ -36,8 +36,14 @@ timer_yield_or_tick(struct proc *p)
   static const int mlfq_quanta[3] = {2, 4, 8};
   int mode = get_sched_mode();
 
-  if(mode == SCHED_FCFS){
-    // non-preemptive: do not yield on timer interrupt
+  // Track observed CPU usage for the running process.  This records only
+  // already-consumed CPU time; it never references the true future burst.
+  // SJF/SRTF predictions are derived solely from cur_burst_run.
+  p->cur_burst_run++;
+  p->rtime++;
+
+  if(mode == SCHED_FCFS || mode == SCHED_SJF){
+    // non-preemptive: run until the process blocks or exits
     return;
   }
 
@@ -55,7 +61,9 @@ timer_yield_or_tick(struct proc *p)
     return;
   }
 
-  // SCHED_RR and SCHED_PRIORITY: preempt on every timer tick.
+  // SCHED_RR, SCHED_PRIORITY, SCHED_SRTF: preempt on every timer tick.
+  // For SRTF every timer tick is a scheduling point, so the scheduler
+  // re-selects the smallest predicted_remaining process each tick.
   yield();
 }
 

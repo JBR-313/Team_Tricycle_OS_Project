@@ -109,13 +109,14 @@ sys_uptime(void)
 }
 
 // Set the global scheduling algorithm.
-// mode: SCHED_RR=0, SCHED_FCFS=1, SCHED_PRIORITY=2, SCHED_MLFQ=3
+// mode: SCHED_RR=0, SCHED_FCFS=1, SCHED_PRIORITY=2, SCHED_MLFQ=3,
+//       SCHED_SJF=4, SCHED_SRTF=5
 uint64
 sys_setscheduler(void)
 {
   int mode;
   argint(0, &mode);
-  if(mode < SCHED_RR || mode > SCHED_MLFQ)
+  if(mode < SCHED_RR || mode > SCHED_SRTF)
     return -1;
   set_sched_mode(mode);
   return 0;
@@ -148,4 +149,38 @@ sys_getpriority(void)
   int pid;
   argint(0, &pid);
   return get_proc_priority(pid);
+}
+
+// Set the global burst-predictor parameters for SJF/SRTF.
+// args: alpha_percent, initial_predicted_burst, min_predicted_burst,
+//       max_predicted_burst.  Returns 0 on success, -1 if out of range.
+// These are predictor parameters only; no actual future CPU burst is accepted.
+uint64
+sys_setpredictor(void)
+{
+  int alpha, initial, min_b, max_b;
+  argint(0, &alpha);
+  argint(1, &initial);
+  argint(2, &min_b);
+  argint(3, &max_b);
+
+  // Validate ranges before applying (Algorithm Guard mirror at the kernel edge).
+  if(alpha < 0 || alpha > 100)
+    return -1;
+  if(min_b < 1 || max_b < min_b || max_b > 100000)
+    return -1;
+  if(initial < 1)
+    return -1;
+
+  return set_predictor_params(alpha, initial, min_b, max_b);
+}
+
+// Return the current predicted next-burst length for a pid, or -1 if not found.
+// This is a prediction, never the true future burst.
+uint64
+sys_getpredictor(void)
+{
+  int pid;
+  argint(0, &pid);
+  return get_predicted_burst(pid);
 }

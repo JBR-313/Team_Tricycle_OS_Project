@@ -24,3 +24,5 @@
 #define SYS_getscheduler 23
 #define SYS_setpriority  24
 #define SYS_getpriority  25
+#define SYS_setpredictor 26
+#define SYS_getpredictor 27

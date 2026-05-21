@@ -106,6 +106,8 @@ int             get_sched_mode(void);
 void            set_sched_mode(int);
 int             get_proc_priority(int);
 int             set_proc_priority(int, int);
+int             set_predictor_params(int, int, int, int);
+int             get_predicted_burst(int);
 
 // swtch.S
 void            swtch(struct context*, struct context*);

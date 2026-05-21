@@ -5,6 +5,8 @@
 #define SCHED_FCFS     1
 #define SCHED_PRIORITY 2
 #define SCHED_MLFQ     3
+#define SCHED_SJF      4
+#define SCHED_SRTF     5
 
 #define NCHILD 3
 
@@ -24,7 +26,7 @@ main(int argc, char *argv[])
   int mode;
 
   if(argc < 2){
-    printf("usage: schedtest rr|fcfs|priority|mlfq\n");
+    printf("usage: schedtest rr|fcfs|priority|mlfq|sjf|srtf\n");
     exit(1);
   }
 
@@ -36,6 +38,10 @@ main(int argc, char *argv[])
     mode = SCHED_PRIORITY;
   else if(strcmp(argv[1], "mlfq") == 0)
     mode = SCHED_MLFQ;
+  else if(strcmp(argv[1], "sjf") == 0)
+    mode = SCHED_SJF;
+  else if(strcmp(argv[1], "srtf") == 0)
+    mode = SCHED_SRTF;
   else {
     printf("schedtest: unknown algo: %s\n", argv[1]);
     exit(1);
