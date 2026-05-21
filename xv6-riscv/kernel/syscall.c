@@ -105,6 +105,8 @@ extern uint64 sys_setscheduler(void);
 extern uint64 sys_getscheduler(void);
 extern uint64 sys_setpriority(void);
 extern uint64 sys_getpriority(void);
+extern uint64 sys_setpredictor(void);
+extern uint64 sys_getpredictor(void);
 
 // An array mapping syscall numbers from syscall.h
 // to the function that handles the system call.
@@ -134,6 +136,8 @@ static uint64 (*syscalls[])(void) = {
 [SYS_getscheduler] sys_getscheduler,
 [SYS_setpriority]  sys_setpriority,
 [SYS_getpriority]  sys_getpriority,
+[SYS_setpredictor] sys_setpredictor,
+[SYS_getpredictor] sys_getpredictor,
 };
 
 void

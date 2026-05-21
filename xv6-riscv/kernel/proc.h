@@ -84,6 +84,8 @@ struct trapframe {
 #define SCHED_FCFS     1
 #define SCHED_PRIORITY 2
 #define SCHED_MLFQ     3
+#define SCHED_SJF      4   // predicted SJF: nonpreemptive, smallest predicted burst
+#define SCHED_SRTF     5   // predicted SRTF: preemptive, smallest predicted remaining
 
 enum procstate { UNUSED, USED, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 
@@ -118,4 +120,10 @@ struct proc {
   int queue_level;    // MLFQ queue level: 0=highest, 2=lowest
   int ticks_in_level; // ticks used in current MLFQ quantum
   int wait_ticks;     // ticks spent RUNNABLE without being scheduled
+
+  // Burst prediction fields (SJF/SRTF). These hold only predicted and already
+  // observed values; the true future CPU burst is NEVER stored here.
+  int predicted_burst;   // exponential-average prediction of next CPU burst
+  int cur_burst_run;     // observed CPU ticks consumed so far in current burst
+  int ready_since_tick;  // tick this proc last became RUNNABLE (SJF tie-break)
 };

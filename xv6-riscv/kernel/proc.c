@@ -31,6 +31,19 @@ struct spinlock wait_lock;
 int sched_mode = SCHED_RR;
 struct spinlock sched_lock;
 
+// Global burst-predictor parameters for SJF/SRTF.  The LLM recommends these
+// before execution; they are applied via set_predictor_params() (validated in
+// the syscall layer).  Only predictions are derived from these values — actual
+// future CPU bursts are never stored or consulted.  Written under sched_lock;
+// read without a lock following the same convention as sched_mode above.
+struct predictor_params {
+  int alpha_percent;            // exponential-averaging weight, 0..100
+  int initial_predicted_burst;  // prediction assigned to a brand-new process
+  int min_predicted_burst;      // lower clamp for predictions
+  int max_predicted_burst;      // upper clamp for predictions
+};
+struct predictor_params pred = {50, 10, 1, 100};
+
 // Allocate a page for each process's kernel stack.
 // Map it high in memory, followed by an invalid
 // guard page.
@@ -139,6 +152,16 @@ found:
   p->ticks_in_level = 0;
   p->wait_ticks   = 0;
 
+  // Initialize burst-prediction fields.  A new process starts with the
+  // configured initial prediction; nothing about its true future burst is known.
+  p->predicted_burst  = pred.initial_predicted_burst;
+  if(p->predicted_burst < pred.min_predicted_burst)
+    p->predicted_burst = pred.min_predicted_burst;
+  if(p->predicted_burst > pred.max_predicted_burst)
+    p->predicted_burst = pred.max_predicted_burst;
+  p->cur_burst_run    = 0;
+  p->ready_since_tick = (int)ticks;
+
   // Allocate a trapframe page.
   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
     freeproc(p);
@@ -190,6 +213,9 @@ freeproc(struct proc *p)
   p->queue_level  = 0;
   p->ticks_in_level = 0;
   p->wait_ticks   = 0;
+  p->predicted_burst  = 0;
+  p->cur_burst_run    = 0;
+  p->ready_since_tick = 0;
 }
 
 // Create a user page table for a given process, with no user memory,
@@ -486,21 +512,90 @@ set_proc_priority(int pid, int priority)
   return -1;
 }
 
+// ── Burst predictor API (SJF/SRTF) ─────────────────────────────────────────────
+
+// Apply LLM-recommended predictor parameters.  Arguments are assumed already
+// range-validated by the syscall layer (Algorithm Guard / sys_setpredictor).
+// Returns 0 on success, -1 if the ranges are inconsistent.
+int
+set_predictor_params(int alpha_percent, int initial, int min_b, int max_b)
+{
+  if(alpha_percent < 0 || alpha_percent > 100)
+    return -1;
+  if(min_b < 1 || max_b < min_b)
+    return -1;
+  if(initial < min_b) initial = min_b;
+  if(initial > max_b) initial = max_b;
+
+  acquire(&sched_lock);
+  pred.alpha_percent           = alpha_percent;
+  pred.initial_predicted_burst = initial;
+  pred.min_predicted_burst     = min_b;
+  pred.max_predicted_burst     = max_b;
+  release(&sched_lock);
+  return 0;
+}
+
+// Return the current predicted next-burst length for a pid, or -1 if not found.
+// This is a prediction (an observable quantity), never the true future burst.
+int
+get_predicted_burst(int pid)
+{
+  struct proc *p;
+  for(p = proc; p < &proc[NPROC]; p++){
+    acquire(&p->lock);
+    if(p->pid == pid){
+      int pb = p->predicted_burst;
+      release(&p->lock);
+      return pb;
+    }
+    release(&p->lock);
+  }
+  return -1;
+}
+
+// Update a process's burst prediction at the end of an observed CPU burst,
+// using integer exponential averaging:
+//   new = (alpha*observed + (100-alpha)*old) / 100
+// Only the already-observed burst length (cur_burst_run) feeds the update; the
+// true future burst is never used.  Caller must hold p->lock.
+static void
+update_burst_prediction(struct proc *p)
+{
+  int observed = p->cur_burst_run;
+  if(observed <= 0)
+    return;  // no CPU was actually consumed; keep the prior prediction
+
+  int a   = pred.alpha_percent;
+  int lo  = pred.min_predicted_burst;
+  int hi  = pred.max_predicted_burst;
+  int np  = (a * observed + (100 - a) * p->predicted_burst) / 100;
+  if(np < lo) np = lo;
+  if(np > hi) np = hi;
+
+  p->predicted_burst = np;
+  p->cur_burst_run   = 0;
+}
+
 // ── Scheduling helpers ────────────────────────────────────────────────────────
 
 #define AGE_THRESHOLD        10   // Priority: rounds without CPU before aging
 #define MLFQ_BOOST_THRESHOLD 20   // MLFQ: rounds without CPU before promotion
 
-static const char * const sched_algo_name[] = {"RR", "FCFS", "PRIORITY", "MLFQ"};
+static const char * const sched_algo_name[] = {
+  "RR", "FCFS", "PRIORITY", "MLFQ", "SJF", "SRTF"
+};
 
 // Print one dispatch event per 5 dispatches to avoid log flooding.
+// Note: no burst value is ever emitted here, so future CPU bursts cannot leak
+// through the trace.
 static void
 sched_debug(struct proc *p, int mode)
 {
   static int dispatch_n = 0;
   dispatch_n++;
   if(dispatch_n % 5 != 0) return;
-  if(mode < 0 || mode > 3) mode = 0;
+  if(mode < 0 || mode >= (int)NELEM(sched_algo_name)) mode = 0;
   printf("[SCHED] tick=%d algo=%s event=DISPATCH pid=%d priority=%d queue=%d\n",
          ticks, sched_algo_name[mode], p->pid, p->priority, p->queue_level);
 }
@@ -669,6 +764,109 @@ sched_mlfq(struct cpu *c)
   return 0;
 }
 
+// Predicted remaining CPU time for SRTF: prediction for the burst minus what
+// has already been observed to run.  Floored at min_predicted_burst so a
+// process that overruns its prediction still has a positive, comparable key.
+// Uses only predicted and observed values — never the true future burst.
+static int
+predicted_remaining(struct proc *p)
+{
+  int rem = p->predicted_burst - p->cur_burst_run;
+  if(rem < pred.min_predicted_burst)
+    rem = pred.min_predicted_burst;
+  return rem;
+}
+
+// Predicted SJF: nonpreemptive.  Pick the RUNNABLE process with the smallest
+// predicted_burst.  Tie-break: earlier ready_since_tick, then smaller pid.
+// Two-phase to avoid holding multiple proc locks (mirrors sched_fcfs).
+static int
+sched_sjf(struct cpu *c)
+{
+  struct proc *p, *chosen = 0;
+  int best_burst = 0, best_ready = 0, best_pid = 0;
+
+  // Phase 1: find best candidate.
+  for(p = proc; p < &proc[NPROC]; p++){
+    acquire(&p->lock);
+    if(p->state == RUNNABLE){
+      if(chosen == 0 ||
+         p->predicted_burst < best_burst ||
+         (p->predicted_burst == best_burst && p->ready_since_tick < best_ready) ||
+         (p->predicted_burst == best_burst && p->ready_since_tick == best_ready &&
+          p->pid < best_pid)){
+        chosen     = p;
+        best_burst = p->predicted_burst;
+        best_ready = p->ready_since_tick;
+        best_pid   = p->pid;
+      }
+    }
+    release(&p->lock);
+  }
+  if(!chosen) return 0;
+
+  // Phase 2: re-acquire and run (re-check state in case it changed).
+  acquire(&chosen->lock);
+  if(chosen->state == RUNNABLE){
+    chosen->wait_ticks = 0;
+    chosen->state = RUNNING;
+    c->proc = chosen;
+    sched_debug(chosen, SCHED_SJF);
+    swtch(&c->context, &chosen->context);
+    c->proc = 0;
+    release(&chosen->lock);
+    return 1;
+  }
+  release(&chosen->lock);
+  return 0;
+}
+
+// Predicted SRTF: preemptive at scheduling points.  Pick the RUNNABLE process
+// with the smallest predicted_remaining.  Tie-break: earlier ready_since_tick,
+// then smaller pid.  Preemption itself happens in trap.c, which yields every
+// timer tick under SRTF so the scheduler re-selects on each scheduling point.
+static int
+sched_srtf(struct cpu *c)
+{
+  struct proc *p, *chosen = 0;
+  int best_rem = 0, best_ready = 0, best_pid = 0;
+
+  // Phase 1: find best candidate by predicted remaining time.
+  for(p = proc; p < &proc[NPROC]; p++){
+    acquire(&p->lock);
+    if(p->state == RUNNABLE){
+      int rem = predicted_remaining(p);
+      if(chosen == 0 ||
+         rem < best_rem ||
+         (rem == best_rem && p->ready_since_tick < best_ready) ||
+         (rem == best_rem && p->ready_since_tick == best_ready &&
+          p->pid < best_pid)){
+        chosen     = p;
+        best_rem   = rem;
+        best_ready = p->ready_since_tick;
+        best_pid   = p->pid;
+      }
+    }
+    release(&p->lock);
+  }
+  if(!chosen) return 0;
+
+  // Phase 2: run chosen.
+  acquire(&chosen->lock);
+  if(chosen->state == RUNNABLE){
+    chosen->wait_ticks = 0;
+    chosen->state = RUNNING;
+    c->proc = chosen;
+    sched_debug(chosen, SCHED_SRTF);
+    swtch(&c->context, &chosen->context);
+    c->proc = 0;
+    release(&chosen->lock);
+    return 1;
+  }
+  release(&chosen->lock);
+  return 0;
+}
+
 // Per-CPU process scheduler.
 // Each CPU calls scheduler() after setting itself up.
 // Scheduler never returns.
@@ -694,6 +892,12 @@ scheduler(void)
       break;
     case SCHED_MLFQ:
       found = sched_mlfq(c);
+      break;
+    case SCHED_SJF:
+      found = sched_sjf(c);
+      break;
+    case SCHED_SRTF:
+      found = sched_srtf(c);
       break;
     default:          // SCHED_RR and any unknown mode
       found = sched_rr(c);
@@ -739,6 +943,7 @@ yield(void)
   struct proc *p = myproc();
   acquire(&p->lock);
   p->state = RUNNABLE;
+  p->ready_since_tick = (int)ticks;  // re-entered ready queue (SJF/SRTF tie-break)
   sched();
   release(&p->lock);
 }
@@ -797,6 +1002,10 @@ sleep(void *chan, struct spinlock *lk)
   acquire(&p->lock);  //DOC: sleeplock1
   release(lk);
 
+  // Blocking on I/O ends the current CPU burst: fold the observed burst length
+  // into the prediction for this process's next burst (SJF/SRTF).
+  update_burst_prediction(p);
+
   // Go to sleep.
   p->chan = chan;
   p->state = SLEEPING;
@@ -823,6 +1032,7 @@ wakeup(void *chan)
       acquire(&p->lock);
       if(p->state == SLEEPING && p->chan == chan) {
         p->state = RUNNABLE;
+        p->ready_since_tick = (int)ticks;  // I/O completion: re-entered ready queue
       }
       release(&p->lock);
     }

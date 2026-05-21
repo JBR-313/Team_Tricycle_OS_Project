@@ -46,3 +46,5 @@ entry("setscheduler");
 entry("getscheduler");
 entry("setpriority");
 entry("getpriority");
+entry("setpredictor");
+entry("getpredictor");
