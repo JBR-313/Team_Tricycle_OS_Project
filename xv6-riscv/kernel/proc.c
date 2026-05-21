@@ -26,6 +26,11 @@ extern char trampoline[]; // trampoline.S
 // must be acquired before any p->lock.
 struct spinlock wait_lock;
 
+// Global scheduler mode; write via set_sched_mode(), read without lock (safe
+// on CPUS=1; a slightly stale read on multi-CPU is non-catastrophic here).
+int sched_mode = SCHED_RR;
+struct spinlock sched_lock;
+
 // Allocate a page for each process's kernel stack.
 // Map it high in memory, followed by an invalid
 // guard page.
@@ -33,7 +38,7 @@ void
 proc_mapstacks(pagetable_t kpgtbl)
 {
   struct proc *p;
-  
+
   for(p = proc; p < &proc[NPROC]; p++) {
     char *pa = kalloc();
     if(pa == 0)
@@ -48,9 +53,10 @@ void
 procinit(void)
 {
   struct proc *p;
-  
+
   initlock(&pid_lock, "nextpid");
   initlock(&wait_lock, "wait_lock");
+  initlock(&sched_lock, "sched");
   for(p = proc; p < &proc[NPROC]; p++) {
       initlock(&p->lock, "proc");
       p->state = UNUSED;
@@ -93,7 +99,7 @@ int
 allocpid()
 {
   int pid;
-  
+
   acquire(&pid_lock);
   pid = nextpid;
   nextpid = nextpid + 1;
@@ -124,6 +130,14 @@ allocproc(void)
 found:
   p->pid = allocpid();
   p->state = USED;
+
+  // Initialize scheduler fields.
+  p->priority     = 10;
+  p->ctime        = (int)ticks;
+  p->rtime        = 0;
+  p->queue_level  = 0;
+  p->ticks_in_level = 0;
+  p->wait_ticks   = 0;
 
   // Allocate a trapframe page.
   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
@@ -169,6 +183,13 @@ freeproc(struct proc *p)
   p->killed = 0;
   p->xstate = 0;
   p->state = UNUSED;
+  // reset scheduler fields
+  p->priority     = 0;
+  p->ctime        = 0;
+  p->rtime        = 0;
+  p->queue_level  = 0;
+  p->ticks_in_level = 0;
+  p->wait_ticks   = 0;
 }
 
 // Create a user page table for a given process, with no user memory,
@@ -223,7 +244,7 @@ userinit(void)
 
   p = allocproc();
   initproc = p;
-  
+
   p->cwd = namei("/");
 
   p->state = RUNNABLE;
@@ -290,6 +311,9 @@ kfork(void)
 
   safestrcpy(np->name, p->name, sizeof(p->name));
 
+  // Child inherits parent priority.
+  np->priority = p->priority;
+
   pid = np->pid;
 
   release(&np->lock);
@@ -352,7 +376,7 @@ kexit(int status)
 
   // Parent might be sleeping in wait().
   wakeup(p->parent);
-  
+
   acquire(&p->lock);
 
   p->xstate = status;
@@ -408,57 +432,276 @@ kwait(uint64 addr)
       release(&wait_lock);
       return -1;
     }
-    
+
     // Wait for a child to exit.
     sleep(p, &wait_lock);  //DOC: wait-sleep
   }
 }
 
+// ── Scheduler public API ──────────────────────────────────────────────────────
+
+int
+get_sched_mode(void)
+{
+  return sched_mode;
+}
+
+void
+set_sched_mode(int mode)
+{
+  acquire(&sched_lock);
+  sched_mode = mode;
+  release(&sched_lock);
+}
+
+int
+get_proc_priority(int pid)
+{
+  struct proc *p;
+  for(p = proc; p < &proc[NPROC]; p++){
+    acquire(&p->lock);
+    if(p->pid == pid){
+      int pri = p->priority;
+      release(&p->lock);
+      return pri;
+    }
+    release(&p->lock);
+  }
+  return -1;
+}
+
+int
+set_proc_priority(int pid, int priority)
+{
+  struct proc *p;
+  for(p = proc; p < &proc[NPROC]; p++){
+    acquire(&p->lock);
+    if(p->pid == pid){
+      p->priority = priority;
+      release(&p->lock);
+      return 0;
+    }
+    release(&p->lock);
+  }
+  return -1;
+}
+
+// ── Scheduling helpers ────────────────────────────────────────────────────────
+
+#define AGE_THRESHOLD        10   // Priority: rounds without CPU before aging
+#define MLFQ_BOOST_THRESHOLD 20   // MLFQ: rounds without CPU before promotion
+
+static const char * const sched_algo_name[] = {"RR", "FCFS", "PRIORITY", "MLFQ"};
+
+// Print one dispatch event per 5 dispatches to avoid log flooding.
+static void
+sched_debug(struct proc *p, int mode)
+{
+  static int dispatch_n = 0;
+  dispatch_n++;
+  if(dispatch_n % 5 != 0) return;
+  if(mode < 0 || mode > 3) mode = 0;
+  printf("[SCHED] tick=%d algo=%s event=DISPATCH pid=%d priority=%d queue=%d\n",
+         ticks, sched_algo_name[mode], p->pid, p->priority, p->queue_level);
+}
+
+// Round-Robin: preserves original xv6 behavior (iterate table in order).
+static int
+sched_rr(struct cpu *c)
+{
+  struct proc *p;
+  int found = 0;
+  for(p = proc; p < &proc[NPROC]; p++){
+    acquire(&p->lock);
+    if(p->state == RUNNABLE){
+      p->state = RUNNING;
+      p->wait_ticks = 0;
+      c->proc = p;
+      sched_debug(p, SCHED_RR);
+      swtch(&c->context, &p->context);
+      c->proc = 0;
+      found = 1;
+    }
+    release(&p->lock);
+  }
+  return found;
+}
+
+// FCFS: non-preemptive; pick the RUNNABLE process with the smallest ctime,
+// breaking ties by pid.  Two-phase to avoid holding multiple proc locks.
+static int
+sched_fcfs(struct cpu *c)
+{
+  struct proc *p, *chosen = 0;
+  int best_ctime = 0, best_pid = 0;
+
+  // Phase 1: find best candidate (lock acquired then released per process).
+  for(p = proc; p < &proc[NPROC]; p++){
+    acquire(&p->lock);
+    if(p->state == RUNNABLE){
+      if(chosen == 0 ||
+         p->ctime < best_ctime ||
+         (p->ctime == best_ctime && p->pid < best_pid)){
+        chosen     = p;
+        best_ctime = p->ctime;
+        best_pid   = p->pid;
+      }
+    }
+    release(&p->lock);
+  }
+  if(!chosen) return 0;
+
+  // Phase 2: re-acquire and run (re-check state in case it changed).
+  acquire(&chosen->lock);
+  if(chosen->state == RUNNABLE){
+    chosen->wait_ticks = 0;
+    chosen->state = RUNNING;
+    c->proc = chosen;
+    sched_debug(chosen, SCHED_FCFS);
+    swtch(&c->context, &chosen->context);
+    c->proc = 0;
+    release(&chosen->lock);
+    return 1;
+  }
+  release(&chosen->lock);
+  return 0;
+}
+
+// Priority: preemptive; pick the RUNNABLE process with the smallest priority
+// number (= highest priority).  Tie-break: smallest ctime, then smallest pid.
+// Simple aging: every AGE_THRESHOLD scheduler rounds waiting, reduce priority
+// number by 1 (floor 0), giving long-waiting processes a better chance.
+static int
+sched_priority(struct cpu *c)
+{
+  struct proc *p, *chosen = 0;
+  int best_pri = 0, best_ctime = 0, best_pid = 0;
+
+  // Phase 1: scan, apply aging, select best.
+  for(p = proc; p < &proc[NPROC]; p++){
+    acquire(&p->lock);
+    if(p->state == RUNNABLE){
+      p->wait_ticks++;
+      if(p->wait_ticks >= AGE_THRESHOLD && p->priority > 0){
+        p->priority--;
+        p->wait_ticks = 0;
+      }
+      if(chosen == 0 ||
+         p->priority < best_pri ||
+         (p->priority == best_pri && p->ctime < best_ctime) ||
+         (p->priority == best_pri && p->ctime == best_ctime && p->pid < best_pid)){
+        chosen     = p;
+        best_pri   = p->priority;
+        best_ctime = p->ctime;
+        best_pid   = p->pid;
+      }
+    }
+    release(&p->lock);
+  }
+  if(!chosen) return 0;
+
+  // Phase 2: run chosen.
+  acquire(&chosen->lock);
+  if(chosen->state == RUNNABLE){
+    chosen->wait_ticks = 0;
+    chosen->state = RUNNING;
+    c->proc = chosen;
+    sched_debug(chosen, SCHED_PRIORITY);
+    swtch(&c->context, &chosen->context);
+    c->proc = 0;
+    release(&chosen->lock);
+    return 1;
+  }
+  release(&chosen->lock);
+  return 0;
+}
+
+// MLFQ: 3 queues (0=highest, 2=lowest).
+// Quanta: Q0=2 ticks, Q1=4 ticks, Q2=8 ticks.
+// Demotion on quantum exhaustion is handled in trap.c.
+// Promotion: if a process waits >= MLFQ_BOOST_THRESHOLD rounds, move to Q0.
+// Within a level, tie-break by ctime then pid (FCFS).
+static int
+sched_mlfq(struct cpu *c)
+{
+  struct proc *p, *chosen = 0;
+  int best_level = 4, best_ctime = 0, best_pid = 0;
+
+  // Phase 1: scan, boost stale processes, select best.
+  for(p = proc; p < &proc[NPROC]; p++){
+    acquire(&p->lock);
+    if(p->state == RUNNABLE){
+      p->wait_ticks++;
+      if(p->wait_ticks >= MLFQ_BOOST_THRESHOLD && p->queue_level > 0){
+        p->queue_level    = 0;
+        p->ticks_in_level = 0;
+        p->wait_ticks     = 0;
+      }
+      int ql = p->queue_level;
+      if(chosen == 0 ||
+         ql < best_level ||
+         (ql == best_level && p->ctime < best_ctime) ||
+         (ql == best_level && p->ctime == best_ctime && p->pid < best_pid)){
+        chosen     = p;
+        best_level = ql;
+        best_ctime = p->ctime;
+        best_pid   = p->pid;
+      }
+    }
+    release(&p->lock);
+  }
+  if(!chosen) return 0;
+
+  // Phase 2: run chosen; reset quantum counter so trap.c tracks from zero.
+  acquire(&chosen->lock);
+  if(chosen->state == RUNNABLE){
+    chosen->wait_ticks    = 0;
+    chosen->ticks_in_level = 0;
+    chosen->state = RUNNING;
+    c->proc = chosen;
+    sched_debug(chosen, SCHED_MLFQ);
+    swtch(&c->context, &chosen->context);
+    c->proc = 0;
+    release(&chosen->lock);
+    return 1;
+  }
+  release(&chosen->lock);
+  return 0;
+}
+
 // Per-CPU process scheduler.
 // Each CPU calls scheduler() after setting itself up.
-// Scheduler never returns.  It loops, doing:
-//  - choose a process to run.
-//  - swtch to start running that process.
-//  - eventually that process transfers control
-//    via swtch back to the scheduler.
+// Scheduler never returns.
 void
 scheduler(void)
 {
-  struct proc *p;
   struct cpu *c = mycpu();
-
   c->proc = 0;
+
   for(;;){
-    // The most recent process to run may have had interrupts
-    // turned off; enable them to avoid a deadlock if all
-    // processes are waiting. Then turn them back off
-    // to avoid a possible race between an interrupt
-    // and wfi.
+    // Enable interrupts briefly so we don't deadlock if all processes are
+    // sleeping, then disable before scanning the run queue.
     intr_on();
     intr_off();
 
     int found = 0;
-    for(p = proc; p < &proc[NPROC]; p++) {
-      acquire(&p->lock);
-      if(p->state == RUNNABLE) {
-        // Switch to chosen process.  It is the process's job
-        // to release its lock and then reacquire it
-        // before jumping back to us.
-        p->state = RUNNING;
-        c->proc = p;
-        swtch(&c->context, &p->context);
+    switch(sched_mode){
+    case SCHED_FCFS:
+      found = sched_fcfs(c);
+      break;
+    case SCHED_PRIORITY:
+      found = sched_priority(c);
+      break;
+    case SCHED_MLFQ:
+      found = sched_mlfq(c);
+      break;
+    default:          // SCHED_RR and any unknown mode
+      found = sched_rr(c);
+      break;
+    }
 
-        // Process is done running for now.
-        // It should have changed its p->state before coming back.
-        c->proc = 0;
-        found = 1;
-      }
-      release(&p->lock);
-    }
-    if(found == 0) {
-      // nothing to run; stop running on this core until an interrupt.
+    if(found == 0)
       asm volatile("wfi");
-    }
   }
 }
 
@@ -543,7 +786,7 @@ void
 sleep(void *chan, struct spinlock *lk)
 {
   struct proc *p = myproc();
-  
+
   // Must acquire p->lock in order to
   // change p->state and then call sched.
   // Once we hold p->lock, we can be
@@ -622,7 +865,7 @@ int
 killed(struct proc *p)
 {
   int k;
-  
+
   acquire(&p->lock);
   k = p->killed;
   release(&p->lock);

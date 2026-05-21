@@ -22,6 +22,43 @@ trapinit(void)
   initlock(&tickslock, "time");
 }
 
+// Handle timer tick for the current process based on scheduler mode.
+// For MLFQ: track ticks_in_level and demote when quantum is exhausted.
+// For FCFS: never preempt.
+// For RR / Priority: always preempt.
+//
+// NOTE: ticks_in_level and queue_level are modified without p->lock here.
+// This is safe on CPUS=1 because the scheduler (the only other writer) runs
+// with interrupts disabled.  On CPUS>1 this would require a lock.
+void
+timer_yield_or_tick(struct proc *p)
+{
+  static const int mlfq_quanta[3] = {2, 4, 8};
+  int mode = get_sched_mode();
+
+  if(mode == SCHED_FCFS){
+    // non-preemptive: do not yield on timer interrupt
+    return;
+  }
+
+  if(mode == SCHED_MLFQ){
+    p->ticks_in_level++;
+    int ql = p->queue_level < 3 ? p->queue_level : 2;
+    if(p->ticks_in_level >= mlfq_quanta[ql]){
+      // Quantum exhausted: demote if not already at the lowest level.
+      if(p->queue_level < 2)
+        p->queue_level++;
+      p->ticks_in_level = 0;
+      yield();
+    }
+    // else: quantum not exhausted, keep running
+    return;
+  }
+
+  // SCHED_RR and SCHED_PRIORITY: preempt on every timer tick.
+  yield();
+}
+
 // set up to take exceptions and traps while in the kernel.
 void
 trapinithart(void)
@@ -80,9 +117,9 @@ usertrap(void)
   if(killed(p))
     kexit(-1);
 
-  // give up the CPU if this is a timer interrupt.
+  // give up the CPU if this is a timer interrupt (mode-aware).
   if(which_dev == 2)
-    yield();
+    timer_yield_or_tick(p);
 
   prepare_return();
 
@@ -151,9 +188,9 @@ kerneltrap()
     panic("kerneltrap");
   }
 
-  // give up the CPU if this is a timer interrupt.
+  // give up the CPU if this is a timer interrupt (mode-aware).
   if(which_dev == 2 && myproc() != 0)
-    yield();
+    timer_yield_or_tick(myproc());
 
   // the yield() may have caused some traps to occur,
   // so restore trap registers for use by kernelvec.S's sepc instruction.
