@@ -1,4 +1,4 @@
-# Scheduler Simulator (v1.5)
+# Scheduler Simulator (v1)
 
 Host-side scheduling simulator for the **Team Tricycle OS** project.
 It provides the scheduling execution and trace-generation layer for the system.
@@ -47,7 +47,7 @@ reads the repo-level `workloads/` directory.
 
 - Algorithm names are **case-insensitive** (`rr`, `RR`, `Rr` all work).
 - `SJF` support is included as a foundation for future burst-prediction experiments.
-- `MLFQ` and `SRTF` are **not implemented** in v1.5.
+- `MLFQ` and `SRTF` are **not implemented** in v1.
 
 ### Algorithm selection precedence
 
@@ -67,7 +67,7 @@ If the resolved algorithm is unsupported (e.g. `MLFQ`):
 Every substitution is reported on **stderr**. Example:
 
 ```
-[simulator] WARNING: algorithm 'MLFQ' is not implemented in v1.5.
+[simulator] WARNING: algorithm 'MLFQ' is not implemented in v1.
 [simulator] WARNING: using guard fallback_algorithm 'RR'.
 ```
 
