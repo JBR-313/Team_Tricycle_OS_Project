@@ -1,0 +1,922 @@
+/* ── Fixed 16:9 dashboard shell ── */
+.dashboard-shell {
+  aspect-ratio: 16 / 9;
+  width: min(100vw, calc(100vh * 16 / 9));
+  height: min(100vh, calc(100vw * 9 / 16));
+  margin: 0 auto;
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: 60px 1fr;
+  gap: 8px;
+  padding: 10px;
+}
+
+/* ── Three equal columns ── */
+.dashboard-main {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* ── Column: flex stack ── */
+.dashboard-col {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* ── Glass card ── */
+.card {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.58);
+  box-shadow: 0 12px 32px rgba(80, 90, 120, 0.14), 0 2px 8px rgba(80, 90, 120, 0.07);
+  padding: 10px 12px 8px 12px;
+  overflow: hidden;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* ── Card label ── */
+.card-label {
+  font-size: 0.60rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: #64748b;
+  margin-bottom: 5px;
+  flex-shrink: 0;
+}
+
+/* ── Pill badge ── */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  margin: 0 3px 3px 0;
+  white-space: nowrap;
+}
+
+/* ── Inner scroll ── */
+.inner-scroll {
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  font-size: 0.68rem;
+  line-height: 1.5;
+  color: #334155;
+}
+
+/* ── Divider ── */
+.divider {
+  border: none;
+  border-top: 1px solid rgba(100, 120, 170, 0.12);
+  margin: 5px 0;
+  flex-shrink: 0;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   HEADER
+───────────────────────────────────────────────────────────── */
+.header-bar {
+  background: rgba(255, 255, 255, 0.80);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.62);
+  box-shadow: 0 6px 22px rgba(80, 90, 120, 0.12);
+  padding: 0 14px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.header-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+@keyframes dot-pulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(99,102,241,0.55); }
+  50%       { box-shadow: 0 0 14px rgba(99,102,241,0.90); }
+}
+.header-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #6366f1;
+  box-shadow: 0 0 8px rgba(99,102,241,0.55);
+  flex-shrink: 0;
+  animation: dot-pulse 1.8s ease-in-out infinite;
+}
+
+.header-title {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #1e293b;
+  letter-spacing: -0.3px;
+  white-space: nowrap;
+}
+
+.header-subtitle {
+  font-size: 0.52rem;
+  color: #94a3b8;
+  white-space: nowrap;
+}
+
+.header-spacer { flex: 1; }
+
+.header-algo-label {
+  font-size: 0.52rem;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  flex-shrink: 0;
+}
+
+.algo-select {
+  appearance: none;
+  background: rgba(255,255,255,0.90);
+  border: 1px solid rgba(100,120,170,0.22);
+  border-radius: 8px;
+  padding: 3px 24px 3px 8px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #1e293b;
+  cursor: pointer;
+  outline: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2394a3b8'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 7px center;
+  min-width: 80px;
+}
+
+.header-tick-label {
+  font-size: 0.52rem;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  flex-shrink: 0;
+}
+
+.header-tick-val {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #1e293b;
+  flex-shrink: 0;
+  min-width: 42px;
+}
+
+.header-tick-max {
+  font-size: 0.58rem;
+  font-weight: 400;
+  color: #94a3b8;
+  margin-left: 2px;
+}
+
+.tick-slider {
+  appearance: none;
+  height: 4px;
+  border-radius: 99px;
+  background: rgba(99,102,241,0.18);
+  outline: none;
+  cursor: pointer;
+  min-width: 120px;
+  max-width: 220px;
+  flex: 1;
+}
+.tick-slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.22);
+  cursor: pointer;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   COLUMN FLEX RATIOS
+───────────────────────────────────────────────────────────── */
+/* Left column */
+.card-rec     { flex: 1 0 0; }
+.card-guard   { flex: 1 0 0; }
+.card-eval    { flex: 1.5 0 0; }
+.card-expl    { flex: 4 0 0; }
+
+/* Center column — pstate is the hero, trace is compact footer */
+.card-gantt   { flex: 2 0 0; }
+.card-pstate  { flex: 5 0 0; }
+.card-trace   { flex: 2 0 0; }
+
+/* Right column */
+.card-lanes   { flex: 1 0 0; }
+.card-wl      { flex: 1 0 0; }
+.card-cmp     { flex: 3 0 0; }
+.card-metric  { flex: 5 0 0; }
+
+/* ─────────────────────────────────────────────────────────────
+   GANTT CHART
+───────────────────────────────────────────────────────────── */
+.gantt-bar-container {
+  position: relative;
+  flex: 1;
+  min-height: 42px;
+  background: rgba(241,245,249,0.70);
+  border-radius: 8px;
+  overflow: hidden;
+  margin: 4px 0;
+}
+
+.gantt-seg {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.60rem;
+  font-weight: 700;
+  color: rgba(255,255,255,0.95);
+  border-right: 1.5px solid rgba(255,255,255,0.55);
+  transition: opacity 0.15s;
+  user-select: none;
+}
+
+@keyframes tick-pulse {
+  0%, 100% { box-shadow: 0 0 6px rgba(99,102,241,0.55); }
+  50%       { box-shadow: 0 0 12px rgba(99,102,241,0.85); }
+}
+.gantt-grid-line {
+  position: absolute;
+  top: 0;
+  width: 1px;
+  height: 100%;
+  background: rgba(148, 163, 184, 0.25);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.gantt-tick-marker {
+  position: absolute;
+  top: 0;
+  width: 2px;
+  height: 100%;
+  background: rgba(99,102,241,0.95);
+  box-shadow: 0 0 6px rgba(99,102,241,0.55);
+  z-index: 10;
+  pointer-events: none;
+  animation: tick-pulse 2s ease-in-out infinite;
+}
+
+.gantt-tick-axis {
+  display: flex;
+  position: relative;
+  height: 14px;
+  flex-shrink: 0;
+  margin-top: 2px;
+  min-height: 14px;
+}
+
+.gantt-tick-num {
+  position: absolute;
+  font-size: 0.52rem;
+  color: #64748b;
+  font-weight: 600;
+  transform: translateX(-50%);
+}
+
+.gantt-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+
+.gantt-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.55rem;
+  color: #64748b;
+}
+
+.gantt-legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   PROCESS STATE FLOW DIAGRAM
+───────────────────────────────────────────────────────────── */
+.flow-diagram {
+  display: grid;
+  grid-template-columns: 1fr 58px 1fr 40px 1fr;
+  grid-template-rows: 1fr 32px 1fr;
+  flex: 1;
+  min-height: 0;
+}
+
+.flow-node {
+  border-radius: 16px;
+  border: 2px solid;
+  padding: 10px 6px 12px;
+  text-align: center;
+  min-width: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+@keyframes node-pulse {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(29,78,216,0.22), 0 4px 20px rgba(29,78,216,0.18); }
+  50%       { box-shadow: 0 0 0 6px rgba(29,78,216,0.38), 0 6px 28px rgba(29,78,216,0.32); }
+}
+.flow-node-running {
+  animation: node-pulse 2s ease-in-out infinite;
+}
+
+.flow-node-name {
+  font-size: 0.70rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 8px;
+}
+
+.flow-token-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 5px;
+  margin-top: 2px;
+}
+
+.flow-token {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.56rem;
+  font-weight: 700;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.22);
+  flex-shrink: 0;
+}
+
+.flow-empty {
+  font-size: 0.56rem;
+  color: #cbd5e1;
+  line-height: 2;
+}
+
+/* Horizontal pipe connector */
+.flow-pipe-h {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  overflow: hidden;
+  padding: 0 2px;
+}
+
+.flow-pipe-exit { padding: 0; }
+
+.flow-pipe-label {
+  font-size: 0.50rem;
+  color: #94a3b8;
+  white-space: nowrap;
+  line-height: 1.3;
+  transition: color 0.2s, font-weight 0.2s;
+}
+
+.flow-pipe-bar {
+  height: 2.5px;
+  width: 100%;
+  background: rgba(148, 163, 184, 0.52);
+  border-radius: 2px;
+  transition: background 0.2s, box-shadow 0.2s;
+}
+
+/* Vertical connector */
+.flow-vert-connector {
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
+}
+
+.flow-vert-bar {
+  width: 2.5px;
+  background: rgba(148, 163, 184, 0.52);
+  height: 100%;
+  border-radius: 2px;
+  transition: background 0.2s;
+}
+
+/* Arc connectors (Waiting ↔ Ready/Running) */
+.flow-arc {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+  overflow: hidden;
+  padding: 0 4px;
+}
+
+.flow-arc-left { align-items: flex-end; padding-right: 3px; }
+.flow-arc-right { align-items: flex-start; padding-left: 3px; }
+
+.flow-arc-line {
+  height: 2.5px;
+  width: 100%;
+  background: rgba(148, 163, 184, 0.52);
+  border-radius: 2px;
+  transition: background 0.2s;
+}
+
+.flow-arc-label {
+  font-size: 0.50rem;
+  color: #94a3b8;
+  white-space: nowrap;
+  transition: color 0.2s;
+}
+
+/* ── Active pipe highlighting (driven by latest trace event) ── */
+.pipe-dispatch .flow-pipe-label:first-child { color: #1d4ed8; font-weight: 700; }
+.pipe-dispatch .flow-pipe-bar               { background: rgba(29,78,216,0.55); box-shadow: 0 0 8px rgba(29,78,216,0.28); }
+
+.pipe-preempt .flow-pipe-label:last-child   { color: #dc2626; font-weight: 700; }
+.pipe-preempt .flow-pipe-bar                { background: rgba(244,63,94,0.42); box-shadow: 0 0 8px rgba(244,63,94,0.22); }
+
+.pipe-exit .flow-pipe-label                 { color: #059669; font-weight: 700; }
+.pipe-exit .flow-pipe-bar                   { background: rgba(16,185,129,0.48); box-shadow: 0 0 8px rgba(16,185,129,0.22); }
+
+.pipe-sleep .flow-arc-line                  { background: rgba(180,83,9,0.48); box-shadow: 0 0 8px rgba(180,83,9,0.22); }
+.pipe-sleep .flow-arc-label                 { color: #b45309; font-weight: 700; }
+.pipe-sleep-vert .flow-vert-bar             { background: rgba(180,83,9,0.48); box-shadow: 0 0 8px rgba(180,83,9,0.22); }
+
+.pipe-wakeup .flow-arc-line                 { background: rgba(14,165,233,0.48); box-shadow: 0 0 8px rgba(14,165,233,0.22); }
+.pipe-wakeup .flow-arc-label               { color: #0284c7; font-weight: 700; }
+
+/* ─────────────────────────────────────────────────────────────
+   TRACE STACK (iPhone notification style)
+───────────────────────────────────────────────────────────── */
+/* wrapper for stack + fade */
+.trace-stack-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.trace-stack {
+  position: relative;
+  padding-bottom: 6px;
+}
+
+/* fade-out overlay when older events exist */
+.trace-fade-out {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 32px;
+  background: linear-gradient(to bottom, transparent, rgba(255,255,255,0.88));
+  pointer-events: none;
+  border-radius: 0 0 10px 10px;
+}
+
+.notif-card {
+  background: rgba(255,255,255,0.97);
+  border-radius: 13px;
+  padding: 7px 11px 6px 11px;
+  border-left: 3px solid #6366f1;
+  position: relative;
+  box-shadow: 0 2px 10px rgba(80,100,160,0.10);
+}
+
+.notif-card.depth-0 {
+  z-index: 10;
+  margin-bottom: 4px;
+  box-shadow: 0 5px 18px rgba(80,100,160,0.18);
+  padding: 10px 14px 9px 13px;
+  background: rgba(255,255,255,1.00);
+}
+
+.notif-card.depth-1 {
+  z-index: 9;
+  margin-top: -18px;
+  opacity: 0.86;
+  transform: scale(0.965) translateY(2px);
+  transform-origin: top center;
+}
+
+.notif-card.depth-2 {
+  z-index: 8;
+  margin-top: -15px;
+  opacity: 0.65;
+  transform: scale(0.93) translateY(4px);
+  transform-origin: top center;
+}
+
+.notif-card.depth-3 {
+  z-index: 7;
+  margin-top: -13px;
+  opacity: 0.44;
+  transform: scale(0.895) translateY(6px);
+  transform-origin: top center;
+}
+
+.notif-card.depth-4 {
+  z-index: 6;
+  margin-top: -12px;
+  opacity: 0.24;
+  transform: scale(0.86) translateY(8px);
+  transform-origin: top center;
+}
+
+.notif-card.ev-preempt    { border-left-color: #f43f5e; }
+.notif-card.ev-exit       { border-left-color: #10b981; }
+.notif-card.ev-arrive     { border-left-color: #8b5cf6; }
+.notif-card.ev-correction { border-left-color: #f59e0b; }
+.notif-card.ev-wakeup     { border-left-color: #0ea5e9; }
+
+.notif-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 4px;
+}
+
+.notif-left {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  flex: 1;
+}
+
+.notif-right {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.notif-pid-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.notif-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.notif-badge {
+  font-size: 0.50rem;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 999px;
+  white-space: nowrap;
+  letter-spacing: 0.04em;
+}
+
+.notif-tick {
+  font-size: 0.56rem;
+  color: #94a3b8;
+  white-space: nowrap;
+}
+
+.notif-body {
+  font-size: 0.60rem;
+  color: #64748b;
+  margin-top: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.trace-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  gap: 6px;
+  color: #94a3b8;
+  font-size: 0.62rem;
+}
+
+.trace-empty-icon {
+  font-size: 1.4rem;
+  opacity: 0.35;
+}
+
+.trace-older-hint {
+  margin-top: 8px;
+  text-align: center;
+  font-size: 0.52rem;
+  color: #b0b8cc;
+  flex-shrink: 0;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   PROCESS LANES (right column compact chart)
+───────────────────────────────────────────────────────────── */
+.lanes-chart {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Tick axis below all lanes */
+.lanes-tick-axis {
+  flex-shrink: 0;
+  height: 13px;
+  margin-top: 2px;
+}
+.lanes-tick-offset {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  padding-left: 22px;
+}
+.lanes-tick-num {
+  position: absolute;
+  font-size: 0.48rem;
+  color: #94a3b8;
+  font-weight: 600;
+  transform: translateX(-50%);
+  line-height: 1;
+}
+
+.lane-row {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  max-height: 24px;
+  margin-bottom: 3px;
+}
+
+.lane-label {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.50rem;
+  font-weight: 700;
+  color: #94a3b8;
+  width: 18px;
+  text-align: right;
+}
+
+.lane-track {
+  position: absolute;
+  left: 22px;
+  right: 0;
+  top: 0;
+  height: 100%;
+  background: rgba(241,245,249,0.70);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.lane-seg {
+  position: absolute;
+  top: 1px;
+  height: calc(100% - 2px);
+  border-radius: 2px;
+  opacity: 0.85;
+}
+
+.lane-tick-marker {
+  position: absolute;
+  top: 0;
+  width: 1.5px;
+  height: 100%;
+  background: rgba(99,102,241,0.85);
+  z-index: 10;
+  pointer-events: none;
+  animation: tick-pulse 2s ease-in-out infinite;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   ALGORITHM COMPARISON TABLE
+───────────────────────────────────────────────────────────── */
+.cmp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.60rem;
+}
+
+.cmp-table th {
+  background: rgba(0,0,0,0.04);
+  color: #64748b;
+  font-weight: 700;
+  font-size: 0.52rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 4px 6px;
+  border-bottom: 1px solid rgba(100,120,170,0.12);
+  white-space: nowrap;
+}
+
+.cmp-table td {
+  padding: 4px 6px;
+  border-bottom: 1px solid rgba(100,120,170,0.07);
+  white-space: nowrap;
+  color: #334155;
+}
+
+.cmp-table tr.recommended {
+  background: rgba(139,92,246,0.07);
+  box-shadow: inset 3px 0 0 #7c3aed;
+}
+
+.cmp-table .col-highlight {
+  background: rgba(99,102,241,0.06);
+}
+
+.judge-success    { color: #059669; font-weight: 700; }
+.judge-near       { color: #1d4ed8; }
+.judge-fail       { color: #dc2626; }
+.judge-success-bg { background: rgba(16,185,129,0.08); }
+.judge-fail-bg    { background: rgba(244,63,94,0.08); }
+
+/* ─────────────────────────────────────────────────────────────
+   METRIC BAR CHART
+───────────────────────────────────────────────────────────── */
+.metric-chart {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* wrapper that holds the bars + axis lines */
+.metric-bars-wrap {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+/* mid-height guideline at 50% */
+.metric-axis-mid {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: rgba(148,163,184,0.18);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* baseline rule at y=0 */
+.metric-axis-base {
+  flex-shrink: 0;
+  height: 1.5px;
+  background: rgba(100,116,139,0.32);
+  border-radius: 1px;
+  margin-top: 1px;
+}
+
+/* star above recommended bar */
+.metric-star {
+  font-size: 0.60rem;
+  color: #7c3aed;
+  font-weight: 700;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.metric-select {
+  appearance: none;
+  background: rgba(255,255,255,0.90);
+  border: 1px solid rgba(100,120,170,0.20);
+  border-radius: 6px;
+  padding: 3px 22px 3px 7px;
+  font-size: 0.62rem;
+  color: #334155;
+  cursor: pointer;
+  outline: none;
+  flex-shrink: 0;
+  margin-bottom: 6px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2394a3b8'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 6px center;
+  align-self: flex-start;
+}
+
+.metric-bars {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: stretch;
+  gap: 5px;
+  overflow: hidden;
+  position: relative;
+  z-index: 2;
+}
+
+.metric-bar-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* inner track so bar sits at bottom of its space */
+.metric-bar-track {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.metric-bar-fill {
+  width: 100%;
+  border-radius: 4px 4px 0 0;
+  transition: height 0.35s ease;
+  min-height: 2px;
+}
+
+.metric-bar-fill.recommended {
+  box-shadow: 0 0 0 2px rgba(124,58,237,0.55), 0 0 12px rgba(124,58,237,0.30);
+}
+
+.metric-bar-val {
+  font-size: 0.50rem;
+  color: #64748b;
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-height: 14px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.metric-bar-label {
+  font-size: 0.50rem;
+  color: #64748b;
+  white-space: nowrap;
+  flex-shrink: 0;
+  margin-top: 2px;
+  min-height: 12px;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   BACKDROP-FILTER FALLBACK (Firefox / Safari < 15)
+───────────────────────────────────────────────────────────── */
+@supports not (backdrop-filter: blur(1px)) {
+  .card {
+    background: rgba(255, 255, 255, 0.94);
+    border: 1px solid rgba(120, 140, 170, 0.22);
+  }
+  .header-bar {
+    background: rgba(255, 255, 255, 0.96);
+    border: 1px solid rgba(120, 140, 170, 0.22);
+  }
+}
