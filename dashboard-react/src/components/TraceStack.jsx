@@ -39,6 +39,7 @@ export default function TraceStack({ events, currentTick }) {
 
   return (
     <Card label="Trace Events · Latest 5" className="card-trace">
+      <div className="trace-stack-wrap">
       <div className="trace-stack">
         {recent.map((ev, i) => {
           const pid    = ev.pid
@@ -76,6 +77,8 @@ export default function TraceStack({ events, currentTick }) {
             </div>
           )
         })}
+      </div>
+      {totalCount > 5 && <div className="trace-fade-out" />}
       </div>
 
       {totalCount > 5 && (

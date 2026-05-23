@@ -31,6 +31,9 @@ export default function ProcessLanes({ events, currentTick, maxTick, algo }) {
   const gridTicks = []
   for (let t = step; t < span; t += step) gridTicks.push(t)
 
+  // Axis ticks to show below the lanes (same cadence as grid lines; skip span to avoid right-edge clip)
+  const axisTicks = [0, ...gridTicks]
+
   return (
     <Card label={`Process Lanes · ${algo}`} className="card-lanes">
       <div className="lanes-chart">
@@ -65,6 +68,21 @@ export default function ProcessLanes({ events, currentTick, maxTick, algo }) {
             </div>
           )
         })}
+
+        {/* Tick axis below all lanes */}
+        <div className="lanes-tick-axis">
+          <div className="lanes-tick-offset">
+            {axisTicks.map(t => (
+              <span
+                key={t}
+                className="lanes-tick-num"
+                style={{ left: `${(t / span) * 100}%` }}
+              >
+                {t}
+              </span>
+            ))}
+          </div>
+        </div>
       </div>
     </Card>
   )

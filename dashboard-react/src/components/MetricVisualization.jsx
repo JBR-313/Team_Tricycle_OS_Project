@@ -35,36 +35,42 @@ export default function MetricVisualization() {
           ))}
         </select>
 
-        <div className="metric-bars">
-          {entries.map(({ algo, val }) => {
-            const pct   = (val / maxVal) * 100
-            const isRec = algo === recAlgo
-            return (
-              <div key={algo} className="metric-bar-col">
-                {/* recommended star + value label */}
-                {isRec && (
-                  <span style={{ fontSize: '0.52rem', color: '#7c3aed', fontWeight: 700, lineHeight: 1, flexShrink: 0 }}>★</span>
-                )}
-                <span className="metric-bar-val">{val.toFixed(2)}</span>
+        <div className="metric-bars-wrap">
+          {/* y-axis half-way guide line */}
+          <div className="metric-axis-mid" />
+          <div className="metric-bars">
+            {entries.map(({ algo, val }) => {
+              const pct   = (val / maxVal) * 100
+              const isRec = algo === recAlgo
+              return (
+                <div key={algo} className="metric-bar-col">
+                  {/* recommended star + value label */}
+                  {isRec && (
+                    <span className="metric-star">★</span>
+                  )}
+                  <span className="metric-bar-val">{val.toFixed(2)}</span>
 
-                {/* track: flex column, bar sits at bottom */}
-                <div className="metric-bar-track">
-                  <div
-                    className={`metric-bar-fill ${isRec ? 'recommended' : ''}`}
-                    style={{
-                      height: `${pct}%`,
-                      background: ALGO_COLORS[algo] || '#94a3b8',
-                      opacity: isRec ? 1.0 : 0.82,
-                    }}
-                    title={`${algo}: ${val}`}
-                  />
+                  {/* track: flex column, bar sits at bottom */}
+                  <div className="metric-bar-track">
+                    <div
+                      className={`metric-bar-fill ${isRec ? 'recommended' : ''}`}
+                      style={{
+                        height: `${pct}%`,
+                        background: ALGO_COLORS[algo] || '#94a3b8',
+                        opacity: isRec ? 1.0 : 0.80,
+                      }}
+                      title={`${algo}: ${val}`}
+                    />
+                  </div>
+
+                  {/* algo label — stays inside col, no overflow */}
+                  <span className="metric-bar-label">{algo}</span>
                 </div>
-
-                {/* algo label — stays inside col, no overflow */}
-                <span className="metric-bar-label">{algo}</span>
-              </div>
-            )
-          })}
+              )
+            })}
+          </div>
+          {/* baseline rule */}
+          <div className="metric-axis-base" />
         </div>
       </div>
     </Card>

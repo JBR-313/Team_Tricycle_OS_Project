@@ -42,12 +42,26 @@ export default function EvaluationResult() {
           gap: '3px 10px',
           fontSize: '0.60rem',
         }}>
-          {[
-            ['Target', tgt.replace(/_/g, ' '), '#334155'],
-            ['Best Algo', bestAlgo, '#059669'],
-            ['LLM Selected', recAlgo, '#7c3aed'],
-            ['LLM → Best', `${recVal != null ? recVal.toFixed(2) : '—'} → ${bestVal < Infinity ? bestVal.toFixed(2) : '—'}`, '#334155'],
-          ].map(([k, v, c]) => (
+          {(() => {
+            // direction: lower is better for most metrics except throughput
+            const lowerBetter = tgt !== 'throughput'
+            let delta = null, deltaColor = '#64748b', deltaArrow = ''
+            if (recVal != null && bestVal < Infinity) {
+              delta = recVal - bestVal
+              const worse = lowerBetter ? delta > 0 : delta < 0
+              deltaColor = worse ? '#dc2626' : '#059669'
+              deltaArrow = worse ? '▲' : (Math.abs(delta) < 0.001 ? '=' : '▼')
+            }
+            const rows = [
+              ['Target',      tgt.replace(/_/g, ' '), '#334155'],
+              ['Best Algo',   bestAlgo,                '#059669'],
+              ['LLM Selected',recAlgo,                 '#7c3aed'],
+              ['Δ vs Best',   delta != null
+                ? <span style={{ color: deltaColor, fontWeight: 700 }}>{deltaArrow} {Math.abs(delta).toFixed(2)}</span>
+                : '—',                                 '#334155'],
+            ]
+            return rows
+          })().map(([k, v, c]) => (
             <div key={k}>
               <div style={{ fontSize: '0.50rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{k}</div>
               <div style={{ fontWeight: 700, color: c, marginTop: 1 }}>{v}</div>
