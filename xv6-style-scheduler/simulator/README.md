@@ -28,12 +28,12 @@ Team_Tricycle_OS_Project/
 ├── outputs/                           # guard_decision.json lives here
 ├── traces/                            # default place generated traces land
 └── xv6-style-scheduler/
-    └── scheduler_simulator/
+    └── simulator/
         ├── simulator.py
         └── README.md
 ```
 
-Workloads are **not** duplicated under `scheduler_simulator/`; the simulator
+Workloads are **not** duplicated under `simulator/`; the simulator
 reads the repo-level `workloads/` directory.
 
 ## Supported algorithms
@@ -217,7 +217,7 @@ Paths in the examples below are relative to the **repo root**
 
 ```bash
 # Round Robin, explicit quantum, starvation threshold 20
-python3 xv6-style-scheduler/scheduler_simulator/simulator.py \
+python3 xv6-style-scheduler/simulator/simulator.py \
   --workload workloads/mixed_workload.json \
   --algorithm RR \
   --output traces/mixed_rr.jsonl \
@@ -225,21 +225,21 @@ python3 xv6-style-scheduler/scheduler_simulator/simulator.py \
   --starvation-threshold 20
 
 # Priority (non-preemptive); pid 4 has no priority -> defaults to 10
-python3 xv6-style-scheduler/scheduler_simulator/simulator.py \
+python3 xv6-style-scheduler/simulator/simulator.py \
   --workload workloads/priority_sensitive.json \
   --algorithm PRIORITY \
   --output traces/priority_trace.jsonl \
   --starvation-threshold 10
 
 # SJF with a long job that gets starved -> one STARVATION_WARNING at t=10
-python3 xv6-style-scheduler/scheduler_simulator/simulator.py \
+python3 xv6-style-scheduler/simulator/simulator.py \
   --workload workloads/starvation_risk.json \
   --algorithm SJF \
   --output traces/starvation_sjf.jsonl \
   --starvation-threshold 10
 
 # Let the guard decide the algorithm (and quantum)
-python3 xv6-style-scheduler/scheduler_simulator/simulator.py \
+python3 xv6-style-scheduler/simulator/simulator.py \
   --workload workloads/mixed_workload.json \
   --guard outputs/guard_decision.json \
   --output traces/mixed_guard_selected.jsonl
