@@ -1,7 +1,7 @@
 # Scheduler Simulator (v1.5)
 
 Host-side scheduling simulator for the **Team Tricycle OS** project.
-Owned by **Role C – Scheduler Engine / Trace Collector**.
+It provides the scheduling execution and trace-generation layer for the system.
 
 ## Purpose
 
@@ -46,8 +46,7 @@ reads the repo-level `workloads/` directory.
 | `PRIORITY` | no          | smallest priority number = highest priority      | `arrival_time`, then `pid`      |
 
 - Algorithm names are **case-insensitive** (`rr`, `RR`, `Rr` all work).
-- `SJF` is implemented even though the current guard does not select it — Role C
-  needs it for future burst-prediction work.
+- `SJF` support is included as a foundation for future burst-prediction experiments.
 - `MLFQ` and `SRTF` are **not implemented** in v1.5.
 
 ### Algorithm selection precedence
