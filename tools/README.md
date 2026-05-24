@@ -24,6 +24,7 @@ workload_summary.json  ──►  llm_advisor.py  ──►  recommendation.json
 |------|---------|
 | `llm_advisor.py` | Entry point. Two modes: **advise** (workload → recommendation) and **feedback** (evaluation results → prompt rules). |
 | `algorithm_guard.py` | Validates recommendation: algorithm, target metric, algorithm-metric compatibility, confidence, and parameter ranges. Outputs `guard_decision.json`. |
+| `trace_explainer.py` | Explains a finished run in natural language: reads `trace.jsonl` + `metrics.json`, outputs `trace_explanation.json` (dashboard §7). |
 | `solar_client.py` | Handles API communication with Upstage Solar Pro 3. |
 | `__init__.py` | Package exports: `SolarClient`, `SolarError`, `load_env`. |
 | `.env.example` | Template for `UPSTAGE_API_KEY` and optional settings. |
@@ -126,6 +127,34 @@ If `outputs/recommendation.json` is present, its `target_metric`, `reason`, and 
 
 **Output** `outputs/feedback_rules.md` is overwritten with a flat Markdown bullet list plus a metadata header comment. On the next `advise` run it is auto-injected into the system prompt.
 
+### Trace Explainer
+
+Explains a finished run in natural language for the dashboard.
+
+```bash
+python3 tools/trace_explainer.py \
+    --trace outputs/trace.jsonl \
+    --metrics outputs/metrics.json \
+    --out outputs/trace_explanation.json
+```
+
+Reads the trace (compresses it to a per-process timeline + event counts) and, when present, `metrics.json` and `recommendation.json` for richer context. `metrics.json`/`recommendation.json` are optional — the trace alone is enough.
+
+**Output `trace_explanation.json`** (schema in [`docs/dashboard_data_contract.md`](../docs/dashboard_data_contract.md) §7):
+```json
+{
+  "scheduling_algorithm": "PRIORITY",
+  "detected_pattern": "convoy_effect",
+  "summary": "...",
+  "main_reason": "...",
+  "evidence": ["...", "..."],
+  "suggestion": "...",
+  "runtime_corrections_applied": 0
+}
+```
+
+`runtime_corrections_applied` is taken from the trace (count of `CORRECTION_APPLIED` events), not the model.
+
 ### Recommendation Output Format (`recommendation.json`)
 
 ```json
@@ -207,6 +236,7 @@ workload_summary.json  ──►  llm_advisor.py  ──►  recommendation.json
 |------|------|
 | `llm_advisor.py` | 진입점. 두 가지 모드: **advise** (워크로드 → 추천) 와 **feedback** (평가 결과 → 프롬프트 규칙). |
 | `algorithm_guard.py` | 추천 검증. 알고리즘, 메트릭, 호환성, 신뢰도, 파라미터 범위를 검사하여 `guard_decision.json` 출력. |
+| `trace_explainer.py` | 끝난 실행을 자연어로 설명. `trace.jsonl` + `metrics.json`을 읽어 `trace_explanation.json` 출력 (대시보드 §7). |
 | `solar_client.py` | Upstage Solar Pro 3 API 통신 담당. |
 | `__init__.py` | 패키지 공개: `SolarClient`, `SolarError`, `load_env`. |
 | `.env.example` | `UPSTAGE_API_KEY` 및 선택사항 설정 템플릿. |
@@ -285,6 +315,34 @@ reject 시에는 `params`도 fallback 알고리즘의 기본값으로 교체되�
 `outputs/recommendation.json`이 있으면 `target_metric`, `reason`, `params`도 LLM 프롬프트에 추가되어 더 정확한 규칙이 생성됩니다. 없어도 동작은 합니다.
 
 **출력** `outputs/feedback_rules.md`는 LLM이 생성한 마크다운 불릿 규칙 목록 + 메타데이터 헤더로 덮어쓰기 됩니다. 다음 advise 실행 시 자동으로 시스템 프롬프트에 주입됩니다.
+
+### Trace Explainer
+
+끝난 실행을 대시보드용 자연어로 설명합니다.
+
+```bash
+python3 tools/trace_explainer.py \
+    --trace outputs/trace.jsonl \
+    --metrics outputs/metrics.json \
+    --out outputs/trace_explanation.json
+```
+
+트레이스를 프로세스별 타임라인 + 이벤트 카운트로 압축하고, 있으면 `metrics.json`/`recommendation.json`을 컨텍스트로 추가합니다. 둘 다 선택사항 — 트레이스만 있어도 동작합니다.
+
+**출력 `trace_explanation.json`** (스키마는 [`docs/dashboard_data_contract.md`](../docs/dashboard_data_contract.md) §7):
+```json
+{
+  "scheduling_algorithm": "PRIORITY",
+  "detected_pattern": "convoy_effect",
+  "summary": "...",
+  "main_reason": "...",
+  "evidence": ["...", "..."],
+  "suggestion": "...",
+  "runtime_corrections_applied": 0
+}
+```
+
+`runtime_corrections_applied`는 모델이 아니라 트레이스의 `CORRECTION_APPLIED` 이벤트 수에서 가져옵니다.
 
 ### 추천 출력 형식 (`recommendation.json`)
 
