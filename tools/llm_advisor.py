@@ -230,10 +230,15 @@ def load_recommendation_context(rec_path: Path) -> dict | None:
 def build_feedback_user_prompt(metrics: dict, rec: dict | None) -> str:
     algo = metrics.get("scheduling_algorithm", "?")
     target_metric = (rec or {}).get("target_metric", "?")
+    # metrics.py fills best_algorithm only when several algorithms were compared
+    # (evaluate_run); a single run leaves it null. Use it when present so the
+    # rule can name the algorithm that actually won.
+    best_algo = metrics.get("best_algorithm")
 
     lines = [
         "Failed evaluation to learn from:\n",
-        f"- recommended algorithm: {algo}",
+        f"- recommended algorithm : {algo}",
+        f"- best algorithm        : {best_algo or 'unknown (no cross-algorithm comparison)'}",
         f"- target metric         : {target_metric}",
         f"- judgment              : {metrics.get('judgment', '?')}",
         f"- regret_score          : {metrics.get('regret_score', '?')}",
