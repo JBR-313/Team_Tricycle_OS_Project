@@ -37,7 +37,7 @@ try:
 except ImportError:  # when run as `python3 tools/llm_advisor.py`
     from solar_client import SolarClient, SolarError
 
-ALGORITHMS = ["FCFS", "RR", "PRIORITY", "MLFQ"]
+ALGORITHMS = ["FCFS", "RR", "PRIORITY", "MLFQ", "SJF", "SRTF"]
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
@@ -54,6 +54,14 @@ You may ONLY choose from these algorithms:
   - RR       : Round Robin (preemptive, good response time, baseline)
   - PRIORITY : Priority Scheduling + aging (low-priority starvation risk)
   - MLFQ     : Multi-Level Feedback Queue (favors interactive, aging possible)
+  - SJF      : Shortest Job First, prediction-based (non-preemptive; great
+               avg waiting/turnaround; long jobs may starve)
+  - SRTF     : Shortest Remaining Time First, prediction-based (preemptive
+               variant of SJF; long jobs may starve)
+
+SJF and SRTF do NOT receive real future bursts. They estimate the next CPU \
+burst with an exponential-averaging predictor that you tune via params. The \
+kernel updates predictions only from already-observed CPU usage.
 
 You must also propose algorithm parameters. Schema per algorithm:
   - FCFS     : params = {{}}     (no parameters)
@@ -65,6 +73,13 @@ You must also propose algorithm parameters. Schema per algorithm:
                  "aging_threshold": <int 1-10000>,
                  "boost_interval": <int 10-10000>
                }}
+  - SJF/SRTF : params = {{
+                 "alpha_percent": <int 0-100>,   smoothing weight for the
+                                                 last observed burst
+                 "initial": <int >=1>,           initial burst guess
+                 "min": <int >=1>,               clamp lower bound
+                 "max": <int, >=min, <=100000>   clamp upper bound
+               }}
 
 You are an ADVISOR only. You do not control the scheduler. Your job is to \
 output a recommendation; another component will verify it by actually running \
@@ -73,11 +88,11 @@ the workload in xv6.
 Respond with STRICT JSON only (no markdown, no prose outside JSON), with \
 exactly these keys:
 {{
-  "algorithm": "<one of FCFS | RR | PRIORITY | MLFQ>",
+  "algorithm": "<one of FCFS | RR | PRIORITY | MLFQ | SJF | SRTF>",
   "params": {{ ... algorithm-specific, see schema above ... }},
   "reason": "<concise explanation, 2-4 sentences, referencing the workload>",
   "target_metric": "<one of waiting_time | response_time | turnaround_time | \
-throughput | starvation>",
+throughput | starvation | fairness>",
   "confidence": <number between 0 and 1>
 }}
 """
