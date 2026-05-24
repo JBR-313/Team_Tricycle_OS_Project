@@ -1,0 +1,16 @@
+{
+  "mode": "simulator",
+  "updated_at": "2026-05-24T07:24:27Z",
+  "version": 2,
+  "workload": "interactive_heavy",
+  "algorithms": [
+    "RR",
+    "FCFS",
+    "Priority",
+    "MLFQ",
+    "SJF",
+    "SRTF"
+  ],
+  "recommended_algorithm": "MLFQ",
+  "target_metric": "avg_response_time"
+}

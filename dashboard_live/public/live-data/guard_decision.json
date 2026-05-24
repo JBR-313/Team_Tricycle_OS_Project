@@ -1,0 +1,13 @@
+{
+  "guard_result": "accepted",
+  "scheduling_algorithm": "MLFQ",
+  "params": {
+    "queues": 3,
+    "quantum": [2, 4, 8],
+    "aging_threshold": 30,
+    "boost_interval": 100
+  },
+  "reason": "MLFQ is implemented and all parameters are in valid ranges.",
+  "original_recommendation": "MLFQ",
+  "fallback_used": false
+}

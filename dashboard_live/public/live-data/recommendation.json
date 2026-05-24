@@ -1,0 +1,18 @@
+{
+  "recommended_scheduling_algorithm": "MLFQ",
+  "params": {
+    "queues": 3,
+    "quantum": [2, 4, 8],
+    "aging_threshold": 30,
+    "boost_interval": 100
+  },
+  "target_metric": "avg_response_time",
+  "risks": ["starvation_if_aging_too_weak"],
+  "reason": "The workload contains multiple short interactive jobs mixed with long CPU-bound jobs. MLFQ favors short jobs while still allowing CPU-bound jobs to make progress. RR would be fairer but slower for interactive jobs, and FCFS risks convoy effect.",
+  "workload_interpretation": {
+    "workload_type": "interactive_heavy",
+    "main_risks": ["poor_response_time", "starvation"]
+  },
+  "llm_model": "solar-pro3",
+  "timestamp": "2026-05-22T10:00:00Z"
+}
