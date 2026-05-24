@@ -50,13 +50,15 @@ export default function App() {
   const [dataMode,        setDataMode]        = useState('loading')
   const [updatedAt,       setUpdatedAt]       = useState(null)
   const [loadError,       setLoadError]       = useState(null)
+  const [traceErrors,     setTraceErrors]     = useState({})
+  const [manifestVersion, setManifestVersion] = useState(null)
 
   const manifestVersionRef = useRef(null)
 
   // ── Initial load ──────────────────────────────────────────────────────────
   const loadAll = useCallback(async () => {
     try {
-      const [mf, rec, gd, wl, mt, tr] = await Promise.all([
+      const [mf, rec, gd, wl, mt, trResult] = await Promise.all([
         loadManifest().catch(() => null),
         loadRecommendation().catch(() => null),
         loadGuardDecision().catch(() => null),
@@ -71,9 +73,11 @@ export default function App() {
       setGuardDecision(gd || fallbackGuardDecision)
       setWorkloadSummary(wl || fallbackWorkloadSummary)
       setMetrics(mt || fallbackMetrics)
-      setTraces(tr)
+      setTraces(trResult.traces)
+      setTraceErrors(trResult.traceErrors)
       setDataMode(usedFallback ? 'fallback' : (mf?.mode || 'simulator'))
       setUpdatedAt(mf?.updated_at ? formatUpdatedAt(mf.updated_at) : null)
+      setManifestVersion(mf?.version ?? null)
       setLoadError(null)
 
       if (mf) manifestVersionRef.current = `${mf.version}:${mf.updated_at}`
@@ -133,9 +137,11 @@ export default function App() {
   }
 
   const dataStatus = {
-    mode:      dataMode,
-    updatedAt: updatedAt,
-    error:     loadError,
+    mode:            dataMode,
+    updatedAt:       updatedAt,
+    manifestVersion: manifestVersion,
+    error:           loadError,
+    traceErrors:     traceErrors,
   }
 
   return (
