@@ -1,7 +1,7 @@
 {
   "mode": "simulator",
-  "updated_at": "2026-05-24T07:24:27Z",
-  "version": 2,
+  "updated_at": "2026-05-24T10:02:48Z",
+  "version": 3,
   "workload": "interactive_heavy",
   "algorithms": [
     "RR",

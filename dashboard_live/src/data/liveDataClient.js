@@ -23,13 +23,21 @@ async function fetchText(path) {
   return res.text()
 }
 
+// Returns { events: [...], errors: [...bad-line messages] }
 export function parseJsonl(text) {
-  return text
-    .split('\n')
-    .map(l => l.trim())
-    .filter(l => l.length > 0)
-    .map(l => JSON.parse(l))
-    .sort((a, b) => a.tick - b.tick)
+  const events = []
+  const errors = []
+  for (const raw of text.split('\n')) {
+    const l = raw.trim()
+    if (!l) continue
+    try {
+      events.push(JSON.parse(l))
+    } catch (e) {
+      errors.push(`Bad JSON line: ${l.slice(0, 60)}`)
+    }
+  }
+  events.sort((a, b) => a.tick - b.tick)
+  return { events, errors }
 }
 
 export async function loadManifest()       { return fetchJson('manifest.json') }
@@ -42,20 +50,26 @@ export async function loadTrace(algo) {
   const file = ALGO_FILE_MAP[algo]
   if (!file) throw new Error(`Unknown algo: ${algo}`)
   const text = await fetchText(file)
-  return parseJsonl(text)
+  const { events } = parseJsonl(text)
+  return events
 }
 
+// Returns { traces: {Algo: events[]}, traceErrors: {Algo: string} }
 export async function loadAllTraces() {
-  const results = {}
+  const traces = {}
+  const traceErrors = {}
   await Promise.all(
     Object.entries(ALGO_FILE_MAP).map(async ([algo, file]) => {
       try {
         const text = await fetchText(file)
-        results[algo] = parseJsonl(text)
-      } catch {
-        results[algo] = []
+        const { events, errors } = parseJsonl(text)
+        traces[algo] = events
+        if (errors.length > 0) traceErrors[algo] = errors.join('; ')
+      } catch (err) {
+        traces[algo] = []
+        traceErrors[algo] = err.message
       }
     })
   )
-  return results
+  return { traces, traceErrors }
 }

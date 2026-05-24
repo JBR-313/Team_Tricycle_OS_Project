@@ -21,15 +21,38 @@ export default function Header({
       <div className="header-spacer" />
 
       {/* Data status indicator */}
-      <div className="header-data-status">
-        <span className="ds-mode">{dataStatus.mode}</span>
+      <div className={`header-data-status${dataStatus.mode === 'fallback' ? ' ds-warn' : ''}`}>
+        <span className={`ds-mode${dataStatus.mode === 'fallback' ? ' ds-mode-fallback' : ''}`}>
+          {dataStatus.mode}
+        </span>
+        {dataStatus.manifestVersion != null && (
+          <span className="ds-version" title="Manifest version">v{dataStatus.manifestVersion}</span>
+        )}
         {dataStatus.updatedAt && (
           <span className="ds-time">{dataStatus.updatedAt}</span>
         )}
         {liveMode && (
-          <span className="ds-live-dot" title="Polling active" />
+          <span className="ds-live-dot" title="Live polling active" />
+        )}
+        {!liveMode && dataStatus.mode !== 'loading' && (
+          <span className="ds-polling-off" title="Live polling off">■</span>
+        )}
+        {dataStatus.traceErrors && Object.keys(dataStatus.traceErrors).length > 0 && (
+          <span
+            className="ds-trace-err"
+            title={`Trace parse errors:\n${Object.entries(dataStatus.traceErrors).map(([k,v])=>`${k}: ${v}`).join('\n')}`}
+          >
+            ⚠ {Object.keys(dataStatus.traceErrors).join(',')}
+          </span>
         )}
       </div>
+
+      {/* Fallback warning banner */}
+      {dataStatus.mode === 'fallback' && (
+        <div className="ds-fallback-banner">
+          No live data — showing fallback. Run <code>python3 scripts/run_live_dashboard_pipeline.py</code>
+        </div>
+      )}
 
       <div className="header-spacer" />
 
