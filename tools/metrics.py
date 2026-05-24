@@ -34,6 +34,18 @@ TARGET_METRIC_ALIASES = {
 }
 DEFAULT_TARGET_METRIC = "avg_response_time"
 
+# Sub-directory under outputs/ that holds optional reference (baseline) traces.
+# Any *.jsonl placed here is included in the comparison set but is never
+# selected as the primary run, even if it matches argv[1].
+BASELINES_SUBDIR = "baselines"
+
+# When no external baseline trace is available, a synthetic Round-Robin
+# baseline is estimated from the primary run's own process data so that
+# evaluate_run() always has something to compare against.
+# The estimate uses a fixed quantum (ms) as the RR time slice.
+SYNTHETIC_RR_QUANTUM = 10
+SYNTHETIC_BASELINE_ALGO = "_synthetic_RR"
+
 
 # Alternative trace schemas name the same data differently. These aliases are
 # normalized to the canonical field names on load, so both schemas work:
@@ -649,6 +661,115 @@ def _select_primary(runs, recommendation, explicit, outputs_dir):
     return runs[0][1], runs[0][2]
 
 
+def _make_synthetic_rr_baseline(primary_metrics):
+    """
+    Estimate Round-Robin metrics from the primary run's per-process data.
+
+    This is used as a last-resort baseline when no external trace file is
+    available, so that evaluate_run() always receives a non-empty comparison
+    set and regret_score / best_algorithm are never left as None.
+
+    The estimate is deliberately conservative (simple uniform time-slice
+    simulation), so any real RR trace would override it automatically.
+
+    Returns a metrics-dict keyed to SYNTHETIC_BASELINE_ALGO, or None when
+    not enough process data is available to build a meaningful estimate.
+    """
+    per_process = primary_metrics.get("per_process") or []
+    total_time = primary_metrics.get("total_execution_time") or 0
+
+    if not per_process or not total_time:
+        return None
+
+    q = SYNTHETIC_RR_QUANTUM
+
+    # Collect (arrival, burst) for processes that have both.
+    tasks = []
+    for p in per_process:
+        arrival = p.get("arrival_time")
+        turnaround = p.get("turnaround_time")
+        waiting = p.get("waiting_time")
+        if arrival is None or turnaround is None:
+            continue
+        burst = turnaround - (waiting or 0)
+        if burst <= 0:
+            continue
+        tasks.append({"arrival": arrival, "burst": burst})
+
+    if not tasks:
+        return None
+
+    # Simple RR simulation on the inferred tasks.
+    tasks = sorted(tasks, key=lambda t: t["arrival"])
+    ready = []
+    clock = 0
+    task_state = [{"remaining": t["burst"], "arrival": t["arrival"],
+                   "first_run": None, "finish": None} for t in tasks]
+    idx = 0  # next un-arrived task pointer
+
+    response_times = []
+    turnaround_times = []
+    waiting_times = []
+
+    while True:
+        # Enqueue newly arrived tasks.
+        while idx < len(task_state) and task_state[idx]["arrival"] <= clock:
+            ready.append(idx)
+            idx += 1
+
+        if not ready:
+            if idx >= len(task_state):
+                break
+            # Advance clock to next arrival.
+            clock = task_state[idx]["arrival"]
+            continue
+
+        i = ready.pop(0)
+        ts = task_state[i]
+
+        if ts["first_run"] is None:
+            ts["first_run"] = clock
+
+        run = min(q, ts["remaining"])
+        clock += run
+        ts["remaining"] -= run
+
+        # Enqueue any tasks that arrived during this slice.
+        while idx < len(task_state) and task_state[idx]["arrival"] <= clock:
+            ready.append(idx)
+            idx += 1
+
+        if ts["remaining"] <= 0:
+            ts["finish"] = clock
+            arrival = tasks[i]["arrival"]
+            burst = tasks[i]["burst"]
+            tat = ts["finish"] - arrival
+            wt = tat - burst
+            rt = ts["first_run"] - arrival
+            turnaround_times.append(tat)
+            waiting_times.append(wt)
+            response_times.append(rt)
+        else:
+            ready.append(i)
+
+    if not turnaround_times:
+        return None
+
+    completed = len(turnaround_times)
+    throughput = round(completed / total_time, 3) if total_time else 0.0
+
+    return {
+        "scheduling_algorithm": SYNTHETIC_BASELINE_ALGO,
+        "avg_response_time": safe_mean(response_times),
+        "avg_turnaround_time": safe_mean(turnaround_times),
+        "avg_waiting_time": safe_mean(waiting_times),
+        "max_waiting_time": round(float(max(waiting_times)), 2) if waiting_times else None,
+        "throughput": throughput,
+        "starvation_occurred": False,
+        "_synthetic": True,
+    }
+
+
 def main():
     # -------------------------------------------------
     # Project root
@@ -663,30 +784,39 @@ def main():
     target_metric = resolve_target_metric(recommendation)
 
     # -------------------------------------------------
-    # Comparison set: every *.jsonl in outputs/ is one algorithm run.
-    #   regret_score is computed self-contained from these runs, with no
-    #   external baseline file. An explicit trace may be passed as argv[1].
+    # Comparison set: every *.jsonl in outputs/ **and** outputs/baselines/ is
+    #   one algorithm run.  An explicit trace may be passed as argv[1].
+    #   Traces in baselines/ are never selected as the primary run.
     # -------------------------------------------------
     explicit = Path(sys.argv[1]) if len(sys.argv) >= 2 else None
 
-    trace_paths = sorted(outputs_dir.glob("*.jsonl"))
-    if explicit and explicit.resolve() not in {p.resolve() for p in trace_paths}:
-        trace_paths.insert(0, explicit)
+    primary_trace_paths = sorted(outputs_dir.glob("*.jsonl"))
+    baseline_trace_paths = sorted(
+        (outputs_dir / BASELINES_SUBDIR).glob("*.jsonl")
+    )
 
-    if not trace_paths:
+    if explicit and explicit.resolve() not in {
+        p.resolve() for p in primary_trace_paths + baseline_trace_paths
+    }:
+        primary_trace_paths.insert(0, explicit)
+
+    all_trace_paths = primary_trace_paths + baseline_trace_paths
+
+    if not all_trace_paths:
         print(f"[ERROR] No trace files found in: {outputs_dir}")
         sys.exit(1)
 
     # Compute base metrics for every algorithm run.
-    runs = []  # list of (path, algo, metrics)
-    for tp in trace_paths:
+    runs = []           # (path, algo, metrics, is_baseline_only)
+    for tp in all_trace_paths:
         if not tp.is_file():
             print(f"[WARN] Skipping missing trace: {tp}")
             continue
         events = load_trace(tp)
         m = compute_metrics(events, recommendation)
         algo = m["scheduling_algorithm"] or tp.stem
-        runs.append((tp, algo, m))
+        is_baseline_only = tp in baseline_trace_paths
+        runs.append((tp, algo, m, is_baseline_only))
 
     if not runs:
         print("[ERROR] No readable trace files.")
@@ -697,16 +827,40 @@ def main():
     #   all_metrics -> determines best_algorithm (primary included)
     #   baseline    -> the other algorithms, used for regret_score
     # -------------------------------------------------
+    # _select_primary only considers non-baseline-only runs.
+    primary_runs = [(p, a, m) for p, a, m, b in runs if not b]
+    if not primary_runs:
+        print("[ERROR] No primary (non-baseline) trace files found.")
+        sys.exit(1)
+
     primary_algo, primary_metrics = _select_primary(
-        runs, recommendation, explicit, outputs_dir
+        primary_runs, recommendation, explicit, outputs_dir
     )
 
     all_metrics = {}
     baseline = {}
-    for _, algo, m in runs:
+    for _, algo, m, _ in runs:
         all_metrics.setdefault(algo, m)
         if algo != primary_algo:
             baseline.setdefault(algo, m)
+
+    # -------------------------------------------------
+    # Synthetic baseline fallback: when no external comparison algorithm
+    #   exists, estimate RR metrics from the primary run's process data so
+    #   that regret_score and best_algorithm are always populated.
+    # -------------------------------------------------
+    if not baseline:
+        synth = _make_synthetic_rr_baseline(primary_metrics)
+        if synth:
+            baseline[SYNTHETIC_BASELINE_ALGO] = synth
+            all_metrics[SYNTHETIC_BASELINE_ALGO] = synth
+            print(
+                "[INFO] No external baseline traces found – using a synthetic "
+                f"Round-Robin estimate ({SYNTHETIC_BASELINE_ALGO}) so that "
+                "regret_score and best_algorithm can be computed.\n"
+                f"       Add *.jsonl files to outputs/{BASELINES_SUBDIR}/ "
+                "for a real comparison."
+            )
 
     evaluate_run(primary_metrics, baseline, all_metrics, target_metric)
 
@@ -716,7 +870,9 @@ def main():
     output_path = outputs_dir / "metrics.json"
     save_metrics(primary_metrics, output_path)
 
-    compared = ", ".join(sorted(baseline)) or "(none)"
+    real_baseline = {k: v for k, v in baseline.items()
+                     if not (isinstance(v, dict) and v.get("_synthetic"))}
+    compared = ", ".join(sorted(real_baseline)) or f"(none – used {SYNTHETIC_BASELINE_ALGO})"
     print(f"[INFO] Metrics saved to:\n{output_path}")
     print(f"[INFO] Evaluated algorithm: {primary_algo}")
     print(f"[INFO] Compared against:    {compared}")
@@ -724,11 +880,12 @@ def main():
     print(f"[INFO] Regret score:        {primary_metrics['regret_score']}")
     print(f"[INFO] Judgment:            {primary_metrics['judgment']}")
 
-    if not baseline:
+    if not real_baseline and not baseline:
         print(
-            "[WARN] Only one algorithm was found, so regret_score could not be "
-            "computed. Add more *.jsonl trace files (e.g. an RR baseline run) "
-            "to outputs/ for a meaningful comparison."
+            "[WARN] Only one algorithm was found and synthetic RR estimation "
+            "failed (insufficient process data). Add more *.jsonl trace files "
+            f"to outputs/ or outputs/{BASELINES_SUBDIR}/ for a meaningful "
+            "comparison."
         )
 
 
