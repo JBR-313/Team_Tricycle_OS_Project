@@ -1,6 +1,6 @@
-import { useState } from 'react'
 import Card from './Card.jsx'
-import { metrics, recommendation, ALGO_COLORS } from '../data/demoData.js'
+import { ALGO_COLORS } from '../data/demoData.js'
+import { normalizeTargetMetric } from '../data/schemaCompat.js'
 
 const METRICS = [
   { key: 'avg_response_time',   label: 'Avg Response Time' },
@@ -11,10 +11,11 @@ const METRICS = [
   { key: 'preemption_count',    label: 'Preemption Count' },
 ]
 
-export default function MetricVisualization() {
-  const [selKey, setSelKey] = useState('avg_response_time')
-  const cmp     = metrics.comparison || {}
-  const recAlgo = recommendation.recommended_scheduling_algorithm
+export default function MetricVisualization({ metrics, recommendation, selectedMetric, onSelectedMetricChange }) {
+  const selKey  = normalizeTargetMetric(selectedMetric || 'avg_response_time')
+  const setSelKey = (v) => onSelectedMetricChange && onSelectedMetricChange(v)
+  const cmp     = (metrics || {}).comparison || {}
+  const recAlgo = (recommendation || {}).recommended_scheduling_algorithm || (recommendation || {}).algorithm
 
   const entries = Object.entries(cmp)
     .map(([algo, v]) => ({ algo, val: v[selKey] }))

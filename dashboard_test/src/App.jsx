@@ -119,9 +119,15 @@ export default function App() {
   const [algo, setAlgo] = useState('MLFQ')
   const [tick, setTick] = useState(30)
 
+  // ── Shared selected metric (chart + comparison JUDGE) ─────────
+  const [selectedMetric, setSelectedMetric] = useState('avg_response_time')
+
   // ── Derive fixture data ───────────────────────────────────────
   const fix = FIXTURES[fixtureName] || FIXTURES['interactive_heavy']
-  const { traces, ALGOS } = fix
+  const {
+    traces, ALGOS,
+    recommendation, guardDecision, metrics, workloadSummary, traceExplanation,
+  } = fix
 
   const algoKey  = ALGOS.includes(algo) ? algo : ALGOS[0]
   const traceKey = Object.keys(traces).find(k => k.toLowerCase() === algoKey.toLowerCase()) || Object.keys(traces)[0] || ''
@@ -173,6 +179,16 @@ export default function App() {
     showDebug, onShowDebugChange: setShowDebug,
     debugInfo,
   }
+
+  // ── Data props (from the selected fixture, so switching fixtures
+  //    updates every card consistently) ──────────────────────────
+  const recProps    = { recommendation, metrics }
+  const guardProps  = { guardDecision }
+  const evalProps   = { metrics, recommendation }
+  const explProps   = { traceExplanation }
+  const wlProps     = { workloadSummary }
+  const metricProps = { metrics, recommendation, selectedMetric, onSelectedMetricChange: setSelectedMetric }
+  const cmpProps    = { metrics, recommendation, selectedMetric }
 
   const shellClass = `dashboard-shell preset-${preset} mode-${focusMode}`
 
@@ -238,8 +254,8 @@ export default function App() {
           </div>
           <div className="trace-side">
             <MainGantt events={events} currentTick={tick} maxTick={maxTick} algo={algoKey} />
-            <LLMRecommendation />
-            <AlgorithmGuard />
+            <LLMRecommendation {...recProps} />
+            <AlgorithmGuard {...guardProps} />
           </div>
         </div>
         <UITestControls {...utcProps} />
@@ -253,11 +269,11 @@ export default function App() {
       <div className={shellClass}>
         <Header {...headerProps} />
         <div className="layout-metrics">
-          <div className="metrics-cmp"><AlgorithmComparison /></div>
-          <div className="metrics-chart"><MetricVisualization /></div>
+          <div className="metrics-cmp"><AlgorithmComparison {...cmpProps} /></div>
+          <div className="metrics-chart"><MetricVisualization {...metricProps} /></div>
           <div className="metrics-side">
-            <EvaluationResult />
-            <WorkloadSummary />
+            <EvaluationResult {...evalProps} />
+            <WorkloadSummary {...wlProps} />
           </div>
         </div>
         <UITestControls {...utcProps} />
@@ -275,18 +291,18 @@ export default function App() {
         <div className="screen-recommend">
           {/* Top banner: Workload Summary (full width) */}
           <div className="rec-top">
-            <WorkloadSummary />
+            <WorkloadSummary {...wlProps} />
           </div>
 
           {/* Left: LLM Recommendation (dominant) */}
           <div className="rec-left">
-            <LLMRecommendation />
+            <LLMRecommendation {...recProps} />
           </div>
 
           {/* Right: Guard + short LLM reasoning */}
           <div className="rec-right">
-            <AlgorithmGuard />
-            <LLMExplanation />
+            <AlgorithmGuard {...guardProps} />
+            <LLMExplanation {...explProps} />
           </div>
         </div>
       )}
@@ -330,14 +346,14 @@ export default function App() {
         <div className="screen-evaluate">
           {/* Top row: Verdict (wider) + Correction & Insight (narrower) */}
           <div className="eval-top">
-            <EvaluationResult />
-            <LLMExplanation compact />
+            <EvaluationResult {...evalProps} />
+            <LLMExplanation compact {...explProps} />
           </div>
 
           {/* Bottom: Metric (left) + Comparison (right) side by side */}
           <div className="eval-bottom">
-            <MetricVisualization />
-            <AlgorithmComparison />
+            <MetricVisualization {...metricProps} />
+            <AlgorithmComparison {...cmpProps} />
           </div>
         </div>
       )}

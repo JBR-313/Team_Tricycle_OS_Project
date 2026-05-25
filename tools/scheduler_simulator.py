@@ -26,7 +26,12 @@ PROJECT_ROOT = Path(__file__).parent.parent
 
 # Backward-compatible schema readers (tolerate algorithm / scheduling_algorithm)
 sys.path.insert(0, str(Path(__file__).parent))
-from schema_compat import get_guard_algorithm
+from schema_compat import (
+    get_guard_algorithm,
+    get_recommended_algorithm,
+    is_higher_better_metric,
+    normalize_target_metric,
+)
 
 
 # ── Process model ──────────────────────────────────────────────────────────
@@ -343,7 +348,8 @@ def load_processes(wl_path: Path) -> list[Process]:
 
 
 def run_all_algorithms(processes: list[Process], guard_params: dict,
-                       rec_algo: str, out_dir: Path) -> dict:
+                       rec_algo: str, out_dir: Path,
+                       target_metric: str = "avg_response_time") -> dict:
     """Run all 6 algorithms and return a metrics dict with comparison."""
     all_results: dict[str, dict] = {}
     algos_params = {
@@ -369,34 +375,42 @@ def run_all_algorithms(processes: list[Process], guard_params: dict,
               f"avg_wt={m.get('avg_waiting_time')} "
               f"preemptions={m.get('preemption_count')}")
 
-    # find best avg_response_time
-    best_rt = min(
-        (v.get("avg_response_time", 999) for v in all_results.values()),
-        default=999,
-    )
-    rec_rt = all_results.get(rec_algo.upper(), {}).get("avg_response_time", 999)
-    delta = abs(rec_rt - best_rt) / (best_rt + 1e-9)
-    if delta < 0.05:
-        judgment = "SUCCESS"
-        regret = round(delta, 3)
-    elif delta < 0.25:
-        judgment = "NEAR-SUCCESS"
-        regret = round(delta, 3)
-    else:
-        judgment = "FAIL"
-        regret = round(delta, 3)
+    # Metric-aware judgment (canonical thresholds; starvation forces FAIL).
+    # regret(lower-better) = (val-best)/|best|; regret(higher-better) = (best-val)/|best|
+    # SUCCESS <= 0.10, NEAR-SUCCESS <= 0.30, else FAIL; UNKNOWN if no value.
+    JUDGE_KEYS = {
+        "avg_response_time", "avg_waiting_time", "avg_turnaround_time",
+        "throughput", "max_waiting_time", "preemption_count",
+    }
+    metric_key = normalize_target_metric(target_metric)
+    if metric_key not in JUDGE_KEYS:
+        metric_key = "avg_response_time"
+    higher = is_higher_better_metric(metric_key)
+    vals = [v.get(metric_key) for v in all_results.values()
+            if isinstance(v.get(metric_key), (int, float))]
+    best_val = (max(vals) if higher else min(vals)) if vals else 0.0
 
-    # build comparison dict (normalised algo names for dashboard)
+    def _judge(m: dict):
+        if m.get("starvation_occurred"):
+            return "FAIL", 1.0
+        val = m.get(metric_key)
+        if not isinstance(val, (int, float)):
+            return "UNKNOWN", 0.0
+        denom = max(abs(best_val), 1e-9)
+        d = round((best_val - val) / denom if higher else (val - best_val) / denom, 3)
+        if d <= 0.10:
+            return "SUCCESS", d
+        if d <= 0.30:
+            return "NEAR-SUCCESS", d
+        return "FAIL", d
+
+    # build comparison dict (normalised display algo names for dashboard)
     algo_display = {"RR": "RR", "FCFS": "FCFS", "PRIORITY": "Priority",
                     "MLFQ": "MLFQ", "SJF": "SJF", "SRTF": "SRTF"}
     comparison = {}
-    judge_map = {}
     for algo_key, m in all_results.items():
         disp = algo_display.get(algo_key, algo_key)
-        algo_rt = m.get("avg_response_time", 999)
-        adelta = abs(algo_rt - best_rt) / (best_rt + 1e-9)
-        aj = "SUCCESS" if adelta < 0.05 else ("NEAR-SUCCESS" if adelta < 0.25 else "FAIL")
-        judge_map[algo_key] = aj
+        aj, _ = _judge(m)
         comparison[disp] = {
             "avg_waiting_time":       m.get("avg_waiting_time"),
             "avg_response_time":      m.get("avg_response_time"),
@@ -410,11 +424,13 @@ def run_all_algorithms(processes: list[Process], guard_params: dict,
         }
 
     rec_m = all_results.get(rec_algo.upper(), {})
+    judgment, regret = _judge(rec_m)
     metrics = {
         **rec_m,
         "comparison": comparison,
         "judgment": judgment,
         "regret_score": regret,
+        "target_metric": metric_key,
     }
     return metrics
 
@@ -439,11 +455,13 @@ def main() -> int:
     # load guard decision
     rec_algo  = "MLFQ"
     guard_params: dict = {}
+    target_metric = "avg_response_time"
     if guard_path.exists():
         gd = json.load(open(guard_path))
         rec_algo = get_guard_algorithm(gd, rec_algo)
         guard_params = gd.get("params", {})
-        print(f"Guard decision: {rec_algo} params={guard_params}")
+        target_metric = normalize_target_metric(gd.get("target_metric"))
+        print(f"Guard decision: {rec_algo} params={guard_params} target={target_metric}")
     else:
         print(f"WARNING: guard_decision.json not found, using default {rec_algo}")
 
@@ -452,7 +470,7 @@ def main() -> int:
     print(f"  {len(processes)} processes")
 
     print("Simulating all algorithms...")
-    metrics = run_all_algorithms(processes, guard_params, rec_algo, out_dir)
+    metrics = run_all_algorithms(processes, guard_params, rec_algo, out_dir, target_metric)
 
     metrics_path = out_dir / "metrics.json"
     with open(metrics_path, "w") as f:

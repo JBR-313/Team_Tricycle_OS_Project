@@ -4,14 +4,16 @@
   "params": {
     "quantum": 2
   },
-  "target_metric": "response_time",
+  "target_metric": "avg_response_time",
   "compatibility_score": 0.9,
   "confidence_score": 0.95,
   "reason": "Accepted: RR is suitable for response_time (compat=0.90, confidence=0.95).",
   "_meta": {
     "source": "tools/algorithm_guard.py",
-    "generated_at": "2026-05-25T07:05:28.509637+00:00",
+    "generated_at": "2026-05-25T08:06:27.789172+00:00",
     "recommendation_source": "recommendation.json"
   },
-  "scheduling_algorithm": "RR"
+  "scheduling_algorithm": "RR",
+  "original_recommendation": "RR",
+  "fallback_used": false
 }

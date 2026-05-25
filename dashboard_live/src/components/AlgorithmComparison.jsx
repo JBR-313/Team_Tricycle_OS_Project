@@ -1,5 +1,9 @@
 import Card from './Card.jsx'
 import { ALGO_COLORS } from './constants.js'
+import {
+  computeAlgorithmJudgment, normalizeAlgo,
+  normalizeTargetMetric, getRecommendedAlgorithm,
+} from '../data/schemaCompat.js'
 
 const COLS = [
   { key: 'avg_response_time',   label: 'Avg RT',  lowerBetter: true  },
@@ -18,14 +22,15 @@ function fmt(v, key) {
   return String(v)
 }
 
-export default function AlgorithmComparison({ metrics, recommendation: rec }) {
+export default function AlgorithmComparison({ metrics, recommendation: rec, selectedMetric }) {
   if (!metrics || !rec) return <Card label="Algorithm Comparison" className="card-cmp"><div className="loading">Loading…</div></Card>
 
   const cmp     = metrics.comparison || {}
-  const recAlgo = rec.recommended_scheduling_algorithm
-  const tgt     = rec.target_metric || 'avg_response_time'
+  const recAlgo = getRecommendedAlgorithm(rec)
+  const tgt     = normalizeTargetMetric(selectedMetric || rec.target_metric || 'avg_response_time')
   const tgtCol  = COLS.find(c => c.key === tgt)?.label
   const rows    = Object.entries(cmp)
+  const allComparisonMetrics = Object.values(cmp)
 
   const colStats = {}
   for (const col of COLS) {

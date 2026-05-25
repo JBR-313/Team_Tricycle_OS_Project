@@ -39,6 +39,7 @@ export default function App() {
   const [algo, setAlgo]         = useState('MLFQ')
   const [tick, setTick]         = useState(0)
   const [liveMode, setLiveMode] = useState(false)
+  const [selectedMetric, setSelectedMetric] = useState('avg_response_time')
 
   const [traces,          setTraces]          = useState(fallbackTraces)
   const [recommendation,  setRecommendation]  = useState(null)
@@ -185,8 +186,8 @@ export default function App() {
         <div className="dashboard-col">
           <ProcessLanes        events={events} currentTick={tick} maxTick={maxTick} algo={algo} />
           <WorkloadSummary     workloadSummary={workloadSummary} />
-          <AlgorithmComparison metrics={metrics} recommendation={recommendation} />
-          <MetricVisualization metrics={metrics} recommendation={recommendation} />
+          <AlgorithmComparison metrics={metrics} recommendation={recommendation} selectedMetric={selectedMetric} />
+          <MetricVisualization metrics={metrics} recommendation={recommendation} selectedMetric={selectedMetric} onSelectedMetricChange={setSelectedMetric} />
         </div>
       </div>
     </div>

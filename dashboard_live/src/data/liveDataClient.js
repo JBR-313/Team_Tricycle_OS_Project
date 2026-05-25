@@ -1,3 +1,5 @@
+import { normalizeTraceEvent, getEventTick } from './schemaCompat.js'
+
 const BASE = '/live-data'
 
 const ALGO_FILE_MAP = {
@@ -24,19 +26,21 @@ async function fetchText(path) {
 }
 
 // Returns { events: [...], errors: [...bad-line messages] }
-export function parseJsonl(text) {
+// Events are normalized through the schema-compat layer (tick/algo spellings)
+// using `defaultAlgo` when an event omits its own algo, then sorted by tick.
+export function parseJsonl(text, defaultAlgo = null) {
   const events = []
   const errors = []
   for (const raw of text.split('\n')) {
     const l = raw.trim()
     if (!l) continue
     try {
-      events.push(JSON.parse(l))
+      events.push(normalizeTraceEvent(JSON.parse(l), defaultAlgo))
     } catch (e) {
       errors.push(`Bad JSON line: ${l.slice(0, 60)}`)
     }
   }
-  events.sort((a, b) => a.tick - b.tick)
+  events.sort((a, b) => (getEventTick(a) ?? 0) - (getEventTick(b) ?? 0))
   return { events, errors }
 }
 
@@ -50,7 +54,7 @@ export async function loadTrace(algo) {
   const file = ALGO_FILE_MAP[algo]
   if (!file) throw new Error(`Unknown algo: ${algo}`)
   const text = await fetchText(file)
-  const { events } = parseJsonl(text)
+  const { events } = parseJsonl(text, algo)
   return events
 }
 
@@ -62,7 +66,7 @@ export async function loadAllTraces() {
     Object.entries(ALGO_FILE_MAP).map(async ([algo, file]) => {
       try {
         const text = await fetchText(file)
-        const { events, errors } = parseJsonl(text)
+        const { events, errors } = parseJsonl(text, algo)
         traces[algo] = events
         if (errors.length > 0) traceErrors[algo] = errors.join('; ')
       } catch (err) {

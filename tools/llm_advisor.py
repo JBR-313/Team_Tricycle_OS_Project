@@ -37,6 +37,12 @@ try:
 except ImportError:  # when run as `python3 tools/llm_advisor.py`
     from solar_client import SolarClient, SolarError
 
+# Backward-compatible output normalizers (DISPLAY algo name + canonical metric).
+try:
+    from tools.schema_compat import normalize_algorithm_name, normalize_target_metric
+except ImportError:  # when run as `python3 tools/llm_advisor.py`
+    from schema_compat import normalize_algorithm_name, normalize_target_metric
+
 ALGORITHMS = ["FCFS", "RR", "PRIORITY", "MLFQ"]
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -300,6 +306,17 @@ def run_advise(in_path: Path, out_path: Path, feedback_path: Path) -> int:
         rec = validate(rec)
     except SolarError as exc:
         raise SystemExit(f"[llm_advisor] LLM error: {exc}")
+
+    # Dashboard data-contract compatibility: emit the canonical keys ALONGSIDE
+    # the legacy ones the rest of the pipeline already validates/consumes.
+    #   - recommended_scheduling_algorithm : DISPLAY form (e.g. "Priority")
+    #   - target_metric                    : canonical (e.g. "avg_response_time")
+    # The legacy `algorithm` key is preserved untouched for backward compat.
+    rec["recommended_scheduling_algorithm"] = normalize_algorithm_name(
+        rec.get("algorithm")
+    )
+    if rec.get("target_metric") and rec.get("target_metric") != "unspecified":
+        rec["target_metric"] = normalize_target_metric(rec.get("target_metric"))
 
     rec["_meta"] = {
         "source": "tools/llm_advisor.py",

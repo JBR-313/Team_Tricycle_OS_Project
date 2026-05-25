@@ -1,6 +1,6 @@
-import { useState } from 'react'
 import Card from './Card.jsx'
 import { ALGO_COLORS } from './constants.js'
+import { normalizeTargetMetric, getRecommendedAlgorithm, normalizeAlgo } from '../data/schemaCompat.js'
 
 const METRICS = [
   { key: 'avg_response_time',   label: 'Avg Response Time' },
@@ -11,13 +11,12 @@ const METRICS = [
   { key: 'preemption_count',    label: 'Preemption Count' },
 ]
 
-export default function MetricVisualization({ metrics, recommendation: rec }) {
-  const [selKey, setSelKey] = useState('avg_response_time')
-
+export default function MetricVisualization({ metrics, recommendation: rec, selectedMetric, onSelectedMetricChange }) {
   if (!metrics || !rec) return <Card label="Metric Visualization" className="card-metric"><div className="loading">Loading…</div></Card>
 
   const cmp     = metrics.comparison || {}
-  const recAlgo = rec.recommended_scheduling_algorithm
+  const recAlgo = getRecommendedAlgorithm(rec)
+  const selKey  = normalizeTargetMetric(selectedMetric)
 
   const entries = Object.entries(cmp)
     .map(([algo, v]) => ({ algo, val: v[selKey] }))
@@ -28,7 +27,7 @@ export default function MetricVisualization({ metrics, recommendation: rec }) {
   return (
     <Card label="Metric Visualization" className="card-metric">
       <div className="metric-chart">
-        <select className="metric-select" value={selKey} onChange={e => setSelKey(e.target.value)}>
+        <select className="metric-select" value={selKey} onChange={e => onSelectedMetricChange(e.target.value)}>
           {METRICS.map(m => <option key={m.key} value={m.key}>{m.label}</option>)}
         </select>
         <div className="metric-bars-wrap">
@@ -36,7 +35,7 @@ export default function MetricVisualization({ metrics, recommendation: rec }) {
           <div className="metric-bars">
             {entries.map(({ algo, val }) => {
               const pct   = (val / maxVal) * 100
-              const isRec = algo === recAlgo
+              const isRec = normalizeAlgo(algo) === recAlgo
               return (
                 <div key={algo} className="metric-bar-col">
                   {isRec && <span className="metric-star">★</span>}
@@ -44,11 +43,11 @@ export default function MetricVisualization({ metrics, recommendation: rec }) {
                   <div className="metric-bar-track">
                     <div
                       className={`metric-bar-fill ${isRec ? 'recommended' : ''}`}
-                      style={{ height: `${pct}%`, background: ALGO_COLORS[algo] || '#94a3b8', opacity: isRec ? 1.0 : 0.80 }}
-                      title={`${algo}: ${val}`}
+                      style={{ height: `${pct}%`, background: ALGO_COLORS[normalizeAlgo(algo)] || ALGO_COLORS[algo] || '#94a3b8', opacity: isRec ? 1.0 : 0.80 }}
+                      title={`${normalizeAlgo(algo)}: ${val}`}
                     />
                   </div>
-                  <span className="metric-bar-label">{algo}</span>
+                  <span className="metric-bar-label">{normalizeAlgo(algo)}</span>
                 </div>
               )
             })}

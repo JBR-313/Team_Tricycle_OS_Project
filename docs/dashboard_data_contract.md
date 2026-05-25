@@ -222,3 +222,53 @@ When `version` or `updated_at` changes, the dashboard reloads all files.
 | `SUCCESS`    | LLM selected the best or near-best algorithm |
 | `NEAR-SUCCESS` | LLM result is close to the best result     |
 | `FAIL`       | LLM result is clearly worse than the best   |
+| `UNKNOWN`    | Not enough data to judge                      |
+
+### Judgment semantics (canonical)
+
+For a metric, `regret` is computed against the best algorithm in the comparison:
+
+- lower-is-better (`avg_response_time`, `avg_waiting_time`, `avg_turnaround_time`,
+  `max_waiting_time`, `preemption_count`): `regret = (value - best) / |best|`
+- higher-is-better (`throughput`): `regret = (best - value) / |best|`
+
+Thresholds: `SUCCESS` if `regret <= 0.10`, `NEAR-SUCCESS` if `regret <= 0.30`,
+else `FAIL`. **Starvation always forces `FAIL`.** `UNKNOWN` when the value is
+missing.
+
+**Table row JUDGE must be metric-aware.** The Algorithm Comparison table's `JUDGE`
+column MUST be recomputed for the currently selected metric (the dropdown), not
+taken blindly from `comparison[algo].judgment` — that stored value is computed for
+the recommendation's `target_metric` and is stale for any other selected metric.
+The stored `metrics.judgment` / `comparison[algo].judgment` remain valid as the
+overall *recommendation verdict* for `target_metric`.
+
+---
+
+## Backward-compatible input aliases
+
+Producers SHOULD emit the canonical keys above. Readers accept these legacy
+aliases (see `tools/schema_compat.py` and `dashboard_*/src/data/schemaCompat.js`):
+
+| Canonical                          | Legacy alias accepted        |
+|------------------------------------|------------------------------|
+| `recommended_scheduling_algorithm` | `algorithm`                  |
+| `scheduling_algorithm` (guard)     | `algorithm`                  |
+| `avg_response_time`                | `response_time`              |
+| `avg_waiting_time`                 | `waiting_time`               |
+| `avg_turnaround_time`              | `turnaround_time`            |
+| `starvation_occurred`              | `starvation`                 |
+| trace `tick`                       | `time`                       |
+| trace `algo`                       | `algorithm`                  |
+
+Algorithm display form is `RR, FCFS, Priority, MLFQ, SJF, SRTF` (note mixed-case
+`Priority`). Readers normalize `PRIORITY`/`priority` to `Priority`.
+
+### Additional fields
+
+- `guard_decision.guard_result` may also be `"accepted_with_warning"` — the
+  dashboard treats it the same as `"accepted"` (a `warnings` array may accompany it).
+- `manifest.metadata_source` (optional): set to `"demo_fallback"` when the
+  recommendation/guard metadata came from `outputs/demo/` because the live advisor
+  or guard step failed. The dashboard should not present demo metadata as a fresh
+  run.

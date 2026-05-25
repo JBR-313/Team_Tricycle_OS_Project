@@ -29,6 +29,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 
+# Backward-compatible output normalizers (DISPLAY algo name + canonical metric).
+try:
+    from tools.schema_compat import normalize_algorithm_name, normalize_target_metric
+except ImportError:  # when run as `python3 tools/algorithm_guard.py`
+    from schema_compat import normalize_algorithm_name, normalize_target_metric
+
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 SUPPORTED_ALGORITHMS = ["FCFS", "RR", "PRIORITY", "MLFQ"]
@@ -372,14 +378,51 @@ def choose_fallback(metric: str, current_algo: str) -> str:
     return "RR"  # ultimate safe fallback
 
 
+def _add_compat_keys(decision: dict, rec: dict, *, fallback_used: bool) -> dict:
+    """Augment a guard_decision dict with dashboard data-contract keys WITHOUT
+    removing any legacy keys.
+
+    Adds:
+      - scheduling_algorithm   : DISPLAY form of the CHOSEN algo (fallback when
+                                 rejected, otherwise the validated algorithm).
+      - original_recommendation: DISPLAY form of what the LLM recommended.
+      - fallback_used          : True when rejected / a fallback was applied.
+      - target_metric          : canonical key (avg_response_time, ...).
+
+    The internal `algorithm`/`target_metric` validation values are left intact;
+    we only add canonical mirrors so the dashboard reads consistent spellings.
+    """
+    rec = rec or {}
+    # Chosen algo: prefer the fallback when one was applied, else the validated.
+    chosen = decision.get("fallback_algorithm") or decision.get("algorithm")
+    decision["scheduling_algorithm"] = normalize_algorithm_name(chosen)
+
+    orig = rec.get("recommended_scheduling_algorithm") or rec.get("algorithm")
+    decision["original_recommendation"] = normalize_algorithm_name(orig)
+
+    decision["fallback_used"] = bool(
+        fallback_used or decision.get("fallback_algorithm")
+    )
+
+    # Canonical metric mirror (internal validation already used response_time form).
+    metric = decision.get("target_metric") or rec.get("target_metric")
+    if metric and metric != "unspecified":
+        decision["target_metric"] = normalize_target_metric(metric)
+    return decision
+
+
 def guard(rec: dict) -> dict:
-    """Run all guard validations. Returns guard_decision dict."""
+    """Run all guard validations. Returns guard_decision dict.
+
+    `guard_result` values: "accepted" | "accepted_with_warning" | "rejected".
+    The dashboard treats "accepted_with_warning" the same as "accepted".
+    """
     timestamp = datetime.now(timezone.utc).isoformat()
 
     # Layer 1: Schema
     schema_ok, schema_err = validate_schema(rec)
     if schema_err:
-        return {
+        decision = {
             "guard_result": "rejected",
             "reason": f"Schema validation failed: {schema_err}",
             "algorithm": rec.get("algorithm", "unknown"),
@@ -390,6 +433,7 @@ def guard(rec: dict) -> dict:
                 "generated_at": timestamp,
             },
         }
+        return _add_compat_keys(decision, rec, fallback_used=True)
 
     try:
         # Layer 2: Algorithm
@@ -453,14 +497,16 @@ def guard(rec: dict) -> dict:
             "recommendation_source": "recommendation.json",
         }
 
-        return guard_decision
+        return _add_compat_keys(
+            guard_decision, rec, fallback_used=(result == "rejected")
+        )
 
     except GuardError as exc:
         fallback = choose_fallback(
             rec.get("target_metric", "response_time"),
             rec.get("algorithm", "UNKNOWN"),
         )
-        return {
+        decision = {
             "guard_result": "rejected",
             "reason": f"Guard validation failed: {exc}",
             "algorithm": rec.get("algorithm", "unknown"),
@@ -471,6 +517,7 @@ def guard(rec: dict) -> dict:
                 "generated_at": timestamp,
             },
         }
+        return _add_compat_keys(decision, rec, fallback_used=True)
 
 
 def main() -> int:

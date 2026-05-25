@@ -54,6 +54,8 @@ from schema_compat import (  # noqa: E402
     get_guard_algorithm,
     get_recommended_algorithm,
     normalize_algo,
+    normalize_algorithm_name,
+    normalize_target_metric,
 )
 from metrics import compute as compute_metrics  # noqa: E402
 
@@ -194,8 +196,11 @@ def run_workload_analyzer(workload: Path, out_dir: Path, dry_run: bool):
             print("  [WARN] workload_summary.json not produced; demo fallback used later")
 
 
-def run_advisor(out_dir: Path, dry_run: bool):
-    """Run llm_advisor (advise). On ANY failure, fall back to demo recommendation."""
+def run_advisor(out_dir: Path, dry_run: bool) -> bool:
+    """Run llm_advisor (advise). On ANY failure, fall back to demo recommendation.
+
+    Returns True if the demo fallback was used (caller flags metadata_source).
+    """
     print("\n[2] LLM advisor")
     summary = out_dir / "workload_summary.json"
     rec_out = out_dir / "recommendation.json"
@@ -208,7 +213,7 @@ def run_advisor(out_dir: Path, dry_run: bool):
     if dry_run:
         print(f"  cmd: {' '.join(cmd)}")
         print("  [DRY-RUN] skipped")
-        return
+        return False
 
     ok = False
     try:
@@ -226,10 +231,15 @@ def run_advisor(out_dir: Path, dry_run: bool):
         if not demo_rec.exists():
             sys.exit(f"[orchestrator] demo recommendation fallback missing: {demo_rec}")
         copy_file(demo_rec, rec_out, dry_run)
+        return True
+    return False
 
 
-def run_guard(out_dir: Path, dry_run: bool):
-    """Run algorithm_guard. On failure, fall back to demo guard_decision."""
+def run_guard(out_dir: Path, dry_run: bool) -> bool:
+    """Run algorithm_guard. On failure, fall back to demo guard_decision.
+
+    Returns True if the demo fallback was used (caller flags metadata_source).
+    """
     print("\n[3] Algorithm guard")
     rec_in = out_dir / "recommendation.json"
     guard_out = out_dir / "guard_decision.json"
@@ -241,9 +251,10 @@ def run_guard(out_dir: Path, dry_run: bool):
     if dry_run:
         print(f"  cmd: {' '.join(cmd)}")
         print("  [DRY-RUN] skipped")
-        return
+        return False
 
     ok = False
+    fellback = False
     try:
         rc = subprocess.run(cmd, capture_output=False).returncode
         ok = rc == 0 and guard_out.exists()
@@ -259,20 +270,18 @@ def run_guard(out_dir: Path, dry_run: bool):
         if not demo_guard.exists():
             sys.exit(f"[orchestrator] demo guard fallback missing: {demo_guard}")
         copy_file(demo_guard, guard_out, dry_run)
+        fellback = True
 
-    # Schema-drift bridge: algorithm_guard.py writes the key `algorithm`, but the
-    # simulator reads `scheduling_algorithm` (falling back to MLFQ otherwise,
-    # which mis-applies params). Mirror the resolved algo onto both keys so the
-    # downstream simulator always sees the LLM-selected algorithm. We only touch
-    # the guard_decision.json in out_dir (tools/* are left untouched).
-    if not dry_run:
-        guard = _read_json(guard_out)
-        if guard:
-            algo = get_guard_algorithm(guard, default="RR")
-            if guard.get("scheduling_algorithm") != algo:
-                guard["scheduling_algorithm"] = algo
-                guard_out.write_text(json.dumps(guard, indent=2) + "\n")
-                print(f"  [guard] mirrored scheduling_algorithm={algo} for simulator compat")
+    # Safety net: algorithm_guard.py now emits a DISPLAY-form `scheduling_algorithm`
+    # itself. Only fill it in if somehow missing (e.g. an older demo file), keeping
+    # the canonical display spelling so the dashboard reads it consistently.
+    guard = _read_json(guard_out)
+    if guard and not guard.get("scheduling_algorithm"):
+        algo = normalize_algorithm_name(get_guard_algorithm(guard, default="RR"))
+        guard["scheduling_algorithm"] = algo
+        guard_out.write_text(json.dumps(guard, indent=2) + "\n")
+        print(f"  [guard] filled missing scheduling_algorithm={algo}")
+    return fellback
 
 
 def resolve_selected_algorithm(out_dir: Path) -> str:
@@ -499,8 +508,9 @@ def build_xv6_metrics(out_dir: Path, selected: str, run_order: list[str],
         if not m:
             print(f"  [WARN] no metrics for {algo} (no EXIT events)")
             continue
-        full[algo] = m
-        comparison[algo] = {
+        disp = normalize_algorithm_name(algo)
+        full[disp] = m
+        comparison[disp] = {
             "avg_waiting_time":      m["avg_waiting_time"],
             "avg_response_time":     m["avg_response_time"],
             "avg_turnaround_time":   m["avg_turnaround_time"],
@@ -517,24 +527,35 @@ def build_xv6_metrics(out_dir: Path, selected: str, run_order: list[str],
         return False
 
     mkey, lower_better = _metric_key(target_metric)
-    vals = [c[mkey] for c in comparison.values()]
-    best = min(vals) if lower_better else max(vals)
+    vals = [c[mkey] for c in comparison.values() if isinstance(c.get(mkey), (int, float))]
+    best = (min(vals) if lower_better else max(vals)) if vals else 0.0
 
-    def _judge(v: float) -> tuple[str, float]:
-        delta = abs(v - best) / (abs(best) + 1e-9)
-        j = "SUCCESS" if delta < 0.05 else ("NEAR-SUCCESS" if delta < 0.25 else "FAIL")
-        return j, round(delta, 3)
+    def _judge(c: dict) -> tuple[str, float]:
+        # Canonical thresholds; starvation forces FAIL.
+        if c.get("starvation_occurred"):
+            return "FAIL", 1.0
+        v = c.get(mkey)
+        if not isinstance(v, (int, float)):
+            return "UNKNOWN", 0.0
+        denom = max(abs(best), 1e-9)
+        delta = round((best - v) / denom if not lower_better else (v - best) / denom, 3)
+        if delta <= 0.10:
+            return "SUCCESS", delta
+        if delta <= 0.30:
+            return "NEAR-SUCCESS", delta
+        return "FAIL", delta
 
     for c in comparison.values():
-        c["judgment"], _ = _judge(c[mkey])
+        c["judgment"], _ = _judge(c)
 
+    selected = normalize_algorithm_name(selected)
     if selected not in full:
         selected = next(iter(full))
     top = dict(full[selected])
     top["scheduling_algorithm"] = selected
     top["params"] = guard_params or {}
     top["comparison"] = comparison
-    top["judgment"], top["regret_score"] = _judge(comparison[selected][mkey])
+    top["judgment"], top["regret_score"] = _judge(comparison[selected])
     top.setdefault("starvation_pids", [])
 
     (out_dir / "metrics.json").write_text(json.dumps(top, indent=2))
@@ -603,7 +624,8 @@ def ensure_metadata_files(out_dir: Path, dry_run: bool):
 
 def export_to_live_data(out_dir: Path, live_dir: Path, *, backend: str, seed: int,
                         workload_type: str, workload_stem: str, selected: str,
-                        run_order: list[str], dry_run: bool) -> dict:
+                        run_order: list[str], dry_run: bool,
+                        metadata_source: str | None = None) -> dict:
     print(f"\n[5] Export to {_rel(live_dir)}")
     ensure_dir(live_dir)
 
@@ -614,9 +636,9 @@ def export_to_live_data(out_dir: Path, live_dir: Path, *, backend: str, seed: in
     for fname in META_FILES:
         copy_file(out_dir / fname, live_dir / fname, dry_run)
 
-    # target_metric from recommendation, else default
+    # target_metric from recommendation, else default — canonical form
     rec = _read_json(out_dir / "recommendation.json")
-    target = rec.get("target_metric") or "avg_response_time"
+    target = normalize_target_metric(rec.get("target_metric")) if rec.get("target_metric") else "avg_response_time"
 
     # version increment from existing manifest
     existing = _read_json(live_dir / "manifest.json")
@@ -625,13 +647,17 @@ def export_to_live_data(out_dir: Path, live_dir: Path, *, backend: str, seed: in
     now = _iso_now()
     mode = "simulator" if backend == "simulator" else "xv6-log"
 
+    # DISPLAY-form algorithm names for the dashboard.
+    selected_disp = normalize_algorithm_name(selected)
+    order_disp = [normalize_algorithm_name(a) for a in run_order]
+
     manifest = {
         # ── new (additive) fields ──
         "backend": backend,
         "seed": seed,
         "workload_type": workload_type,
-        "llm_selected_algorithm": selected,
-        "algorithms_executed": run_order,
+        "llm_selected_algorithm": selected_disp,
+        "algorithms_executed": order_disp,
         "generated_at": now,
         "orchestrator_version": ORCHESTRATOR_VERSION,
         # ── legacy mirrors (keep the current dashboard working) ──
@@ -639,12 +665,16 @@ def export_to_live_data(out_dir: Path, live_dir: Path, *, backend: str, seed: in
         "updated_at": now,
         "version": version,
         "workload": workload_stem,
-        "algorithms": run_order,
-        "recommended_algorithm": selected,
+        "algorithms": order_disp,
+        "recommended_algorithm": selected_disp,
         "target_metric": target,
     }
+    # Honest provenance: flag when metadata came from the demo fallback.
+    if metadata_source:
+        manifest["metadata_source"] = metadata_source
     write_json(live_dir / "manifest.json", manifest, dry_run)
-    print(f"  manifest version -> {version}")
+    print(f"  manifest version -> {version}"
+          + (f"  (metadata_source={metadata_source})" if metadata_source else ""))
     return manifest
 
 
@@ -655,6 +685,9 @@ def main() -> int:
         description="LLM Sched Copilot — host-side Orchestrator (Phase B)"
     )
     p.add_argument("--backend", choices=["xv6", "simulator"], default="simulator")
+    p.add_argument("--mode", choices=["simulator", "xv6-log", "xv6", "fallback"],
+                   default=None,
+                   help="legacy alias for --backend (simulator | xv6-log/xv6 -> xv6 | fallback)")
     p.add_argument("--seed", type=int, default=42)
     p.add_argument("--workload", default="interactive",
                    help="profile name or path ending in .json")
@@ -666,6 +699,10 @@ def main() -> int:
     p.add_argument("--live-data-dir", default=str(LIVE_DATA))
     p.add_argument("--dry-run", action="store_true")
     args = p.parse_args()
+
+    # Legacy --mode alias maps onto --backend (xv6-log/xv6 -> xv6, else simulator).
+    if args.mode:
+        args.backend = "xv6" if args.mode in ("xv6-log", "xv6") else "simulator"
 
     out_dir = Path(args.out_dir)
     live_dir = Path(args.live_data_dir)
@@ -692,8 +729,9 @@ def main() -> int:
 
     # Before-running phase: analyze -> advise -> guard
     run_workload_analyzer(workload_path, out_dir, dry_run)
-    run_advisor(out_dir, dry_run)
-    run_guard(out_dir, dry_run)
+    advisor_fellback = run_advisor(out_dir, dry_run)
+    guard_fellback = run_guard(out_dir, dry_run)
+    metadata_source = "demo_fallback" if (advisor_fellback or guard_fellback) else None
 
     # Resolve LLM-selected algorithm + run order (selected first).
     selected = "RR" if dry_run else resolve_selected_algorithm(out_dir)
@@ -720,6 +758,7 @@ def main() -> int:
         backend=args.backend, seed=args.seed,
         workload_type=workload_type, workload_stem=workload_stem,
         selected=selected, run_order=run_order, dry_run=dry_run,
+        metadata_source=metadata_source,
     )
 
     print("\n[DONE] Orchestrator pipeline complete.")

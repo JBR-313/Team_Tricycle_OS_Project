@@ -86,7 +86,6 @@ const METRIC_KEYS = {
   preemption_count: 'preemption_count',
 }
 
-// Metric-aware judgment for ONE algorithm row vs the whole comparison set.
 export function computeAlgorithmJudgment(algoMetrics, allComparisonMetrics, targetMetric) {
   if (!algoMetrics) return 'UNKNOWN'
   if (algoMetrics.starvation_occurred === true) return 'FAIL'
@@ -104,18 +103,4 @@ export function computeAlgorithmJudgment(algoMetrics, allComparisonMetrics, targ
   if (regret <= 0.10) return 'SUCCESS'
   if (regret <= 0.30) return 'NEAR-SUCCESS'
   return 'FAIL'
-}
-
-export function getBackend(manifest) {
-  if (!manifest) return 'simulator'
-  if (manifest.backend) {
-    const b = String(manifest.backend).toLowerCase()
-    if (b === 'xv6' || b === 'xv6-log') return 'xv6'
-    if (b === 'fallback') return 'fallback'
-    return 'simulator'
-  }
-  const mode = String(manifest.mode || '').toLowerCase()
-  if (mode === 'xv6-log' || mode === 'xv6') return 'xv6'
-  if (mode === 'fallback') return 'fallback'
-  return 'simulator'
 }

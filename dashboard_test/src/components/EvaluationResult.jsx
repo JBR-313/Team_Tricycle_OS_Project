@@ -1,20 +1,26 @@
 import Card from './Card.jsx'
-import { metrics, recommendation, PROC_COLORS } from '../data/demoData.js'
+import { PROC_COLORS } from '../data/demoData.js'
+import { isHigherBetterMetric, normalizeTargetMetric } from '../data/schemaCompat.js'
 
-export default function EvaluationResult() {
-  const jdg    = metrics.judgment || '—'
-  const regret = metrics.regret_score
-  const starv  = metrics.starvation_occurred
-  const cmp    = metrics.comparison || {}
-  const perProc = metrics.per_process || []
-  const recAlgo = recommendation.recommended_scheduling_algorithm
-  const tgt     = recommendation.target_metric || 'avg_response_time'
+export default function EvaluationResult({ metrics, recommendation }) {
+  const m       = metrics || {}
+  const rec     = recommendation || {}
+  const jdg     = m.judgment || '—'
+  const regret  = m.regret_score
+  const starv   = m.starvation_occurred
+  const cmp     = m.comparison || {}
+  const perProc = m.per_process || []
+  const recAlgo = rec.recommended_scheduling_algorithm || rec.algorithm
+  const tgt     = normalizeTargetMetric(rec.target_metric || 'avg_response_time')
+  const higher  = isHigherBetterMetric(tgt)
 
-  // Find best algorithm for target metric
-  let bestAlgo = '—', bestVal = Infinity
+  // Find best algorithm for target metric (direction-aware: max for throughput).
+  let bestAlgo = '—', bestVal = higher ? -Infinity : Infinity
   for (const [a, v] of Object.entries(cmp)) {
     const val = v[tgt]
-    if (typeof val === 'number' && val < bestVal) { bestVal = val; bestAlgo = a }
+    if (typeof val === 'number' && (higher ? val > bestVal : val < bestVal)) {
+      bestVal = val; bestAlgo = a
+    }
   }
 
   const jBg = { SUCCESS: '#d1fae5', 'NEAR-SUCCESS': '#dbeafe', FAIL: '#fee2e2' }[jdg] || '#f1f5f9'

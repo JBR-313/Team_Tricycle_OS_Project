@@ -1071,6 +1071,13 @@
 .backend-sim .backend-badge-text { color: #b45309; }
 .backend-sim .backend-badge-note { color: #92400e; }
 
+.backend-fallback {
+  background: rgba(254,226,226,0.92);
+  border-color: rgba(248,113,113,0.65);
+}
+.backend-fallback .backend-badge-text { color: #b91c1c; }
+.backend-fallback .backend-badge-note { color: #991b1b; }
+
 /* Extra manifest metadata strip */
 .header-manifest-meta {
   display: flex;

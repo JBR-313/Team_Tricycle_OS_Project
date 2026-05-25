@@ -10,7 +10,10 @@ export default function Header({
   totalTraceEvents,
 }) {
   const mf = manifest || {}
-  const backend = getBackend(mf)
+  // Backend source: 'xv6' | 'simulator' | 'fallback'. A demo_fallback metadata
+  // flag (set by the orchestrator) downgrades the badge to FALLBACK for honesty.
+  let backend = getBackend(mf)
+  if (backend !== 'xv6' && mf.metadata_source === 'demo_fallback') backend = 'fallback'
   const isXv6 = backend === 'xv6'
 
   // Extra manifest fields (new schema with legacy fallbacks)
@@ -61,14 +64,16 @@ export default function Header({
         )}
       </div>
 
-      {/* Backend source badge — the primary honesty signal */}
-      <div className={`backend-badge ${isXv6 ? 'backend-xv6' : 'backend-sim'}`}>
+      {/* Backend source badge — the primary honesty signal (3 states) */}
+      <div className={`backend-badge backend-${backend === 'xv6' ? 'xv6' : backend === 'fallback' ? 'fallback' : 'sim'}`}>
         <span className="backend-badge-text">
-          {isXv6 ? 'Backend: XV6 TRACE' : 'Backend: SIMULATOR FALLBACK'}
+          {backend === 'xv6' ? 'Backend: XV6 TRACE'
+            : backend === 'fallback' ? 'Backend: FALLBACK'
+            : 'Backend: SIMULATOR FALLBACK'}
         </span>
         <span className="backend-badge-note">
-          {isXv6
-            ? 'xv6 schedtest trace loaded'
+          {backend === 'xv6' ? 'xv6 schedtest trace loaded'
+            : backend === 'fallback' ? 'Demo/fallback metadata — not a real run.'
             : 'Simulator backend: for development/fallback, not real xv6 execution.'}
         </span>
       </div>

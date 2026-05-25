@@ -1,5 +1,6 @@
 import Card from './Card.jsx'
-import { recommendation as rec, metrics, ALGO_COLORS } from '../data/demoData.js'
+import { ALGO_COLORS } from '../data/demoData.js'
+import { computeAlgorithmJudgment } from '../data/schemaCompat.js'
 
 const PARAM_LABELS = {
   queues: 'Queues',
@@ -20,8 +21,9 @@ const JUDGE_COLOR = {
 const fmtVal = (v) => (Array.isArray(v) ? v.join(' / ') : String(v))
 const labelOf = (k) => PARAM_LABELS[k] || k.replace(/_/g, ' ')
 
-export default function LLMRecommendation() {
-  const algo      = rec.recommended_scheduling_algorithm
+export default function LLMRecommendation({ recommendation, metrics }) {
+  const rec       = recommendation || {}
+  const algo      = rec.recommended_scheduling_algorithm || rec.algorithm
   const target    = rec.target_metric?.replace(/_/g, ' ')
   const risks     = rec.risks || []
   const params    = rec.params || {}
@@ -34,9 +36,14 @@ export default function LLMRecommendation() {
 
   // Rank every candidate by the target metric (time metrics: lower is better)
   const metricKey = rec.target_metric
-  const comparison = metrics.comparison || {}
+  const comparison = (metrics || {}).comparison || {}
+  const allCmp = Object.values(comparison)
   const alternatives = Object.entries(comparison)
-    .map(([name, m]) => ({ name, value: m[metricKey], judgment: m.judgment }))
+    .map(([name, m]) => ({
+      name,
+      value: m[metricKey],
+      judgment: computeAlgorithmJudgment(m, allCmp, metricKey),
+    }))
     .filter(r => typeof r.value === 'number')
     .sort((a, b) => a.value - b.value)
   const maxVal = Math.max(...alternatives.map(r => r.value), 1)

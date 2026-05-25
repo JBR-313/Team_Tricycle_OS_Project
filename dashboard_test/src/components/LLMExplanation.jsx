@@ -1,5 +1,4 @@
 import Card from './Card.jsx'
-import { traceExplanation as ex } from '../data/demoData.js'
 
 const clamp = (n) => ({
   overflow: 'hidden',
@@ -9,7 +8,7 @@ const clamp = (n) => ({
 })
 
 // Full version (used on Recommend screen)
-function FullExplanation() {
+function FullExplanation({ ex }) {
   const corrections = ex.runtime_corrections_applied || 0
 
   return (
@@ -72,7 +71,7 @@ function FullExplanation() {
 }
 
 // Compact version (used on Evaluate screen — correction & insight mode)
-function CompactExplanation() {
+function CompactExplanation({ ex }) {
   const corrections = ex.runtime_corrections_applied || 0
   const evidencePicks = (ex.evidence || []).slice(0, 2)
 
@@ -140,6 +139,7 @@ function CompactExplanation() {
   )
 }
 
-export default function LLMExplanation({ compact = false }) {
-  return compact ? <CompactExplanation /> : <FullExplanation />
+export default function LLMExplanation({ compact = false, traceExplanation }) {
+  const ex = traceExplanation || {}
+  return compact ? <CompactExplanation ex={ex} /> : <FullExplanation ex={ex} />
 }
