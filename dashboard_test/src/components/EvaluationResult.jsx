@@ -1,11 +1,12 @@
 import Card from './Card.jsx'
-import { metrics, recommendation } from '../data/demoData.js'
+import { metrics, recommendation, PROC_COLORS } from '../data/demoData.js'
 
 export default function EvaluationResult() {
   const jdg    = metrics.judgment || '—'
   const regret = metrics.regret_score
   const starv  = metrics.starvation_occurred
   const cmp    = metrics.comparison || {}
+  const perProc = metrics.per_process || []
   const recAlgo = recommendation.recommended_scheduling_algorithm
   const tgt     = recommendation.target_metric || 'avg_response_time'
 
@@ -35,8 +36,9 @@ export default function EvaluationResult() {
         </span>
       </div>
       <hr className="divider" />
-      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
         <div style={{
+          flexShrink: 0,
           display: 'grid',
           gridTemplateColumns: '1fr 1fr',
           gap: '3px 10px',
@@ -69,8 +71,34 @@ export default function EvaluationResult() {
           ))}
         </div>
 
+        {/* Per-process breakdown — fills the middle */}
+        {perProc.length > 0 && (
+          <div className="eval-proc">
+            <div className="eval-proc-head">
+              <span>Per-Process · {recAlgo}</span>
+            </div>
+            <div className="eval-proc-table">
+              <div className="eval-proc-row eval-proc-row-head">
+                <span>PID</span><span>Arr</span><span>Resp</span><span>Wait</span><span>TAT</span>
+              </div>
+              {perProc.map(p => (
+                <div key={p.pid} className="eval-proc-row">
+                  <span className="eval-proc-pid">
+                    <span className="eval-proc-dot" style={{ background: PROC_COLORS[p.pid] || '#94a3b8' }} />
+                    P{p.pid}
+                  </span>
+                  <span>{p.arrival_time}</span>
+                  <span>{p.response_time}</span>
+                  <span>{p.waiting_time}</span>
+                  <span>{p.turnaround_time}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {cmp[recAlgo] && (
-          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', paddingTop: 6 }}>
+          <div style={{ flexShrink: 0, display: 'flex', gap: 4, flexWrap: 'wrap', paddingTop: 6 }}>
             {[
               { k: 'avg_response_time',   label: 'RT' },
               { k: 'avg_waiting_time',    label: 'WT' },
