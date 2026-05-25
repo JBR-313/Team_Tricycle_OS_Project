@@ -1,37 +1,66 @@
 [
     {
-        "pid":1,
-        "arrival_time":0,
-        "cpu_burst":20,
-        "priority":5,
-        "type":"background"
+        "pid": 1,
+        "arrival_time": 0,
+        "cpu_bursts": [
+            10,
+            10
+        ],
+        "io_bursts": [
+            2
+        ],
+        "priority": 5,
+        "label": "cpu_bound"
     },
     {
-        "pid":2,
-        "arrival_time":1,
-        "cpu_burst":8,
-        "priority":1,
-        "type":"system"
+        "pid": 2,
+        "arrival_time": 1,
+        "cpu_bursts": [
+            4,
+            4
+        ],
+        "io_bursts": [
+            1
+        ],
+        "priority": 1,
+        "label": "interactive"
     },
     {
-        "pid":3,
-        "arrival_time":2,
-        "cpu_burst":5,
-        "priority":2,
-        "type":"system"
+        "pid": 3,
+        "arrival_time": 2,
+        "cpu_bursts": [
+            2,
+            3
+        ],
+        "io_bursts": [
+            1
+        ],
+        "priority": 2,
+        "label": "interactive"
     },
     {
-        "pid":4,
-        "arrival_time":3,
-        "cpu_burst":10,
-        "priority":3,
-        "type":"interactive"
+        "pid": 4,
+        "arrival_time": 3,
+        "cpu_bursts": [
+            3,
+            3,
+            4
+        ],
+        "io_bursts": [
+            4,
+            4
+        ],
+        "priority": 3,
+        "label": "interactive"
     },
     {
-        "pid":5,
-        "arrival_time":4,
-        "cpu_burst":3,
-        "priority":1,
-        "type":"system"
+        "pid": 5,
+        "arrival_time": 4,
+        "cpu_bursts": [
+            3
+        ],
+        "io_bursts": [],
+        "priority": 1,
+        "label": "interactive"
     }
 ]

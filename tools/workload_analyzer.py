@@ -3,10 +3,7 @@ import statistics
 import sys
 from pathlib import Path
 
-
-SHORT_JOB_THRESHOLD = 5
-LONG_JOB_THRESHOLD = 20
-
+STARVATION_PRIORITY_RATIO = 3
 
 def load_workload(path):
     with open(path, "r") as f:
@@ -21,141 +18,137 @@ def load_workload(path):
     return data
 
 
-def analyze_workload(workload):
-    workload_name = workload["workload_name"]
+# ---------------------------------------------------------
+# Per-process helpers
+# ---------------------------------------------------------
+
+def total_cpu_burst_time(process):
+    """Sum of all CPU burst durations for one process."""
+    return sum(process["cpu_bursts"])
+
+
+def burst_count(process):
+    """Number of CPU bursts (= scheduling phases)."""
+    return len(process["cpu_bursts"])
+
+
+# ---------------------------------------------------------
+# Main analysis
+# ---------------------------------------------------------
+
+def analyze_workload(workload, input_path: Path):
     processes = workload["processes"]
+    n = len(processes)
 
-    num_processes = len(processes)
+    arrival_times  = [p["arrival_time"] for p in processes]
+    priorities     = [p["priority"]     for p in processes]
+    labels         = [p.get("label", p.get("type", "unknown"))
+                      for p in processes]
 
-    burst_times = [p["cpu_burst"] for p in processes]
-    arrival_times = [p["arrival_time"] for p in processes]
-    priorities = [p["priority"] for p in processes]
+    # Per-process total CPU work
+    cpu_works = [total_cpu_burst_time(p) for p in processes]
+
+    # Per-process burst counts
+    burst_counts = [burst_count(p) for p in processes]
 
     # -------------------------------------------------
-    # Basic burst statistics
+    # avg_arrival_gap
+    # Mean gap between consecutive arrival times.
+    # Requires sorted arrivals; returns 0.0 for n <= 1.
     # -------------------------------------------------
-    avg_burst = round(statistics.mean(burst_times), 2)
-    min_burst = min(burst_times)
-    max_burst = max(burst_times)
+    sorted_arrivals = sorted(arrival_times)
+    if n > 1:
+        gaps = [
+            sorted_arrivals[i + 1] - sorted_arrivals[i]
+            for i in range(n - 1)
+        ]
+        avg_arrival_gap = round(statistics.mean(gaps), 2)
+    else:
+        avg_arrival_gap = 0.0
 
-    if len(burst_times) > 1:
-        burst_variance = round(
-            statistics.variance(burst_times), 2
+    # -------------------------------------------------
+    # Label ratios
+    # -------------------------------------------------
+    cpu_bound_count   = sum(1 for l in labels if l == "cpu_bound")
+    interactive_count = sum(1 for l in labels if l == "interactive")
+
+    cpu_bound_ratio   = round(cpu_bound_count   / n, 2)
+    interactive_ratio = round(interactive_count / n, 2)
+
+    # -------------------------------------------------
+    # Priority statistics
+    # -------------------------------------------------
+    avg_priority = round(statistics.mean(priorities), 2)
+
+    if n > 1:
+        priority_variance = round(
+            statistics.variance(priorities), 2
         )
     else:
-        burst_variance = 0.0
+        priority_variance = 0.0
 
     # -------------------------------------------------
-    # Job classification
+    # Starvation risk heuristic
+    # A low-priority process risks starvation when the
+    # priority range is wide AND high-priority processes
+    # keep arriving to preempt it.
     # -------------------------------------------------
-    short_jobs = [
-        b for b in burst_times
-        if b <= SHORT_JOB_THRESHOLD
-    ]
+    priority_min = min(priorities)
+    priority_max = max(priorities)
 
-    long_jobs = [
-        b for b in burst_times
-        if b > LONG_JOB_THRESHOLD
-    ]
-
-    short_job_ratio = round(
-        len(short_jobs) / num_processes, 2
-    )
-
-    long_job_ratio = round(
-        len(long_jobs) / num_processes, 2
+    has_starvation_risk = (
+        priority_max >= priority_min * STARVATION_PRIORITY_RATIO
+        and n > 1
     )
 
     # -------------------------------------------------
-    # Interactive ratio
+    # Burst count distribution
     # -------------------------------------------------
-    interactive_count = sum(
-        1 for p in processes
-        if p["type"] == "interactive"
-    )
-
-    interactive_ratio = round(
-        interactive_count / num_processes, 2
-    )
+    burst_count_distribution = {
+        "min": min(burst_counts),
+        "max": max(burst_counts),
+        "avg": round(statistics.mean(burst_counts), 2),
+    }
 
     # -------------------------------------------------
-    # Priority analysis
+    # Total CPU work across all processes
     # -------------------------------------------------
-    priority_range = (
-        max(priorities) - min(priorities)
-    )
+    total_cpu_work = sum(cpu_works)
 
     # -------------------------------------------------
-    # Arrival spread
+    # Resolve workload_file relative label
+    # (show path from project root if possible,
+    #  otherwise use the absolute path string)
     # -------------------------------------------------
-    arrival_spread = (
-        max(arrival_times) - min(arrival_times)
-    )
-
-    # -------------------------------------------------
-    # Target metric heuristic
-    # -------------------------------------------------
-    target_metric = determine_target_metric(
-        short_job_ratio,
-        long_job_ratio,
-        interactive_ratio
-    )
+    try:
+        project_root  = input_path.resolve().parent.parent
+        workload_file = str(
+            input_path.resolve().relative_to(project_root)
+        )
+    except ValueError:
+        workload_file = str(input_path.resolve())
 
     # -------------------------------------------------
     # Final summary
     # -------------------------------------------------
     summary = {
-        "workload_name": workload_name,
-
-        "num_processes": num_processes,
-
-        "avg_burst": avg_burst,
-        "min_burst": min_burst,
-        "max_burst": max_burst,
-        "burst_variance": burst_variance,
-
-        "short_job_ratio": short_job_ratio,
-        "long_job_ratio": long_job_ratio,
-
-        "interactive_ratio": interactive_ratio,
-
-        "priority_range": priority_range,
-
-        "arrival_spread": arrival_spread,
-
-        "target_metric": target_metric
+        "process_count":             n,
+        "avg_arrival_gap":           avg_arrival_gap,
+        "cpu_bound_ratio":           cpu_bound_ratio,
+        "interactive_ratio":         interactive_ratio,
+        "avg_priority":              avg_priority,
+        "priority_variance":         priority_variance,
+        "has_starvation_risk":       has_starvation_risk,
+        "burst_count_distribution":  burst_count_distribution,
+        "total_cpu_work":            total_cpu_work,
+        "workload_file":             workload_file,
     }
 
     return summary
 
 
-def determine_target_metric(
-    short_job_ratio,
-    long_job_ratio,
-    interactive_ratio
-):
-    """
-    Heuristic for deciding
-    which scheduling metric matters most.
-    """
-
-    if interactive_ratio >= 0.6:
-        return "response_time"
-
-    if short_job_ratio >= 0.6:
-        return "response_time"
-
-    if long_job_ratio >= 0.5:
-        return "throughput"
-
-    return "fairness"
-
-
-def save_summary(summary, output_path):
-    output_path.parent.mkdir(
-        parents=True,
-        exist_ok=True
-    )
+def save_summary(summary, output_path: Path):
+    output_path.parent.mkdir(parents=True, exist_ok=True)
 
     with open(output_path, "w") as f:
         json.dump(summary, f, indent=4)
@@ -170,11 +163,9 @@ def main():
         sys.exit(1)
 
     # -------------------------------------------------
-    # Project root
+    # Project root  (<root>/src/workload_analyzer.py)
     # -------------------------------------------------
-    project_root = (
-        Path(__file__).resolve().parent.parent
-    )
+    project_root = Path(__file__).resolve().parent.parent
 
     # -------------------------------------------------
     # Input workload path
@@ -199,18 +190,13 @@ def main():
     # Output path
     # -------------------------------------------------
     outputs_dir = project_root / "outputs"
-
-    output_path = (
-        outputs_dir / "workload_summary.json"
-    )
+    output_path = outputs_dir / "workload_summary.json"
 
     # -------------------------------------------------
-    # Analyze workload
+    # Run analysis
     # -------------------------------------------------
     workload = load_workload(input_path)
-
-    summary = analyze_workload(workload)
-
+    summary  = analyze_workload(workload, input_path)
     save_summary(summary, output_path)
 
     print(

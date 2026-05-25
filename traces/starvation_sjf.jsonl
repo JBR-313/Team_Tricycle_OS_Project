@@ -1,0 +1,22 @@
+{"time": 0, "event": "ARRIVE", "pid": 1, "algorithm": "SJF", "state": "RUNNABLE"}
+{"time": 0, "event": "ARRIVE", "pid": 2, "algorithm": "SJF", "state": "RUNNABLE"}
+{"time": 0, "event": "DISPATCH", "pid": 1, "algorithm": "SJF", "state": "RUNNING"}
+{"time": 1, "event": "ARRIVE", "pid": 3, "algorithm": "SJF", "state": "RUNNABLE"}
+{"time": 2, "event": "ARRIVE", "pid": 4, "algorithm": "SJF", "state": "RUNNABLE"}
+{"time": 4, "event": "ARRIVE", "pid": 5, "algorithm": "SJF", "state": "RUNNABLE"}
+{"time": 4, "event": "EXIT", "pid": 1, "algorithm": "SJF", "state": "TERMINATED"}
+{"time": 4, "event": "DISPATCH", "pid": 3, "algorithm": "SJF", "state": "RUNNING"}
+{"time": 6, "event": "ARRIVE", "pid": 6, "algorithm": "SJF", "state": "RUNNABLE"}
+{"time": 7, "event": "EXIT", "pid": 3, "algorithm": "SJF", "state": "TERMINATED"}
+{"time": 7, "event": "DISPATCH", "pid": 4, "algorithm": "SJF", "state": "RUNNING"}
+{"time": 8, "event": "ARRIVE", "pid": 7, "algorithm": "SJF", "state": "RUNNABLE"}
+{"time": 10, "event": "EXIT", "pid": 4, "algorithm": "SJF", "state": "TERMINATED"}
+{"time": 10, "event": "STARVATION_WARNING", "pid": 2, "algorithm": "SJF", "state": "RUNNABLE", "wait_time": 10, "threshold": 10}
+{"time": 10, "event": "DISPATCH", "pid": 5, "algorithm": "SJF", "state": "RUNNING"}
+{"time": 13, "event": "EXIT", "pid": 5, "algorithm": "SJF", "state": "TERMINATED"}
+{"time": 13, "event": "DISPATCH", "pid": 6, "algorithm": "SJF", "state": "RUNNING"}
+{"time": 16, "event": "EXIT", "pid": 6, "algorithm": "SJF", "state": "TERMINATED"}
+{"time": 16, "event": "DISPATCH", "pid": 7, "algorithm": "SJF", "state": "RUNNING"}
+{"time": 19, "event": "EXIT", "pid": 7, "algorithm": "SJF", "state": "TERMINATED"}
+{"time": 19, "event": "DISPATCH", "pid": 2, "algorithm": "SJF", "state": "RUNNING"}
+{"time": 39, "event": "EXIT", "pid": 2, "algorithm": "SJF", "state": "TERMINATED"}

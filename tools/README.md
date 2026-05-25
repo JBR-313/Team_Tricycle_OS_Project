@@ -24,6 +24,7 @@ workload_summary.json  ──►  llm_advisor.py  ──►  recommendation.json
 |------|---------|
 | `llm_advisor.py` | Entry point. Two modes: **advise** (workload → recommendation) and **feedback** (evaluation results → prompt rules). |
 | `algorithm_guard.py` | Validates recommendation: algorithm, target metric, algorithm-metric compatibility, confidence, and parameter ranges. Outputs `guard_decision.json`. |
+| `trace_explainer.py` | Explains a finished run in natural language: reads `trace.jsonl` + `metrics.json`, outputs `trace_explanation.json` (dashboard §7). |
 | `solar_client.py` | Handles API communication with Upstage Solar Pro 3. |
 | `__init__.py` | Package exports: `SolarClient`, `SolarError`, `load_env`. |
 | `.env.example` | Template for `UPSTAGE_API_KEY` and optional settings. |
@@ -78,10 +79,10 @@ python3 tools/algorithm_guard.py \
 ```
 
 **What it validates:**
-- Algorithm is in supported list: **FCFS, RR, PRIORITY, MLFQ** (matches xv6 implementation scope)
-- Metric is valid (`response_time`, `turnaround_time`, `waiting_time`, `throughput`, `starvation`)
+- Algorithm is in supported list: **FCFS, RR, PRIORITY, MLFQ, SJF, SRTF** (matches xv6 implementation scope)
+- Metric is valid (`response_time`, `turnaround_time`, `waiting_time`, `throughput`, `starvation`, `fairness`). Unknown metrics are **not** rejected — the compatibility check is skipped with a warning so a sound recommendation is never sunk by an unrecognized metric word.
 - Algorithm-metric pair is OS-theoretically sound (compatibility matrix)
-- Parameters are in valid ranges per algorithm; out-of-range values are silently replaced with safe defaults (+ warning)
+- Parameters are in valid ranges per algorithm; out-of-range values are silently replaced with safe defaults (+ warning). For SJF/SRTF the predictor's `min`/`max`/`initial` cross-field rules are enforced too.
 
 **Decision rules:**
 - `compatibility_score < 0.4` → **rejected** (fallback to a safer algorithm for the target metric)
@@ -126,6 +127,34 @@ If `outputs/recommendation.json` is present, its `target_metric`, `reason`, and 
 
 **Output** `outputs/feedback_rules.md` is overwritten with a flat Markdown bullet list plus a metadata header comment. On the next `advise` run it is auto-injected into the system prompt.
 
+### Trace Explainer
+
+Explains a finished run in natural language for the dashboard.
+
+```bash
+python3 tools/trace_explainer.py \
+    --trace outputs/trace.jsonl \
+    --metrics outputs/metrics.json \
+    --out outputs/trace_explanation.json
+```
+
+Reads the trace (compresses it to a per-process timeline + event counts) and, when present, `metrics.json` and `recommendation.json` for richer context. `metrics.json`/`recommendation.json` are optional — the trace alone is enough.
+
+**Output `trace_explanation.json`** (schema in [`docs/dashboard_data_contract.md`](../docs/dashboard_data_contract.md) §7):
+```json
+{
+  "scheduling_algorithm": "PRIORITY",
+  "detected_pattern": "convoy_effect",
+  "summary": "...",
+  "main_reason": "...",
+  "evidence": ["...", "..."],
+  "suggestion": "...",
+  "runtime_corrections_applied": 0
+}
+```
+
+`runtime_corrections_applied` is taken from the trace (count of `CORRECTION_APPLIED` events), not the model.
+
 ### Recommendation Output Format (`recommendation.json`)
 
 ```json
@@ -157,8 +186,10 @@ If `outputs/recommendation.json` is present, its `target_metric`, `reason`, and 
 | **RR** | `{ "quantum": int [1, 100] }` | Round Robin baseline (default quantum = 10) |
 | **PRIORITY** | `{ "aging_threshold": int [1, 10000] }` | With aging to mitigate starvation |
 | **MLFQ** | `{ "queues": int [2, 5], "quantum": [int, ...] (length = queues, each [1, 100]), "aging_threshold": int [1, 10000], "boost_interval": int [10, 10000] }` | Multi-level feedback queue |
+| **SJF** | `{ "alpha_percent": int [0, 100], "initial": int >=1, "min": int >=1, "max": int (>=min, <=100000) }` | Prediction-based, non-preemptive (exponential-averaging predictor) |
+| **SRTF** | same as SJF | Prediction-based, preemptive variant of SJF |
 
-SJF / SRTF are not currently supported by the guard — the LLM is not allowed to recommend them. They may be added later once burst prediction and xv6 implementation land.
+SJF/SRTF use an exponential-averaging burst predictor — the LLM tunes only the predictor params, never the real future bursts (the kernel updates predictions from observed CPU usage only). See [`docs/work_status_sjf_srtf.md`](../docs/work_status_sjf_srtf.md). The predictor's cross-field rules (`min <= max`, `initial` clamped into `[min, max]`) are enforced by the guard.
 
 ### Using SolarClient Directly
 
@@ -205,6 +236,7 @@ workload_summary.json  ──►  llm_advisor.py  ──►  recommendation.json
 |------|------|
 | `llm_advisor.py` | 진입점. 두 가지 모드: **advise** (워크로드 → 추천) 와 **feedback** (평가 결과 → 프롬프트 규칙). |
 | `algorithm_guard.py` | 추천 검증. 알고리즘, 메트릭, 호환성, 신뢰도, 파라미터 범위를 검사하여 `guard_decision.json` 출력. |
+| `trace_explainer.py` | 끝난 실행을 자연어로 설명. `trace.jsonl` + `metrics.json`을 읽어 `trace_explanation.json` 출력 (대시보드 §7). |
 | `solar_client.py` | Upstage Solar Pro 3 API 통신 담당. |
 | `__init__.py` | 패키지 공개: `SolarClient`, `SolarError`, `load_env`. |
 | `.env.example` | `UPSTAGE_API_KEY` 및 선택사항 설정 템플릿. |
@@ -252,10 +284,10 @@ python3 tools/algorithm_guard.py
 ```
 
 **검증 항목:**
-- 지원 알고리즘 목록에 있는지: **FCFS, RR, PRIORITY, MLFQ** (xv6 구현 범위와 일치)
-- 메트릭 유효성 (`response_time`, `turnaround_time`, `waiting_time`, `throughput`, `starvation`)
+- 지원 알고리즘 목록에 있는지: **FCFS, RR, PRIORITY, MLFQ, SJF, SRTF** (xv6 구현 범위와 일치)
+- 메트릭 유효성 (`response_time`, `turnaround_time`, `waiting_time`, `throughput`, `starvation`, `fairness`). 모르는 메트릭은 **거부하지 않고** 호환성 검사만 건너뜀(+경고) — 인식 못 하는 메트릭 단어 하나 때문에 멀쩡한 추천이 떨어지지 않도록.
 - 알고리즘×메트릭 호환성 (OS 이론 기반 매트릭스)
-- 알고리즘별 파라미터 범위 — 범위 밖이면 **기본값으로 자동 교체** + 경고
+- 알고리즘별 파라미터 범위 — 범위 밖이면 **기본값으로 자동 교체** + 경고. SJF/SRTF는 predictor의 `min`/`max`/`initial` 교차 검증도 수행
 
 **판정 규칙:**
 - `호환성 < 0.4` → **rejected** (메트릭에 더 적합한 알고리즘으로 fallback)
@@ -283,6 +315,34 @@ reject 시에는 `params`도 fallback 알고리즘의 기본값으로 교체되�
 `outputs/recommendation.json`이 있으면 `target_metric`, `reason`, `params`도 LLM 프롬프트에 추가되어 더 정확한 규칙이 생성됩니다. 없어도 동작은 합니다.
 
 **출력** `outputs/feedback_rules.md`는 LLM이 생성한 마크다운 불릿 규칙 목록 + 메타데이터 헤더로 덮어쓰기 됩니다. 다음 advise 실행 시 자동으로 시스템 프롬프트에 주입됩니다.
+
+### Trace Explainer
+
+끝난 실행을 대시보드용 자연어로 설명합니다.
+
+```bash
+python3 tools/trace_explainer.py \
+    --trace outputs/trace.jsonl \
+    --metrics outputs/metrics.json \
+    --out outputs/trace_explanation.json
+```
+
+트레이스를 프로세스별 타임라인 + 이벤트 카운트로 압축하고, 있으면 `metrics.json`/`recommendation.json`을 컨텍스트로 추가합니다. 둘 다 선택사항 — 트레이스만 있어도 동작합니다.
+
+**출력 `trace_explanation.json`** (스키마는 [`docs/dashboard_data_contract.md`](../docs/dashboard_data_contract.md) §7):
+```json
+{
+  "scheduling_algorithm": "PRIORITY",
+  "detected_pattern": "convoy_effect",
+  "summary": "...",
+  "main_reason": "...",
+  "evidence": ["...", "..."],
+  "suggestion": "...",
+  "runtime_corrections_applied": 0
+}
+```
+
+`runtime_corrections_applied`는 모델이 아니라 트레이스의 `CORRECTION_APPLIED` 이벤트 수에서 가져옵니다.
 
 ### 추천 출력 형식 (`recommendation.json`)
 
@@ -315,8 +375,10 @@ reject 시에는 `params`도 fallback 알고리즘의 기본값으로 교체되�
 | **RR** | `{ "quantum": int [1, 100] }` | 베이스라인 (기본 quantum = 10) |
 | **PRIORITY** | `{ "aging_threshold": int [1, 10000] }` | 에이징으로 기아 완화 |
 | **MLFQ** | `{ "queues": int [2, 5], "quantum": [int, ...] (길이 = queues, 각 [1, 100]), "aging_threshold": int [1, 10000], "boost_interval": int [10, 10000] }` | 다단계 피드백 큐 |
+| **SJF** | `{ "alpha_percent": int [0, 100], "initial": int >=1, "min": int >=1, "max": int (>=min, <=100000) }` | 예측 기반, 비선점 (지수 평균 predictor) |
+| **SRTF** | SJF와 동일 | 예측 기반, SJF의 선점 버전 |
 
-SJF / SRTF는 현재 guard에서 지원하지 않습니다 (LLM도 추천하지 않음). 추후 burst 예측과 xv6 구현이 추가되면 포함될 수 있습니다.
+SJF/SRTF는 지수 평균 버스트 predictor를 사용합니다 — LLM은 predictor 파라미터만 추천하고, 실제 미래 버스트는 절대 받지 않습니다 (커널이 관측된 CPU 사용량으로만 예측 갱신). [`docs/work_status_sjf_srtf.md`](../docs/work_status_sjf_srtf.md) 참고. predictor의 교차 검증(`min <= max`, `initial`을 `[min, max]`로 clamp)은 guard가 수행합니다.
 
 ### SolarClient 직접 사용
 
@@ -343,4 +405,4 @@ python3 tools/solar_client.py
 
 ---
 
-**Last updated:** 2026-05-21
+**Last updated:** 2026-05-24

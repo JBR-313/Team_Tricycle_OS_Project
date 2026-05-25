@@ -37,13 +37,16 @@ except ImportError:  # when run as `python3 tools/algorithm_guard.py`
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
-SUPPORTED_ALGORITHMS = ["FCFS", "RR", "PRIORITY", "MLFQ"]
+# RR/FCFS/PRIORITY/MLFQ implemented in xv6; SJF/SRTF are prediction-based
+# (exponential averaging) — see docs/work_status_sjf_srtf.md.
+SUPPORTED_ALGORITHMS = ["FCFS", "RR", "PRIORITY", "MLFQ", "SJF", "SRTF"]
 SUPPORTED_METRICS = [
     "response_time",
     "turnaround_time",
     "waiting_time",
     "throughput",
     "starvation",
+    "fairness",
 ]
 
 # Alias mappings (normalize input metric names)
@@ -55,6 +58,7 @@ METRIC_ALIASES = {
     "response": "response_time",
     "turnaround": "turnaround_time",
     "waiting": "waiting_time",
+    "fair": "fairness",
 }
 
 # Algorithm-Metric Compatibility Matrix (0.0 to 1.0)
@@ -66,6 +70,7 @@ COMPATIBILITY_MATRIX = {
         "waiting_time": 0.3,  # convoy effect
         "throughput": 0.8,
         "starvation": 0.9,
+        "fairness": 0.4,  # arrival-order; convoy hurts fairness
     },
     "RR": {
         "response_time": 0.9,  # excellent
@@ -73,6 +78,7 @@ COMPATIBILITY_MATRIX = {
         "waiting_time": 0.7,
         "throughput": 0.8,
         "starvation": 0.95,
+        "fairness": 0.95,  # time-slicing is the fairness baseline
     },
     "PRIORITY": {
         "response_time": 0.7,
@@ -80,6 +86,7 @@ COMPATIBILITY_MATRIX = {
         "waiting_time": 0.7,
         "throughput": 0.6,
         "starvation": 0.2,  # ⚠️ HIGH RISK: low-priority starvation
+        "fairness": 0.2,  # priority discrimination
     },
     "MLFQ": {
         "response_time": 0.95,  # excellent
@@ -87,6 +94,23 @@ COMPATIBILITY_MATRIX = {
         "waiting_time": 0.9,
         "throughput": 0.85,
         "starvation": 0.95,  # with aging
+        "fairness": 0.7,  # aging helps, but queue tiers differ
+    },
+    "SJF": {
+        "response_time": 0.8,
+        "turnaround_time": 0.95,  # minimizes avg turnaround
+        "waiting_time": 0.95,  # optimal avg waiting (non-preemptive)
+        "throughput": 0.8,
+        "starvation": 0.5,  # long jobs may starve
+        "fairness": 0.3,  # favors short jobs; long jobs disadvantaged
+    },
+    "SRTF": {
+        "response_time": 0.95,  # preemptive shortest-remaining
+        "turnaround_time": 0.95,
+        "waiting_time": 0.95,
+        "throughput": 0.85,
+        "starvation": 0.5,  # long jobs may starve
+        "fairness": 0.3,  # favors short jobs
     },
 }
 
@@ -109,6 +133,20 @@ PARAM_RANGES = {
         "boost_interval": (10, 10000),
         # quantum is a list — checked separately
     },
+    # SJF/SRTF use a predicted-burst estimator (exponential averaging).
+    # The LLM only tunes the predictor; the kernel never sees future bursts.
+    "SJF": {
+        "alpha_percent": (0, 100),
+        "initial": (1, 100000),
+        "min": (1, 100000),
+        "max": (1, 100000),
+    },
+    "SRTF": {
+        "alpha_percent": (0, 100),
+        "initial": (1, 100000),
+        "min": (1, 100000),
+        "max": (1, 100000),
+    },
 }
 
 DEFAULT_PARAMS = {
@@ -121,18 +159,24 @@ DEFAULT_PARAMS = {
         "aging_threshold": 100,
         "boost_interval": 100,
     },
+    "SJF": {"alpha_percent": 50, "initial": 10, "min": 1, "max": 100},
+    "SRTF": {"alpha_percent": 50, "initial": 10, "min": 1, "max": 100},
 }
 
 MLFQ_QUANTUM_RANGE = (1, 100)
+PREDICTOR_ALGORITHMS = ("SJF", "SRTF")
 
 # Context-aware fallback selection
 # If we must reject, what's the best alternative given the metric?
+# Fallbacks stay within the stable, non-predictive algorithms (RR/MLFQ) so a
+# rejection never lands on a predictor that itself needs tuning.
 FALLBACK_BY_METRIC = {
     "response_time": "MLFQ",
-    "turnaround_time": "MLFQ",  # best turnaround among the 4 implemented algos
+    "turnaround_time": "MLFQ",
     "waiting_time": "MLFQ",
     "throughput": "RR",
     "starvation": "MLFQ",  # aging prevents starvation
+    "fairness": "RR",  # time-slicing is the fairness baseline
 }
 
 
@@ -220,7 +264,13 @@ def check_algorithm(rec: dict) -> str:
 
 
 def check_metric(rec: dict) -> tuple[str, Optional[str]]:
-    """Validate metric. Returns (metric, info_message or None)."""
+    """Validate metric. Returns (metric, info_message or None).
+
+    An unknown metric does NOT reject the recommendation: the algorithm and its
+    params may still be perfectly valid, we just can't score the metric fit. We
+    downgrade to "unspecified" (skips the compatibility check) and warn, so a
+    new metric word from upstream never sinks a sound recommendation.
+    """
     metric = rec.get("target_metric")
 
     if metric is None or metric == "unspecified":
@@ -230,8 +280,9 @@ def check_metric(rec: dict) -> tuple[str, Optional[str]]:
     normalized = normalize_metric(metric_str)
 
     if normalized is None:
-        raise GuardError(
-            f"Metric '{metric_str}' is not supported. Must be one of {SUPPORTED_METRICS}."
+        return "unspecified", (
+            f"Unknown target_metric {metric_str!r} (not in {SUPPORTED_METRICS}); "
+            f"skipping algorithm-metric compatibility check."
         )
 
     return normalized, None
@@ -300,6 +351,23 @@ def normalize_params(algo: str, params: Any) -> tuple[dict, list[str]]:
             )
         else:
             out["quantum"] = q
+
+    if algo in PREDICTOR_ALGORITHMS:
+        # Cross-field rules the per-key range check can't catch.
+        if out["min"] > out["max"]:
+            warnings.append(
+                f"{algo}: min ({out['min']}) > max ({out['max']}); "
+                f"resetting both to defaults [{defaults['min']}, {defaults['max']}]."
+            )
+            out["min"] = defaults["min"]
+            out["max"] = defaults["max"]
+        if not (out["min"] <= out["initial"] <= out["max"]):
+            clamped = max(out["min"], min(out["initial"], out["max"]))
+            warnings.append(
+                f"{algo}.initial={out['initial']} outside [min, max]="
+                f"[{out['min']}, {out['max']}]; clamped to {clamped}."
+            )
+            out["initial"] = clamped
 
     return out, warnings
 
