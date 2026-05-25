@@ -52,9 +52,14 @@ timer_yield_or_tick(struct proc *p)
     int ql = p->queue_level < 3 ? p->queue_level : 2;
     if(p->ticks_in_level >= mlfq_quanta[ql]){
       // Quantum exhausted: demote if not already at the lowest level.
+      int from_q = p->queue_level;
       if(p->queue_level < 2)
         p->queue_level++;
       p->ticks_in_level = 0;
+      if(p->queue_level != from_q)
+        sched_trace_queue(SCHED_MLFQ, p->pid, from_q, p->queue_level, "demotion");
+      sched_trace(SCHED_MLFQ, "PREEMPT", p->pid, "RUNNABLE",
+                  p->queue_level, p->priority, "quantum_expired");
       yield();
     }
     // else: quantum not exhausted, keep running
@@ -64,6 +69,9 @@ timer_yield_or_tick(struct proc *p)
   // SCHED_RR, SCHED_PRIORITY, SCHED_SRTF: preempt on every timer tick.
   // For SRTF every timer tick is a scheduling point, so the scheduler
   // re-selects the smallest predicted_remaining process each tick.
+  sched_trace(mode, "PREEMPT", p->pid, "RUNNABLE",
+              p->queue_level, p->priority,
+              mode == SCHED_RR ? "quantum_expired" : "timer_tick");
   yield();
 }
 

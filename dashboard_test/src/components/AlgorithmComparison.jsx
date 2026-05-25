@@ -1,5 +1,6 @@
 import Card from './Card.jsx'
-import { metrics, recommendation, ALGO_COLORS } from '../data/demoData.js'
+import { ALGO_COLORS } from '../data/demoData.js'
+import { computeAlgorithmJudgment, normalizeAlgo, normalizeTargetMetric } from '../data/schemaCompat.js'
 
 const COLS = [
   { key: 'avg_response_time',   label: 'Avg RT',  lowerBetter: true  },
@@ -18,13 +19,17 @@ function fmt(v, key) {
   return String(v)
 }
 
-export default function AlgorithmComparison() {
-  const cmp     = metrics.comparison || {}
-  const recAlgo = recommendation.recommended_scheduling_algorithm
-  const tgt     = recommendation.target_metric || 'avg_response_time'
-  const tgtCol  = COLS.find(c => c.key === tgt)?.label
+export default function AlgorithmComparison({ metrics, recommendation, selectedMetric }) {
+  const cmp     = (metrics || {}).comparison || {}
+  const rec     = recommendation || {}
+  const recAlgo = normalizeAlgo(rec.recommended_scheduling_algorithm || rec.algorithm)
+  // JUDGE + column highlight follow the SELECTED metric (dropdown), not the
+  // recommendation's target_metric or any stale stored judgment.
+  const sel     = normalizeTargetMetric(selectedMetric || rec.target_metric || 'avg_response_time')
+  const tgtCol  = COLS.find(c => c.key === sel)?.label
 
   const rows = Object.entries(cmp)
+  const allCmp = Object.values(cmp)
 
   // Pre-compute best/worst per numeric column
   const colStats = {}
@@ -71,12 +76,14 @@ export default function AlgorithmComparison() {
                   </td>
                   {COLS.map(c => {
                     const raw = vals[c.key]
-                    const v   = fmt(raw, c.key)
+                    let v   = fmt(raw, c.key)
                     let style = {}
 
                     if (c.key === 'judgment') {
+                      // Metric-aware: recompute for the selected metric (starvation ⇒ FAIL).
+                      v = computeAlgorithmJudgment(vals, allCmp, sel)
                       style = {
-                        color: { SUCCESS: '#059669', 'NEAR-SUCCESS': '#1d4ed8', FAIL: '#dc2626' }[v] || '#334155',
+                        color: { SUCCESS: '#059669', 'NEAR-SUCCESS': '#1d4ed8', FAIL: '#dc2626', UNKNOWN: '#64748b' }[v] || '#334155',
                         fontWeight: 700,
                       }
                     } else if (c.key === 'starvation_occurred') {

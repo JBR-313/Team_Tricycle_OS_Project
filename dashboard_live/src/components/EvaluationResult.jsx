@@ -1,4 +1,5 @@
 import Card from './Card.jsx'
+import { isHigherBetterMetric, normalizeTargetMetric } from '../data/schemaCompat.js'
 
 export default function EvaluationResult({ metrics, recommendation: rec }) {
   if (!metrics || !rec) return <Card label="Evaluation Result" className="card-eval"><div className="loading">Loading…</div></Card>
@@ -7,13 +8,17 @@ export default function EvaluationResult({ metrics, recommendation: rec }) {
   const regret = metrics.regret_score
   const starv  = metrics.starvation_occurred
   const cmp    = metrics.comparison || {}
-  const recAlgo = rec.recommended_scheduling_algorithm
-  const tgt     = rec.target_metric || 'avg_response_time'
+  const recAlgo = rec.recommended_scheduling_algorithm || rec.algorithm
+  const tgt     = normalizeTargetMetric(rec.target_metric || 'avg_response_time')
+  const higher  = isHigherBetterMetric(tgt)
 
-  let bestAlgo = '—', bestVal = Infinity
+  // Direction-aware best: max for throughput, min for the lower-is-better metrics.
+  let bestAlgo = '—', bestVal = higher ? -Infinity : Infinity
   for (const [a, v] of Object.entries(cmp)) {
     const val = v[tgt]
-    if (typeof val === 'number' && val < bestVal) { bestVal = val; bestAlgo = a }
+    if (typeof val === 'number' && (higher ? val > bestVal : val < bestVal)) {
+      bestVal = val; bestAlgo = a
+    }
   }
 
   const jBg = { SUCCESS: '#d1fae5', 'NEAR-SUCCESS': '#dbeafe', FAIL: '#fee2e2' }[jdg] || '#f1f5f9'
@@ -38,9 +43,9 @@ export default function EvaluationResult({ metrics, recommendation: rec }) {
       <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3px 10px', fontSize: '0.60rem' }}>
           {(() => {
-            const lowerBetter = tgt !== 'throughput'
+            const lowerBetter = !higher
             let delta = null, deltaColor = '#64748b', deltaArrow = ''
-            if (recVal != null && bestVal < Infinity) {
+            if (recVal != null && Number.isFinite(bestVal)) {
               delta = recVal - bestVal
               const worse = lowerBetter ? delta > 0 : delta < 0
               deltaColor = worse ? '#dc2626' : '#059669'

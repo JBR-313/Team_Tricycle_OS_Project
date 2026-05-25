@@ -405,6 +405,9 @@ kexit(int status)
 
   acquire(&p->lock);
 
+  // Emit a parseable EXIT event (sched_mode is read locklessly, as in scheduler()).
+  sched_trace(sched_mode, "EXIT", p->pid, "ZOMBIE", p->queue_level, p->priority, 0);
+
   p->xstate = status;
   p->state = ZOMBIE;
 
@@ -586,18 +589,42 @@ static const char * const sched_algo_name[] = {
   "RR", "FCFS", "PRIORITY", "MLFQ", "SJF", "SRTF"
 };
 
-// Print one dispatch event per 5 dispatches to avoid log flooding.
-// Note: no burst value is ever emitted here, so future CPU bursts cannot leak
-// through the trace.
+// Emit one parseable scheduler trace line.  Format consumed by
+// tools/trace_parser.py:
+//   [SCHED] tick=N algo=ALGO event=EVENT pid=N state=STATE queue=N priority=N reason=TEXT
+// No CPU-burst value is ever emitted, so future bursts cannot leak via traces.
+// Safe to call with interrupts off and/or while holding p->lock (CPUS=1): the
+// existing dispatch trace already prints under chosen->lock.
+void
+sched_trace(int mode, const char *event, int pid, const char *state,
+            int queue, int priority, const char *reason)
+{
+  if(mode < 0 || mode >= (int)NELEM(sched_algo_name)) mode = 0;
+  printf("[SCHED] tick=%d algo=%s event=%s pid=%d", ticks,
+         sched_algo_name[mode], event, pid);
+  if(state)
+    printf(" state=%s", state);
+  printf(" queue=%d priority=%d", queue, priority);
+  if(reason)
+    printf(" reason=%s", reason);
+  printf("\n");
+}
+
+// MLFQ queue-level transition (demotion / promotion).
+void
+sched_trace_queue(int mode, int pid, int from_q, int to_q, const char *reason)
+{
+  if(mode < 0 || mode >= (int)NELEM(sched_algo_name)) mode = 0;
+  printf("[SCHED] tick=%d algo=%s event=QUEUE_CHANGE pid=%d from_queue=%d to_queue=%d reason=%s\n",
+         ticks, sched_algo_name[mode], pid, from_q, to_q, reason);
+}
+
+// Trace one DISPATCH per scheduling decision (no throttling, so the host-side
+// parser/metrics can reconstruct dashboard-grade timelines).
 static void
 sched_debug(struct proc *p, int mode)
 {
-  static int dispatch_n = 0;
-  dispatch_n++;
-  if(dispatch_n % 5 != 0) return;
-  if(mode < 0 || mode >= (int)NELEM(sched_algo_name)) mode = 0;
-  printf("[SCHED] tick=%d algo=%s event=DISPATCH pid=%d priority=%d queue=%d\n",
-         ticks, sched_algo_name[mode], p->pid, p->priority, p->queue_level);
+  sched_trace(mode, "DISPATCH", p->pid, "RUNNING", p->queue_level, p->priority, 0);
 }
 
 // Round-Robin: preserves original xv6 behavior (iterate table in order).
@@ -728,9 +755,11 @@ sched_mlfq(struct cpu *c)
     if(p->state == RUNNABLE){
       p->wait_ticks++;
       if(p->wait_ticks >= MLFQ_BOOST_THRESHOLD && p->queue_level > 0){
+        int from_q = p->queue_level;
         p->queue_level    = 0;
         p->ticks_in_level = 0;
         p->wait_ticks     = 0;
+        sched_trace_queue(SCHED_MLFQ, p->pid, from_q, 0, "promotion");
       }
       int ql = p->queue_level;
       if(chosen == 0 ||

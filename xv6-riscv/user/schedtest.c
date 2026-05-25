@@ -8,78 +8,176 @@
 #define SCHED_SJF      4
 #define SCHED_SRTF     5
 
-#define NCHILD 3
+static const char *ALGO_NAMES[] = {"RR", "FCFS", "PRIORITY", "MLFQ", "SJF", "SRTF"};
+#define NALGO (sizeof(ALGO_NAMES) / sizeof(ALGO_NAMES[0]))
 
-// CPU-bound busy loop so children produce visible scheduling events.
-static void
-busywork(void)
+#define MAXPROC 8
+
+// One planned process in a curated workload.
+struct procdef {
+  int arrival;        // intended arrival tick (metadata; this phase forks immediately)
+  int cpu_burst;      // CPU time to consume, in ticks
+  int priority;       // scheduling priority (lower number = higher priority)
+  const char *label;  // workload label
+};
+
+struct workload {
+  const char *name;
+  int n;
+  struct procdef procs[MAXPROC];
+};
+
+// Fixed curated workload tables, one per profile.  No JSON parsing inside xv6
+// and no random generation yet: the workload is deterministic by profile name.
+// The seed argument is parsed and logged for reproducibility but does not yet
+// alter the workload (random generation is a later phase).
+static struct workload WORKLOADS[] = {
+  { "interactive", 5, {
+      {0,  3, 5, "interactive"},
+      {2,  1, 2, "interactive"},
+      {5,  2, 3, "interactive"},
+      {10, 4, 7, "cpu"},
+      {15, 1, 4, "interactive"},
+  }},
+  { "cpu_bound", 4, {
+      {0, 8, 5, "cpu"},
+      {1, 6, 4, "cpu"},
+      {2, 7, 6, "cpu"},
+      {3, 5, 5, "cpu"},
+  }},
+  { "mixed", 5, {
+      {0, 5, 4, "cpu"},
+      {2, 2, 2, "interactive"},
+      {4, 6, 6, "cpu"},
+      {6, 1, 3, "interactive"},
+      {8, 4, 5, "mixed"},
+  }},
+  { "priority_sensitive", 5, {
+      {0, 6, 8, "cpu"},
+      {1, 4, 1, "interactive"},
+      {2, 5, 9, "cpu"},
+      {3, 3, 2, "interactive"},
+      {4, 4, 5, "mixed"},
+  }},
+};
+#define NWORKLOADS (sizeof(WORKLOADS) / sizeof(WORKLOADS[0]))
+
+static int
+algo_mode(const char *s)
 {
+  if(strcmp(s, "rr") == 0)       return SCHED_RR;
+  if(strcmp(s, "fcfs") == 0)     return SCHED_FCFS;
+  if(strcmp(s, "priority") == 0) return SCHED_PRIORITY;
+  if(strcmp(s, "mlfq") == 0)     return SCHED_MLFQ;
+  if(strcmp(s, "sjf") == 0)      return SCHED_SJF;
+  if(strcmp(s, "srtf") == 0)     return SCHED_SRTF;
+  return -1;
+}
+
+static struct workload*
+find_workload(const char *name)
+{
+  for(int i = 0; i < (int)NWORKLOADS; i++)
+    if(strcmp(WORKLOADS[i].name, name) == 0)
+      return &WORKLOADS[i];
+  return 0;
+}
+
+// Consume approximately ticks_to_run ticks of CPU time.  uptime() returns the
+// kernel tick counter; we spin doing small chunks of work between checks so the
+// timer interrupt can drive real scheduling decisions while we run.
+static void
+run_burst(int ticks_to_run)
+{
+  int start = uptime();
   volatile int x = 0;
-  for(int i = 0; i < 500000; i++)
-    x += i;
+  while(uptime() - start < ticks_to_run){
+    for(int i = 0; i < 20000; i++)
+      x += i;
+  }
   (void)x;
 }
 
-int
-main(int argc, char *argv[])
+// Run one algorithm over the curated workload.  Forks all children, each of
+// which consumes its burst, then waits for them.  Emits parseable [SCHEDTEST]
+// metadata; the kernel emits [SCHED] scheduling events while they run.
+static void
+run_one(const char *algo, int mode, int seed, struct workload *wl)
 {
-  int mode;
-
-  if(argc < 2){
-    printf("usage: schedtest rr|fcfs|priority|mlfq|sjf|srtf\n");
-    exit(1);
-  }
-
-  if(strcmp(argv[1], "rr") == 0)
-    mode = SCHED_RR;
-  else if(strcmp(argv[1], "fcfs") == 0)
-    mode = SCHED_FCFS;
-  else if(strcmp(argv[1], "priority") == 0)
-    mode = SCHED_PRIORITY;
-  else if(strcmp(argv[1], "mlfq") == 0)
-    mode = SCHED_MLFQ;
-  else if(strcmp(argv[1], "sjf") == 0)
-    mode = SCHED_SJF;
-  else if(strcmp(argv[1], "srtf") == 0)
-    mode = SCHED_SRTF;
-  else {
-    printf("schedtest: unknown algo: %s\n", argv[1]);
-    exit(1);
-  }
-
-  printf("schedtest: start mode=%s\n", argv[1]);
+  printf("[SCHEDTEST] event=RUN_BEGIN algo=%s seed=%d profile=%s nproc=%d\n",
+         algo, seed, wl->name, wl->n);
 
   if(setscheduler(mode) < 0){
     printf("schedtest: setscheduler failed\n");
     exit(1);
   }
 
-  for(int i = 0; i < NCHILD; i++){
+  for(int i = 0; i < wl->n; i++){
     int pid = fork();
     if(pid < 0){
       printf("schedtest: fork failed\n");
-      exit(1);
+      break;
     }
     if(pid == 0){
+      struct procdef *d = &wl->procs[i];
       int mypid = getpid();
-      int pri = (i + 1) * 3;   // children get priorities 3, 6, 9
       if(mode == SCHED_PRIORITY)
-        setpriority(mypid, pri);
-      printf("schedtest: child %d pid=%d pri=%d start\n",
-             i, mypid, getpriority(mypid));
-      busywork();
-      printf("schedtest: child %d pid=%d done\n", i, mypid);
+        setpriority(mypid, d->priority);
+      printf("[SCHEDTEST] event=PROC_DEF pid=%d arrival=%d cpu_burst=%d priority=%d label=%s\n",
+             mypid, d->arrival, d->cpu_burst, getpriority(mypid), d->label);
+      printf("[SCHEDTEST] event=CHILD_START pid=%d priority=%d\n",
+             mypid, getpriority(mypid));
+      run_burst(d->cpu_burst);
+      printf("[SCHEDTEST] event=CHILD_EXIT pid=%d\n", mypid);
       exit(0);
     }
-    // parent loops to fork next child
   }
 
-  for(int i = 0; i < NCHILD; i++)
+  for(int i = 0; i < wl->n; i++)
     wait(0);
 
-  printf("schedtest: end mode=%s\n", argv[1]);
+  printf("[SCHEDTEST] event=RUN_END algo=%s seed=%d profile=%s\n",
+         algo, seed, wl->name);
 
   // Restore default scheduler so the shell keeps working normally.
   setscheduler(SCHED_RR);
+}
+
+int
+main(int argc, char *argv[])
+{
+  if(argc < 2){
+    printf("usage: schedtest <algorithm> <seed> <profile>\n");
+    printf("  algorithm : rr|fcfs|priority|mlfq|sjf|srtf | all\n");
+    printf("  seed      : integer (default 1)\n");
+    printf("  profile   : interactive|cpu_bound|mixed|priority_sensitive (default mixed)\n");
+    exit(1);
+  }
+
+  int seed = (argc >= 3) ? atoi(argv[2]) : 1;
+  const char *profile = (argc >= 4) ? argv[3] : "mixed";
+
+  struct workload *wl = find_workload(profile);
+  if(wl == 0){
+    printf("schedtest: unknown profile: %s\n", profile);
+    exit(1);
+  }
+
+  // Developer convenience: run every algorithm over the SAME workload/profile,
+  // sequentially (LLM-selected-first ordering is the Orchestrator's job; here we
+  // just run all six for clean per-algorithm trace separation).
+  if(strcmp(argv[1], "all") == 0){
+    for(int m = 0; m < (int)NALGO; m++)
+      run_one(ALGO_NAMES[m], m, seed, wl);
+    exit(0);
+  }
+
+  int mode = algo_mode(argv[1]);
+  if(mode < 0){
+    printf("schedtest: unknown algo: %s\n", argv[1]);
+    exit(1);
+  }
+
+  run_one(ALGO_NAMES[mode], mode, seed, wl);
   exit(0);
 }

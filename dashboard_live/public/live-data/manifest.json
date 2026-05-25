@@ -1,7 +1,21 @@
 {
+  "backend": "simulator",
+  "seed": 42,
+  "workload_type": "interactive",
+  "llm_selected_algorithm": "RR",
+  "algorithms_executed": [
+    "RR",
+    "FCFS",
+    "Priority",
+    "MLFQ",
+    "SJF",
+    "SRTF"
+  ],
+  "generated_at": "2026-05-25T08:06:27Z",
+  "orchestrator_version": "1.0.0",
   "mode": "simulator",
-  "updated_at": "2026-05-24T10:02:48Z",
-  "version": 3,
+  "updated_at": "2026-05-25T08:06:27Z",
+  "version": 8,
   "workload": "interactive_heavy",
   "algorithms": [
     "RR",
@@ -11,6 +25,6 @@
     "SJF",
     "SRTF"
   ],
-  "recommended_algorithm": "MLFQ",
+  "recommended_algorithm": "RR",
   "target_metric": "avg_response_time"
 }

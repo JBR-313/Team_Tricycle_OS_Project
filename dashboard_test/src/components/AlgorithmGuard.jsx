@@ -1,7 +1,9 @@
 import Card from './Card.jsx'
-import { guardDecision as g } from '../data/demoData.js'
 
-export default function AlgorithmGuard() {
+export default function AlgorithmGuard({ guardDecision }) {
+  const g = guardDecision
+  if (!g) return <Card label="Algorithm Guard" className="card-guard"><div className="loading">Loading…</div></Card>
+
   const accepted = g.guard_result === 'accepted'
   const bg = accepted ? '#d1fae5' : '#fee2e2'
   const fg = accepted ? '#059669' : '#dc2626'

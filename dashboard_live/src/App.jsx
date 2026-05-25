@@ -39,6 +39,7 @@ export default function App() {
   const [algo, setAlgo]         = useState('MLFQ')
   const [tick, setTick]         = useState(0)
   const [liveMode, setLiveMode] = useState(false)
+  const [selectedMetric, setSelectedMetric] = useState('avg_response_time')
 
   const [traces,          setTraces]          = useState(fallbackTraces)
   const [recommendation,  setRecommendation]  = useState(null)
@@ -123,6 +124,12 @@ export default function App() {
     if (liveMode) setTick(maxTick)
   }, [liveMode, maxTick])
 
+  // Total trace event count across all loaded algorithms (for header info)
+  const totalTraceEvents = useMemo(
+    () => Object.values(traces).reduce((sum, evs) => sum + (evs?.length || 0), 0),
+    [traces],
+  )
+
   function handleAlgoChange(newAlgo) {
     setAlgo(newAlgo)
     const newEvents = traces[Object.keys(traces).find(k => k.toLowerCase() === newAlgo.toLowerCase())] || []
@@ -155,6 +162,8 @@ export default function App() {
         liveMode={liveMode}
         onLiveModeToggle={handleLiveModeToggle}
         dataStatus={dataStatus}
+        manifest={manifest}
+        totalTraceEvents={totalTraceEvents}
       />
 
       <div className="dashboard-main">
@@ -177,8 +186,8 @@ export default function App() {
         <div className="dashboard-col">
           <ProcessLanes        events={events} currentTick={tick} maxTick={maxTick} algo={algo} />
           <WorkloadSummary     workloadSummary={workloadSummary} />
-          <AlgorithmComparison metrics={metrics} recommendation={recommendation} />
-          <MetricVisualization metrics={metrics} recommendation={recommendation} />
+          <AlgorithmComparison metrics={metrics} recommendation={recommendation} selectedMetric={selectedMetric} />
+          <MetricVisualization metrics={metrics} recommendation={recommendation} selectedMetric={selectedMetric} onSelectedMetricChange={setSelectedMetric} />
         </div>
       </div>
     </div>

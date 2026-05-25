@@ -1,7 +1,7 @@
 import Card from './Card.jsx'
-import { workloadSummary as wl } from '../data/demoData.js'
 
-export default function WorkloadSummary() {
+export default function WorkloadSummary({ workloadSummary }) {
+  const wl = workloadSummary || {}
   const n      = wl.process_count || 5
   const cpuR   = wl.cpu_bound_ratio
   const iaR    = wl.interactive_ratio

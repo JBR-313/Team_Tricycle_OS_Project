@@ -1,17 +1,9 @@
 export default function Header({
   algo, onAlgoChange, ALGOS,
   currentTick, maxTick, onTickChange,
-  focusMode, onFocusModeChange,
-  fixture,
+  step, onStepChange,
 }) {
-  const FOCUS_MODES = [
-    { id: 'hero',         label: 'Hero' },
-    { id: 'full',         label: 'Full' },
-    { id: 'process-flow', label: 'Flow' },
-    { id: 'gantt',        label: 'Gantt' },
-    { id: 'trace',        label: 'Trace' },
-    { id: 'metrics',      label: 'Metrics' },
-  ]
+  const STEPS = ['Recommend', 'Execute', 'Evaluate']
 
   return (
     <div className="header-bar">
@@ -20,26 +12,30 @@ export default function Header({
         <div>
           <div className="header-title">LLM Sched Copilot</div>
           <div className="header-subtitle">
-            {fixture ? `fixture: ${fixture.replace(/_/g, ' ')}` : 'UI Lab · Static Fixture'}
+            LLM suggests · Guard validates · xv6 executes · Metrics verify
           </div>
         </div>
       </div>
 
       <div className="header-spacer" />
 
-      <div className="header-mode-pills">
-        {FOCUS_MODES.map(m => (
+      {/* Step navigation */}
+      <div className="header-steps">
+        {STEPS.map((s, i) => (
           <button
-            key={m.id}
-            className={`header-mode-pill ${focusMode === m.id ? 'active' : ''}`}
-            onClick={() => onFocusModeChange(m.id)}
+            key={s}
+            className={`header-step-btn ${step === s ? 'active' : ''}`}
+            onClick={() => onStepChange(s)}
           >
-            {m.label}
+            <span className="step-num">{i + 1}</span>
+            {s}
           </button>
         ))}
       </div>
 
       <div className="header-spacer" />
+
+      <span className="header-mode-badge">SIMULATOR</span>
 
       <span className="header-algo-label">Algorithm</span>
       <select

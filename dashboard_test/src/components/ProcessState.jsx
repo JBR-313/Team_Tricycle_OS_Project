@@ -14,7 +14,7 @@ function getStates(events) {
   return st
 }
 
-const NODE_STYLE = {
+const STATE_STYLE = {
   Ready:      { fg: '#7c3aed', bg: 'rgba(237,233,254,0.90)', border: '#c4b5fd' },
   Running:    { fg: '#1d4ed8', bg: 'rgba(219,234,254,0.90)', border: '#93c5fd' },
   Waiting:    { fg: '#b45309', bg: 'rgba(254,243,199,0.90)', border: '#fcd34d' },
@@ -22,42 +22,38 @@ const NODE_STYLE = {
 }
 
 const PIPE_CLASS = {
-  DISPATCH:          'pipe-dispatch',
-  PREEMPT:           'pipe-preempt',
-  QUEUE_CHANGE:      'pipe-preempt',
-  EXIT:              'pipe-exit',
-  SLEEP:             'pipe-sleep',
-  WAKEUP:            'pipe-wakeup',
+  DISPATCH:     'ps-active-dispatch',
+  PREEMPT:      'ps-active-preempt',
+  QUEUE_CHANGE: 'ps-active-preempt',
+  EXIT:         'ps-active-exit',
+  SLEEP:        'ps-active-sleep',
+  WAKEUP:       'ps-active-wakeup',
 }
 
-function Tokens({ pids }) {
-  if (!pids.length) return <div className="flow-empty">—</div>
+function TokenRow({ pids }) {
+  if (!pids.length) return <span className="ps-empty">—</span>
   return (
-    <div className="flow-token-row">
-      {pids.map(pid => (
-        <div
+    <div className="ps-tokens">
+      {pids.slice(0, 5).map(pid => (
+        <span
           key={pid}
-          className="flow-token"
+          className="ps-token"
           style={{ background: PROC_COLORS[pid] || '#94a3b8' }}
-          title={`P${pid}`}
-        >
-          P{pid}
-        </div>
+        >P{pid}</span>
       ))}
     </div>
   )
 }
 
-function Node({ name, pids, gridCol, gridRow }) {
-  const { fg, bg, border } = NODE_STYLE[name]
-  const extra = name === 'Running' ? ' flow-node-running' : ''
+function Box({ label, pids, stateKey, col, row, pulse }) {
+  const { fg, bg, border } = STATE_STYLE[stateKey]
   return (
     <div
-      className={`flow-node${extra}`}
-      style={{ background: bg, borderColor: border, gridColumn: gridCol, gridRow }}
+      className={`ps-box${pulse ? ' ps-box-running' : ''}`}
+      style={{ background: bg, borderColor: border, gridColumn: col, gridRow: row }}
     >
-      <div className="flow-node-name" style={{ color: fg }}>{name}</div>
-      <Tokens pids={pids} />
+      <div className="ps-box-name" style={{ color: fg }}>{label}</div>
+      <TokenRow pids={pids} />
     </div>
   )
 }
@@ -71,76 +67,54 @@ export default function ProcessState({ events, currentTick }) {
   }
   Object.values(groups).forEach(g => g.sort((a, b) => a - b))
 
-  // Find the most recent event that corresponds to a known state transition
   const latestEvent = [...visible]
     .sort((a, b) => b.tick - a.tick || b.pid - a.pid)
     .find(ev => ev.event in PIPE_CLASS)?.event ?? null
-  const pc = PIPE_CLASS[latestEvent] || ''
-
-  const isRRPipe    = pc === 'pipe-dispatch' || pc === 'pipe-preempt'
-  const isExitPipe  = pc === 'pipe-exit'
-  const isSleepArc  = pc === 'pipe-sleep'
-  const isWakeupArc = pc === 'pipe-wakeup'
+  const active = PIPE_CLASS[latestEvent] || ''
 
   return (
     <Card label="Process State" className="card-pstate">
       {/*
         Grid (5 cols × 3 rows):
-          [READY] [pipe] [RUNNING] [pipe] [TERMINATED]
-                          (vert)
-          [wakeup←] [←]  [WAITING] [→] [sleep→]
+          [READY] [conn-rr] [RUNNING] [conn-exit] [DONE]
+                               [v]
+          [wakeup arc←←←←←←←] [WAITING] [←←←←sleep arc]
       */}
-      <div className="flow-diagram">
+      <div className={`ps-diagram ${active}`}>
 
-        {/* ── Row 1 ── */}
-        <Node name="Ready"      pids={groups.Ready}      gridCol={1} gridRow={1} />
+        <Box label="READY"   pids={groups.Ready}       stateKey="Ready"      col={1} row={1} />
 
-        <div
-          className={`flow-pipe-h${isRRPipe ? ` ${pc}` : ''}`}
-          style={{ gridColumn: 2, gridRow: 1 }}
-        >
-          <span className="flow-pipe-label">dispatch ▶</span>
-          <div className="flow-pipe-bar" />
-          <span className="flow-pipe-label">◀ preempt</span>
+        <div className="ps-conn-h ps-conn-rr" style={{ gridColumn: 2, gridRow: 1 }}>
+          <span className="ps-conn-top">dispatch ▸</span>
+          <div className="ps-conn-line" />
+          <span className="ps-conn-bot">◂ preempt</span>
         </div>
 
-        <Node name="Running"    pids={groups.Running}    gridCol={3} gridRow={1} />
+        <Box label="RUNNING" pids={groups.Running}    stateKey="Running"    col={3} row={1} pulse />
 
-        <div
-          className={`flow-pipe-h flow-pipe-exit${isExitPipe ? ' pipe-exit' : ''}`}
-          style={{ gridColumn: 4, gridRow: 1 }}
-        >
-          <span className="flow-pipe-label">exit ▶</span>
-          <div className="flow-pipe-bar" />
+        <div className="ps-conn-h ps-conn-exit" style={{ gridColumn: 4, gridRow: 1 }}>
+          <span className="ps-conn-top">exit ▸</span>
+          <div className="ps-conn-line" />
         </div>
 
-        <Node name="Terminated" pids={groups.Terminated} gridCol={5} gridRow={1} />
+        <Box label="DONE"    pids={groups.Terminated} stateKey="Terminated" col={5} row={1} />
 
-        {/* ── Row 2: vertical connector ── */}
-        <div
-          className={`flow-vert-connector${isSleepArc ? ' pipe-sleep-vert' : ''}`}
-          style={{ gridColumn: 3, gridRow: 2 }}
-        >
-          <div className="flow-vert-bar" />
+        <div className="ps-conn-v" style={{ gridColumn: 3, gridRow: 2 }}>
+          <div className="ps-conn-vline" />
         </div>
 
-        {/* ── Row 3: wakeup arc | Waiting | sleep arc ── */}
-        <div
-          className={`flow-arc flow-arc-left${isWakeupArc ? ' pipe-wakeup' : ''}`}
-          style={{ gridColumn: '1 / 3', gridRow: 3 }}
-        >
-          <span className="flow-arc-label">wakeup ▶</span>
-          <div className="flow-arc-line" />
+        <div className="ps-conn-arc ps-conn-wakeup" style={{ gridColumn: '1 / 3', gridRow: 3 }}>
+          <span className="ps-conn-arc-label">wakeup ▸</span>
+          <div className="ps-conn-arc-line" />
+          <div className="ps-pipe-elbow" />
         </div>
 
-        <Node name="Waiting"    pids={groups.Waiting}    gridCol={3} gridRow={3} />
+        <Box label="WAITING" pids={groups.Waiting}    stateKey="Waiting"    col={3} row={3} />
 
-        <div
-          className={`flow-arc flow-arc-right${isSleepArc ? ' pipe-sleep' : ''}`}
-          style={{ gridColumn: '4 / 6', gridRow: 3 }}
-        >
-          <div className="flow-arc-line" />
-          <span className="flow-arc-label">◀ sleep</span>
+        <div className="ps-conn-arc ps-conn-sleep" style={{ gridColumn: '4 / 6', gridRow: 3 }}>
+          <div className="ps-pipe-elbow" />
+          <div className="ps-conn-arc-line" />
+          <span className="ps-conn-arc-label">◂ sleep</span>
         </div>
 
       </div>

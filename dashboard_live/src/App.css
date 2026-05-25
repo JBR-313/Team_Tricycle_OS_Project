@@ -1027,6 +1027,87 @@
   padding: 0 4px;
 }
 
+/* ─────────────────────────────────────────────────────────────
+   BACKEND SOURCE BADGE (xv6 trace vs simulator fallback)
+───────────────────────────────────────────────────────────── */
+.backend-badge {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  padding: 3px 10px;
+  border: 1px solid transparent;
+  max-width: 220px;
+}
+
+.backend-badge-text {
+  font-size: 0.56rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  line-height: 1.1;
+}
+
+.backend-badge-note {
+  font-size: 0.48rem;
+  font-weight: 600;
+  line-height: 1.15;
+  opacity: 0.85;
+}
+
+.backend-xv6 {
+  background: rgba(220,252,231,0.92);
+  border-color: rgba(16,185,129,0.55);
+}
+.backend-xv6 .backend-badge-text { color: #047857; }
+.backend-xv6 .backend-badge-note { color: #059669; }
+
+.backend-sim {
+  background: rgba(254,243,199,0.92);
+  border-color: rgba(251,191,36,0.60);
+}
+.backend-sim .backend-badge-text { color: #b45309; }
+.backend-sim .backend-badge-note { color: #92400e; }
+
+.backend-fallback {
+  background: rgba(254,226,226,0.92);
+  border-color: rgba(248,113,113,0.65);
+}
+.backend-fallback .backend-badge-text { color: #b91c1c; }
+.backend-fallback .backend-badge-note { color: #991b1b; }
+
+/* Extra manifest metadata strip */
+.header-manifest-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.hm-item {
+  font-size: 0.52rem;
+  font-weight: 700;
+  color: #475569;
+  background: rgba(241,245,249,0.80);
+  border: 1px solid rgba(100,120,170,0.14);
+  border-radius: 8px;
+  padding: 2px 7px;
+  white-space: nowrap;
+  letter-spacing: 0.03em;
+}
+
+.hm-label {
+  color: #94a3b8;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-right: 4px;
+  font-size: 0.45rem;
+}
+
 .loading {
   font-size: 0.62rem;
   color: #94a3b8;

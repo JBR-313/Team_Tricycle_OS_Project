@@ -1,11 +1,28 @@
 import { ALGOS } from '../data/liveDataClient.js'
+import { getBackend } from '../data/schemaCompat.js'
 
 export default function Header({
   algo, onAlgoChange,
   currentTick, maxTick, onTickChange,
   liveMode, onLiveModeToggle,
   dataStatus,
+  manifest,
+  totalTraceEvents,
 }) {
+  const mf = manifest || {}
+  // Backend source: 'xv6' | 'simulator' | 'fallback'. A demo_fallback metadata
+  // flag (set by the orchestrator) downgrades the badge to FALLBACK for honesty.
+  let backend = getBackend(mf)
+  if (backend !== 'xv6' && mf.metadata_source === 'demo_fallback') backend = 'fallback'
+  const isXv6 = backend === 'xv6'
+
+  // Extra manifest fields (new schema with legacy fallbacks)
+  const seed = mf.seed
+  const workloadType = mf.workload_type || mf.workload
+  const llmAlgo = mf.llm_selected_algorithm || mf.recommended_algorithm
+  const executed = mf.algorithms_executed || mf.algorithms
+  const executedCount = Array.isArray(executed) ? executed.length : null
+
   return (
     <div className="header-bar">
       <div className="header-brand">
@@ -46,6 +63,54 @@ export default function Header({
           </span>
         )}
       </div>
+
+      {/* Backend source badge — the primary honesty signal (3 states) */}
+      <div className={`backend-badge backend-${backend === 'xv6' ? 'xv6' : backend === 'fallback' ? 'fallback' : 'sim'}`}>
+        <span className="backend-badge-text">
+          {backend === 'xv6' ? 'Backend: XV6 TRACE'
+            : backend === 'fallback' ? 'Backend: FALLBACK'
+            : 'Backend: SIMULATOR FALLBACK'}
+        </span>
+        <span className="backend-badge-note">
+          {backend === 'xv6' ? 'xv6 schedtest trace loaded'
+            : backend === 'fallback' ? 'Demo/fallback metadata — not a real run.'
+            : 'Simulator backend: for development/fallback, not real xv6 execution.'}
+        </span>
+      </div>
+
+      {/* Extra manifest fields */}
+      {(seed != null || workloadType || llmAlgo || executedCount != null || totalTraceEvents > 0) && (
+        <div className="header-manifest-meta">
+          {workloadType && (
+            <span className="hm-item" title="Workload type">
+              <span className="hm-label">workload</span>{workloadType}
+            </span>
+          )}
+          {llmAlgo && (
+            <span className="hm-item" title="LLM selected algorithm">
+              <span className="hm-label">llm</span>{llmAlgo}
+            </span>
+          )}
+          {executedCount != null && (
+            <span
+              className="hm-item"
+              title={Array.isArray(executed) ? executed.join(', ') : 'Algorithms executed'}
+            >
+              <span className="hm-label">algos</span>{executedCount}
+            </span>
+          )}
+          {seed != null && (
+            <span className="hm-item" title="Random seed">
+              <span className="hm-label">seed</span>{seed}
+            </span>
+          )}
+          {totalTraceEvents > 0 && (
+            <span className="hm-item" title="Total trace events loaded">
+              <span className="hm-label">events</span>{totalTraceEvents}
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Fallback warning banner */}
       {dataStatus.mode === 'fallback' && (
