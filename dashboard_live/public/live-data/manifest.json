@@ -1,16 +1,30 @@
 {
-  "mode": "simulator",
-  "updated_at": "2026-05-24T10:02:48Z",
-  "version": 3,
-  "workload": "interactive_heavy",
-  "algorithms": [
+  "backend": "xv6",
+  "seed": 42,
+  "workload_type": "interactive",
+  "llm_selected_algorithm": "RR",
+  "algorithms_executed": [
     "RR",
     "FCFS",
-    "Priority",
+    "PRIORITY",
     "MLFQ",
     "SJF",
     "SRTF"
   ],
-  "recommended_algorithm": "MLFQ",
-  "target_metric": "avg_response_time"
+  "generated_at": "2026-05-25T07:06:02Z",
+  "orchestrator_version": "1.0.0",
+  "mode": "xv6-log",
+  "updated_at": "2026-05-25T07:06:02Z",
+  "version": 7,
+  "workload": "interactive_heavy",
+  "algorithms": [
+    "RR",
+    "FCFS",
+    "PRIORITY",
+    "MLFQ",
+    "SJF",
+    "SRTF"
+  ],
+  "recommended_algorithm": "RR",
+  "target_metric": "response_time"
 }

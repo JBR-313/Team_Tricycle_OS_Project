@@ -9,6 +9,105 @@ File: `outputs/trace.jsonl`
 
 Each line represents one scheduling event.
 
+The normalized JSONL described below is produced by `tools/trace_parser.py` from
+the **raw console log lines** that xv6 prints. Two raw line shapes exist: kernel
+`[SCHED]` lines and user-program `[SCHEDTEST]` metadata lines. Both are
+documented in "Raw xv6 Console Log Format" before the normalized fields.
+
+---
+
+## Raw xv6 Console Log Format
+
+xv6 cannot write JSON files from inside the guest. Instead it prints plain text
+lines to the QEMU console, and `tools/trace_parser.py` converts them into the
+normalized JSONL described in the rest of this document. Only lines containing
+`[SCHED]` or `[SCHEDTEST]` are processed; boot spam and shell prompts are
+ignored.
+
+### Kernel scheduling lines — `[SCHED]`
+
+Emitted by the xv6 kernel scheduler.
+
+```text
+[SCHED] tick=<int> algo=<ALGO> event=<EVENT> pid=<int> state=<STATE> queue=<int> priority=<int> reason=<text>
+```
+
+Events: `DISPATCH`, `PREEMPT`, `EXIT`, `QUEUE_CHANGE`, `ARRIVE`, `SLEEP`,
+`WAKEUP`. A line may also carry `from_queue` / `to_queue` (for `QUEUE_CHANGE`)
+and `turnaround` / `waiting` / `response` (for `EXIT`). Tokens are generic
+`key=value` pairs; not every token is present on every line.
+
+```text
+[SCHED] tick=12 algo=MLFQ event=DISPATCH pid=3 state=RUNNING queue=0 priority=2
+[SCHED] tick=2 algo=MLFQ event=PREEMPT pid=1 state=RUNNABLE queue=1 priority=1 reason=quantum_expired
+[SCHED] tick=30 algo=MLFQ event=QUEUE_CHANGE pid=1 state=RUNNABLE from_queue=0 to_queue=1 reason=demotion
+[SCHED] tick=60 algo=MLFQ event=EXIT pid=2 state=ZOMBIE queue=1 turnaround=58 waiting=50 response=2
+```
+
+> Status note: the full set of rich `[SCHED]` events is part of the in-progress
+> xv6 backend. Not all events are emitted by the kernel yet. See
+> `docs/implementation_status.md`.
+
+### User-program metadata lines — `[SCHEDTEST]`
+
+Emitted by the `schedtest.c` user program to describe the run and the processes
+it defines. These lines provide run context (seed, profile, process definitions)
+that the kernel scheduler does not know.
+
+```text
+[SCHEDTEST] event=RUN_BEGIN|PROC_DEF|CHILD_START|CHILD_EXIT|RUN_END key=value ...
+```
+
+```text
+[SCHEDTEST] event=RUN_BEGIN algo=MLFQ seed=42 profile=interactive
+[SCHEDTEST] event=PROC_DEF pid=3 arrival=0 cpu_burst=5 priority=2 label=interactive
+[SCHEDTEST] event=CHILD_START pid=3 priority=2
+[SCHEDTEST] event=CHILD_EXIT pid=3
+[SCHEDTEST] event=RUN_END algo=MLFQ seed=42 profile=interactive
+```
+
+> Status note: `schedtest.c` currently takes only `schedtest <algo>`. The
+> planned `schedtest <algorithm> <seed> <profile>` form, and the `[SCHEDTEST]`
+> metadata emission, are PLANNED / in-progress, not done.
+
+### Parser CLI
+
+```bash
+python3 tools/trace_parser.py --input <log> --algo <ALGO> \
+    [--out <file> | --out-dir <dir>] [--seed N] [--profile P]
+```
+
+- `--input` — raw xv6 console log file.
+- `--algo` — algorithm name (`RR`, `FCFS`, `PRIORITY`, `MLFQ`, `SJF`, `SRTF`);
+  used when a line omits its own `algo` token.
+- `--out` — output JSONL path (default `outputs/trace.jsonl`).
+- `--out-dir` — alternative to `--out`; writes `trace_<algo>.jsonl` into the dir.
+- `--seed` / `--profile` — optional; stamped onto every emitted event.
+
+### Normalized JSONL fields (parser output)
+
+`tools/trace_parser.py` emits one normalized JSON object per recognized line:
+
+| Field | Source |
+|-------|--------|
+| `tick` | `tick` token (integer, or `null` for `[SCHEDTEST]` metadata) |
+| `algo` | `algo` token, canonicalized to UPPERCASE, falling back to `--algo` |
+| `event` | `event` token |
+| `pid` | `pid` token |
+| `state` | `state` token |
+| `queue` / `priority` / `reason` | carried through when present |
+| `from_queue` / `to_queue` | carried through (QUEUE_CHANGE) |
+| `turnaround` / `waiting` / `response` | carried through (EXIT) |
+| `source` | always `"xv6"` |
+| `kind` | `"sched"` for `[SCHED]` lines, `"schedtest"` for `[SCHEDTEST]` lines |
+| `seed` / `profile` | added when `--seed` / `--profile` are supplied |
+
+Integer-looking tokens (`tick`, `pid`, `queue`, `priority`, `from_queue`,
+`to_queue`, `turnaround`, `waiting`, `response`, `arrival`, `cpu_burst`, `seed`)
+are coerced to integers; all other values stay as strings. Events are stably
+sorted by `tick`, with null-tick metadata lines treated as `-1` so `RUN_BEGIN`
+and related lines stay at the front.
+
 ---
 
 ## Common Fields

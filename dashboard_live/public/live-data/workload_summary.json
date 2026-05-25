@@ -1,16 +1,14 @@
 {
-  "process_count": 5,
-  "avg_arrival_gap": 3.0,
-  "cpu_bound_ratio": 0.4,
-  "interactive_ratio": 0.6,
-  "avg_priority": 4.4,
-  "priority_variance": 3.8,
-  "has_starvation_risk": true,
-  "burst_count_distribution": {"min": 1, "max": 4, "avg": 2.4},
-  "total_cpu_work": 48,
-  "workload_file": "workloads/interactive_heavy.json",
-  "workload_type": "interactive_heavy",
-  "target_metric": "avg_response_time",
-  "main_risks": ["poor_response_time", "starvation"],
-  "reason": "The workload contains multiple short interactive jobs mixed with long CPU-bound jobs."
+    "workload_name": "interactive_heavy",
+    "num_processes": 25,
+    "avg_burst": 1.52,
+    "min_burst": 1,
+    "max_burst": 2,
+    "burst_variance": 0.26,
+    "short_job_ratio": 1.0,
+    "long_job_ratio": 0.0,
+    "interactive_ratio": 1.0,
+    "priority_range": 0,
+    "arrival_spread": 24,
+    "target_metric": "response_time"
 }

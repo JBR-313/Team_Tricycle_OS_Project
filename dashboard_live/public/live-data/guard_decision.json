@@ -1,13 +1,17 @@
 {
   "guard_result": "accepted",
-  "scheduling_algorithm": "MLFQ",
+  "algorithm": "RR",
   "params": {
-    "queues": 3,
-    "quantum": [2, 4, 8],
-    "aging_threshold": 30,
-    "boost_interval": 100
+    "quantum": 2
   },
-  "reason": "MLFQ is implemented and all parameters are in valid ranges.",
-  "original_recommendation": "MLFQ",
-  "fallback_used": false
+  "target_metric": "response_time",
+  "compatibility_score": 0.9,
+  "confidence_score": 0.95,
+  "reason": "Accepted: RR is suitable for response_time (compat=0.90, confidence=0.95).",
+  "_meta": {
+    "source": "tools/algorithm_guard.py",
+    "generated_at": "2026-05-25T07:05:28.509637+00:00",
+    "recommendation_source": "recommendation.json"
+  },
+  "scheduling_algorithm": "RR"
 }

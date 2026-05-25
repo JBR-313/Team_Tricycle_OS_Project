@@ -1,75 +1,28 @@
-{"tick": 0, "algo": "SJF", "event": "ARRIVE", "pid": 1, "state": "RUNNABLE", "queue": 0, "priority": 1, "burst_hint": null}
-{"tick": 0, "algo": "SJF", "event": "DISPATCH", "pid": 1, "state": "RUNNING", "queue": 0}
-{"tick": 1, "algo": "SJF", "event": "ARRIVE", "pid": 2, "state": "RUNNABLE", "queue": 0, "priority": 1, "burst_hint": null}
-{"tick": 2, "algo": "SJF", "event": "ARRIVE", "pid": 3, "state": "RUNNABLE", "queue": 0, "priority": 1, "burst_hint": null}
-{"tick": 3, "algo": "SJF", "event": "ARRIVE", "pid": 4, "state": "RUNNABLE", "queue": 0, "priority": 1, "burst_hint": null}
-{"tick": 4, "algo": "SJF", "event": "ARRIVE", "pid": 5, "state": "RUNNABLE", "queue": 0, "priority": 1, "burst_hint": null}
-{"tick": 5, "algo": "SJF", "event": "ARRIVE", "pid": 6, "state": "RUNNABLE", "queue": 0, "priority": 1, "burst_hint": null}
-{"tick": 6, "algo": "SJF", "event": "ARRIVE", "pid": 7, "state": "RUNNABLE", "queue": 0, "priority": 1, "burst_hint": null}
-{"tick": 7, "algo": "SJF", "event": "ARRIVE", "pid": 8, "state": "RUNNABLE", "queue": 0, "priority": 1, "burst_hint": null}
-{"tick": 8, "algo": "SJF", "event": "ARRIVE", "pid": 9, "state": "RUNNABLE", "queue": 0, "priority": 1, "burst_hint": null}
-{"tick": 9, "algo": "SJF", "event": "ARRIVE", "pid": 10, "state": "RUNNABLE", "queue": 0, "priority": 1, "burst_hint": null}
-{"tick": 9, "algo": "SJF", "event": "EXIT", "pid": 1, "state": "ZOMBIE", "queue": 0, "turnaround": 9, "waiting": 0, "response": 9}
-{"tick": 10, "algo": "SJF", "event": "ARRIVE", "pid": 11, "state": "RUNNABLE", "queue": 0, "priority": 1, "burst_hint": null}
-{"tick": 10, "algo": "SJF", "event": "DISPATCH", "pid": 2, "state": "RUNNING", "queue": 0}
-{"tick": 11, "algo": "SJF", "event": "ARRIVE", "pid": 12, "state": "RUNNABLE", "queue": 0, "priority": 1, "burst_hint": null}
-{"tick": 12, "algo": "SJF", "event": "ARRIVE", "pid": 13, "state": "RUNNABLE", "queue": 0, "priority": 1, "burst_hint": null}
-{"tick": 13, "algo": "SJF", "event": "ARRIVE", "pid": 14, "state": "RUNNABLE", "queue": 0, "priority": 1, "burst_hint": null}
-{"tick": 14, "algo": "SJF", "event": "ARRIVE", "pid": 15, "state": "RUNNABLE", "queue": 0, "priority": 1, "burst_hint": null}
-{"tick": 15, "algo": "SJF", "event": "ARRIVE", "pid": 16, "state": "RUNNABLE", "queue": 0, "priority": 1, "burst_hint": null}
-{"tick": 16, "algo": "SJF", "event": "ARRIVE", "pid": 17, "state": "RUNNABLE", "queue": 0, "priority": 1, "burst_hint": null}
-{"tick": 17, "algo": "SJF", "event": "ARRIVE", "pid": 18, "state": "RUNNABLE", "queue": 0, "priority": 1, "burst_hint": null}
-{"tick": 18, "algo": "SJF", "event": "ARRIVE", "pid": 19, "state": "RUNNABLE", "queue": 0, "priority": 1, "burst_hint": null}
-{"tick": 19, "algo": "SJF", "event": "ARRIVE", "pid": 20, "state": "RUNNABLE", "queue": 0, "priority": 1, "burst_hint": null}
-{"tick": 19, "algo": "SJF", "event": "EXIT", "pid": 2, "state": "ZOMBIE", "queue": 0, "turnaround": 18, "waiting": 8, "response": 9}
-{"tick": 20, "algo": "SJF", "event": "ARRIVE", "pid": 21, "state": "RUNNABLE", "queue": 0, "priority": 1, "burst_hint": null}
-{"tick": 20, "algo": "SJF", "event": "DISPATCH", "pid": 3, "state": "RUNNING", "queue": 0}
-{"tick": 21, "algo": "SJF", "event": "ARRIVE", "pid": 22, "state": "RUNNABLE", "queue": 0, "priority": 1, "burst_hint": null}
-{"tick": 22, "algo": "SJF", "event": "ARRIVE", "pid": 23, "state": "RUNNABLE", "queue": 0, "priority": 1, "burst_hint": null}
-{"tick": 23, "algo": "SJF", "event": "ARRIVE", "pid": 24, "state": "RUNNABLE", "queue": 0, "priority": 1, "burst_hint": null}
-{"tick": 24, "algo": "SJF", "event": "ARRIVE", "pid": 25, "state": "RUNNABLE", "queue": 0, "priority": 1, "burst_hint": null}
-{"tick": 29, "algo": "SJF", "event": "EXIT", "pid": 3, "state": "ZOMBIE", "queue": 0, "turnaround": 27, "waiting": 17, "response": 18}
-{"tick": 30, "algo": "SJF", "event": "DISPATCH", "pid": 4, "state": "RUNNING", "queue": 0}
-{"tick": 39, "algo": "SJF", "event": "EXIT", "pid": 4, "state": "ZOMBIE", "queue": 0, "turnaround": 36, "waiting": 26, "response": 27}
-{"tick": 40, "algo": "SJF", "event": "DISPATCH", "pid": 5, "state": "RUNNING", "queue": 0}
-{"tick": 49, "algo": "SJF", "event": "EXIT", "pid": 5, "state": "ZOMBIE", "queue": 0, "turnaround": 45, "waiting": 35, "response": 36}
-{"tick": 50, "algo": "SJF", "event": "DISPATCH", "pid": 6, "state": "RUNNING", "queue": 0}
-{"tick": 59, "algo": "SJF", "event": "EXIT", "pid": 6, "state": "ZOMBIE", "queue": 0, "turnaround": 54, "waiting": 44, "response": 45}
-{"tick": 60, "algo": "SJF", "event": "DISPATCH", "pid": 7, "state": "RUNNING", "queue": 0}
-{"tick": 69, "algo": "SJF", "event": "EXIT", "pid": 7, "state": "ZOMBIE", "queue": 0, "turnaround": 63, "waiting": 53, "response": 54}
-{"tick": 70, "algo": "SJF", "event": "DISPATCH", "pid": 8, "state": "RUNNING", "queue": 0}
-{"tick": 79, "algo": "SJF", "event": "EXIT", "pid": 8, "state": "ZOMBIE", "queue": 0, "turnaround": 72, "waiting": 62, "response": 63}
-{"tick": 80, "algo": "SJF", "event": "DISPATCH", "pid": 9, "state": "RUNNING", "queue": 0}
-{"tick": 89, "algo": "SJF", "event": "EXIT", "pid": 9, "state": "ZOMBIE", "queue": 0, "turnaround": 81, "waiting": 71, "response": 72}
-{"tick": 90, "algo": "SJF", "event": "DISPATCH", "pid": 10, "state": "RUNNING", "queue": 0}
-{"tick": 99, "algo": "SJF", "event": "EXIT", "pid": 10, "state": "ZOMBIE", "queue": 0, "turnaround": 90, "waiting": 80, "response": 81}
-{"tick": 100, "algo": "SJF", "event": "DISPATCH", "pid": 11, "state": "RUNNING", "queue": 0}
-{"tick": 109, "algo": "SJF", "event": "EXIT", "pid": 11, "state": "ZOMBIE", "queue": 0, "turnaround": 99, "waiting": 89, "response": 90}
-{"tick": 110, "algo": "SJF", "event": "DISPATCH", "pid": 12, "state": "RUNNING", "queue": 0}
-{"tick": 119, "algo": "SJF", "event": "EXIT", "pid": 12, "state": "ZOMBIE", "queue": 0, "turnaround": 108, "waiting": 98, "response": 99}
-{"tick": 120, "algo": "SJF", "event": "DISPATCH", "pid": 13, "state": "RUNNING", "queue": 0}
-{"tick": 129, "algo": "SJF", "event": "EXIT", "pid": 13, "state": "ZOMBIE", "queue": 0, "turnaround": 117, "waiting": 107, "response": 108}
-{"tick": 130, "algo": "SJF", "event": "DISPATCH", "pid": 14, "state": "RUNNING", "queue": 0}
-{"tick": 139, "algo": "SJF", "event": "EXIT", "pid": 14, "state": "ZOMBIE", "queue": 0, "turnaround": 126, "waiting": 116, "response": 117}
-{"tick": 140, "algo": "SJF", "event": "DISPATCH", "pid": 15, "state": "RUNNING", "queue": 0}
-{"tick": 149, "algo": "SJF", "event": "EXIT", "pid": 15, "state": "ZOMBIE", "queue": 0, "turnaround": 135, "waiting": 125, "response": 126}
-{"tick": 150, "algo": "SJF", "event": "DISPATCH", "pid": 16, "state": "RUNNING", "queue": 0}
-{"tick": 159, "algo": "SJF", "event": "EXIT", "pid": 16, "state": "ZOMBIE", "queue": 0, "turnaround": 144, "waiting": 134, "response": 135}
-{"tick": 160, "algo": "SJF", "event": "DISPATCH", "pid": 17, "state": "RUNNING", "queue": 0}
-{"tick": 169, "algo": "SJF", "event": "EXIT", "pid": 17, "state": "ZOMBIE", "queue": 0, "turnaround": 153, "waiting": 143, "response": 144}
-{"tick": 170, "algo": "SJF", "event": "DISPATCH", "pid": 18, "state": "RUNNING", "queue": 0}
-{"tick": 179, "algo": "SJF", "event": "EXIT", "pid": 18, "state": "ZOMBIE", "queue": 0, "turnaround": 162, "waiting": 152, "response": 153}
-{"tick": 180, "algo": "SJF", "event": "DISPATCH", "pid": 19, "state": "RUNNING", "queue": 0}
-{"tick": 189, "algo": "SJF", "event": "EXIT", "pid": 19, "state": "ZOMBIE", "queue": 0, "turnaround": 171, "waiting": 161, "response": 162}
-{"tick": 190, "algo": "SJF", "event": "DISPATCH", "pid": 20, "state": "RUNNING", "queue": 0}
-{"tick": 199, "algo": "SJF", "event": "EXIT", "pid": 20, "state": "ZOMBIE", "queue": 0, "turnaround": 180, "waiting": 170, "response": 171}
-{"tick": 200, "algo": "SJF", "event": "DISPATCH", "pid": 21, "state": "RUNNING", "queue": 0}
-{"tick": 209, "algo": "SJF", "event": "EXIT", "pid": 21, "state": "ZOMBIE", "queue": 0, "turnaround": 189, "waiting": 179, "response": 180}
-{"tick": 210, "algo": "SJF", "event": "DISPATCH", "pid": 22, "state": "RUNNING", "queue": 0}
-{"tick": 219, "algo": "SJF", "event": "EXIT", "pid": 22, "state": "ZOMBIE", "queue": 0, "turnaround": 198, "waiting": 188, "response": 189}
-{"tick": 220, "algo": "SJF", "event": "DISPATCH", "pid": 23, "state": "RUNNING", "queue": 0}
-{"tick": 229, "algo": "SJF", "event": "EXIT", "pid": 23, "state": "ZOMBIE", "queue": 0, "turnaround": 207, "waiting": 197, "response": 198}
-{"tick": 230, "algo": "SJF", "event": "DISPATCH", "pid": 24, "state": "RUNNING", "queue": 0}
-{"tick": 239, "algo": "SJF", "event": "EXIT", "pid": 24, "state": "ZOMBIE", "queue": 0, "turnaround": 216, "waiting": 206, "response": 207}
-{"tick": 240, "algo": "SJF", "event": "DISPATCH", "pid": 25, "state": "RUNNING", "queue": 0}
-{"tick": 249, "algo": "SJF", "event": "EXIT", "pid": 25, "state": "ZOMBIE", "queue": 0, "turnaround": 225, "waiting": 215, "response": 216}
+{"tick": null, "algo": "SJF", "event": "RUN_BEGIN", "source": "xv6", "kind": "schedtest", "seed": 42, "profile": "interactive", "nproc": 5}
+{"tick": null, "algo": "SJF", "event": "PROC_DEF", "source": "xv6", "kind": "schedtest", "pid": 4, "arrival": 0, "cpu_burst": 3, "priority": 10, "label": "interactive", "seed": 42, "profile": "interactive"}
+{"tick": null, "algo": "SJF", "event": "CHILD_START", "source": "xv6", "kind": "schedtest", "pid": 4, "priority": 10, "seed": 42, "profile": "interactive"}
+{"tick": null, "algo": "SJF", "event": "CHILD_EXIT", "source": "xv6", "kind": "schedtest", "pid": 4, "seed": 42, "profile": "interactive"}
+{"tick": null, "algo": "SJF", "event": "PROC_DEF", "source": "xv6", "kind": "schedtest", "pid": 5, "arrival": 2, "cpu_burst": 1, "priority": 10, "label": "interactive", "seed": 42, "profile": "interactive"}
+{"tick": null, "algo": "SJF", "event": "CHILD_START", "source": "xv6", "kind": "schedtest", "pid": 5, "priority": 10, "seed": 42, "profile": "interactive"}
+{"tick": null, "algo": "SJF", "event": "CHILD_EXIT", "source": "xv6", "kind": "schedtest", "pid": 5, "seed": 42, "profile": "interactive"}
+{"tick": null, "algo": "SJF", "event": "PROC_DEF", "source": "xv6", "kind": "schedtest", "pid": 6, "arrival": 5, "cpu_burst": 2, "priority": 10, "label": "interactive", "seed": 42, "profile": "interactive"}
+{"tick": null, "algo": "SJF", "event": "CHILD_START", "source": "xv6", "kind": "schedtest", "pid": 6, "priority": 10, "seed": 42, "profile": "interactive"}
+{"tick": null, "algo": "SJF", "event": "CHILD_EXIT", "source": "xv6", "kind": "schedtest", "pid": 6, "seed": 42, "profile": "interactive"}
+{"tick": null, "algo": "SJF", "event": "PROC_DEF", "source": "xv6", "kind": "schedtest", "pid": 7, "arrival": 10, "cpu_burst": 4, "priority": 10, "label": "cpu", "seed": 42, "profile": "interactive"}
+{"tick": null, "algo": "SJF", "event": "CHILD_START", "source": "xv6", "kind": "schedtest", "pid": 7, "priority": 10, "seed": 42, "profile": "interactive"}
+{"tick": null, "algo": "SJF", "event": "CHILD_EXIT", "source": "xv6", "kind": "schedtest", "pid": 7, "seed": 42, "profile": "interactive"}
+{"tick": null, "algo": "SJF", "event": "PROC_DEF", "source": "xv6", "kind": "schedtest", "pid": 8, "arrival": 15, "cpu_burst": 1, "priority": 10, "label": "interactive", "seed": 42, "profile": "interactive"}
+{"tick": null, "algo": "SJF", "event": "CHILD_START", "source": "xv6", "kind": "schedtest", "pid": 8, "priority": 10, "seed": 42, "profile": "interactive"}
+{"tick": null, "algo": "SJF", "event": "CHILD_EXIT", "source": "xv6", "kind": "schedtest", "pid": 8, "seed": 42, "profile": "interactive"}
+{"tick": null, "algo": "SJF", "event": "RUN_END", "source": "xv6", "kind": "schedtest", "seed": 42, "profile": "interactive"}
+{"tick": 0, "algo": "SJF", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 4, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
+{"tick": 4, "algo": "SJF", "event": "EXIT", "source": "xv6", "kind": "sched", "pid": 4, "state": "ZOMBIE", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
+{"tick": 4, "algo": "SJF", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 5, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
+{"tick": 5, "algo": "SJF", "event": "EXIT", "source": "xv6", "kind": "sched", "pid": 5, "state": "ZOMBIE", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
+{"tick": 5, "algo": "SJF", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 6, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
+{"tick": 7, "algo": "SJF", "event": "EXIT", "source": "xv6", "kind": "sched", "pid": 6, "state": "ZOMBIE", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
+{"tick": 7, "algo": "SJF", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 7, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
+{"tick": 11, "algo": "SJF", "event": "EXIT", "source": "xv6", "kind": "sched", "pid": 7, "state": "ZOMBIE", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
+{"tick": 11, "algo": "SJF", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 8, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
+{"tick": 12, "algo": "SJF", "event": "EXIT", "source": "xv6", "kind": "sched", "pid": 8, "state": "ZOMBIE", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
+{"tick": 12, "algo": "SJF", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 3, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}

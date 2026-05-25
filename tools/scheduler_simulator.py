@@ -24,6 +24,10 @@ from typing import Optional
 
 PROJECT_ROOT = Path(__file__).parent.parent
 
+# Backward-compatible schema readers (tolerate algorithm / scheduling_algorithm)
+sys.path.insert(0, str(Path(__file__).parent))
+from schema_compat import get_guard_algorithm
+
 
 # ── Process model ──────────────────────────────────────────────────────────
 @dataclass
@@ -437,7 +441,7 @@ def main() -> int:
     guard_params: dict = {}
     if guard_path.exists():
         gd = json.load(open(guard_path))
-        rec_algo = gd.get("scheduling_algorithm", rec_algo).upper()
+        rec_algo = get_guard_algorithm(gd, rec_algo)
         guard_params = gd.get("params", {})
         print(f"Guard decision: {rec_algo} params={guard_params}")
     else:

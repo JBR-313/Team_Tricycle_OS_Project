@@ -123,6 +123,12 @@ export default function App() {
     if (liveMode) setTick(maxTick)
   }, [liveMode, maxTick])
 
+  // Total trace event count across all loaded algorithms (for header info)
+  const totalTraceEvents = useMemo(
+    () => Object.values(traces).reduce((sum, evs) => sum + (evs?.length || 0), 0),
+    [traces],
+  )
+
   function handleAlgoChange(newAlgo) {
     setAlgo(newAlgo)
     const newEvents = traces[Object.keys(traces).find(k => k.toLowerCase() === newAlgo.toLowerCase())] || []
@@ -155,6 +161,8 @@ export default function App() {
         liveMode={liveMode}
         onLiveModeToggle={handleLiveModeToggle}
         dataStatus={dataStatus}
+        manifest={manifest}
+        totalTraceEvents={totalTraceEvents}
       />
 
       <div className="dashboard-main">
