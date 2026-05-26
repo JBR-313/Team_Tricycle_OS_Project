@@ -216,6 +216,155 @@ def check_traces(d: Path, r: Report) -> None:
             r.warn_(f"{fname}: zero EXIT events — metrics cannot be computed")
 
 
+def _has_correction_applied(obj) -> bool:
+    """True iff any nested key in obj equals 'CORRECTION_APPLIED'.
+
+    The preview surface promises this trace event never appears here —
+    it is reserved for the (future) closed-loop apply.
+    """
+    if isinstance(obj, dict):
+        for k, v in obj.items():
+            if k == "CORRECTION_APPLIED" or v == "CORRECTION_APPLIED":
+                return True
+            if _has_correction_applied(v):
+                return True
+    elif isinstance(obj, list):
+        for v in obj:
+            if v == "CORRECTION_APPLIED" or _has_correction_applied(v):
+                return True
+    return False
+
+
+# Allowed event types and correction types (kept in sync with
+# tools/event_detector.py and tools/correction_proposer.py).
+_EVENT_TYPES = {"starvation", "high_response_time",
+                "high_preemption_rate", "low_throughput"}
+_EVENT_SEVERITIES = {"low", "medium", "high"}
+_CORRECTION_TYPES = {"aging_strengthen", "quantum_decrease",
+                     "quantum_increase", "parameter_update",
+                     "algorithm_change", "no_op"}
+
+
+def _check_runtime_events(d: Path, r: Report) -> tuple[dict | None, list[dict]]:
+    """Validate runtime_events.json. Returns (doc, events) or (None, []) if absent."""
+    p = d / "runtime_events.json"
+    if not p.is_file():
+        return None, []
+    doc = _load(p)
+    if doc.get("applied") is True:
+        r.warn_("runtime_events.json carries applied=true (must be observational, not applied)")
+    if _has_correction_applied(doc):
+        r.warn_("runtime_events.json mentions CORRECTION_APPLIED (reserved for live apply)")
+    events = doc.get("events")
+    if not isinstance(events, list):
+        r.warn_("runtime_events.json: events is not a list")
+        return doc, []
+    total = doc.get("total_problems")
+    if not isinstance(total, int) or total < 0:
+        r.warn_("runtime_events.json: total_problems missing or negative")
+    elif total != len(events):
+        r.warn_(f"runtime_events.json: total_problems={total} != len(events)={len(events)}")
+    for i, e in enumerate(events):
+        if not isinstance(e, dict):
+            r.warn_(f"runtime_events.json: event[{i}] is not an object")
+            continue
+        if e.get("type") not in _EVENT_TYPES:
+            r.warn_(f"runtime_events.json: event[{i}].type={e.get('type')!r} not in {sorted(_EVENT_TYPES)}")
+        if e.get("severity") not in _EVENT_SEVERITIES:
+            r.warn_(f"runtime_events.json: event[{i}].severity={e.get('severity')!r} not in {sorted(_EVENT_SEVERITIES)}")
+        if not isinstance(e.get("tick"), int):
+            r.warn_(f"runtime_events.json: event[{i}].tick missing or not int")
+        if not isinstance(e.get("pid"), int):
+            r.warn_(f"runtime_events.json: event[{i}].pid missing or not int")
+    r.good(f"runtime_events.json: {len(events)} event(s)")
+    return doc, events
+
+
+def _check_correction_proposal(d: Path, events: list[dict], r: Report) -> dict | None:
+    """Validate correction_proposal.json. Returns the doc or None if absent."""
+    p = d / "correction_proposal.json"
+    if not p.is_file():
+        if events:
+            r.warn_("correction_proposal.json missing despite non-empty runtime_events.events")
+        return None
+    if not events:
+        r.warn_("correction_proposal.json present but runtime_events.events is empty (orphan proposal)")
+    doc = _load(p)
+    # Honesty invariants — always ERROR if violated.
+    if doc.get("preview_only") is not True:
+        r.hard_error("correction_proposal.json: preview_only is not true")
+    if doc.get("applied") is not False:
+        r.hard_error("correction_proposal.json: applied is not false")
+    if _has_correction_applied(doc):
+        r.hard_error("correction_proposal.json: mentions CORRECTION_APPLIED")
+    proposed = doc.get("proposed") or {}
+    ct = proposed.get("correction_type")
+    if ct not in _CORRECTION_TYPES:
+        r.warn_(f"correction_proposal.json: correction_type={ct!r} not in {sorted(_CORRECTION_TYPES)}")
+    if not isinstance(proposed.get("new_scheduling_algorithm"), str) \
+            or not proposed.get("new_scheduling_algorithm"):
+        r.warn_("correction_proposal.json: new_scheduling_algorithm missing or empty")
+    if not isinstance(proposed.get("new_params"), dict):
+        r.warn_("correction_proposal.json: new_params is not an object")
+    te = proposed.get("triggering_event") or {}
+    if events:
+        match = any((isinstance(te, dict)
+                     and te.get("tick") == ev.get("tick")
+                     and te.get("type") == ev.get("type")) for ev in events)
+        if not match:
+            r.warn_("correction_proposal.json: triggering_event does not match any runtime_events.events entry")
+    r.good(f"correction_proposal.json: {ct} on {proposed.get('new_scheduling_algorithm')}")
+    return doc
+
+
+def _check_correction_guard(d: Path, proposal: dict | None, r: Report) -> dict | None:
+    """Validate correction_guard_decision.json. Returns the doc or None if absent."""
+    p = d / "correction_guard_decision.json"
+    if not p.is_file():
+        if proposal is not None:
+            r.hard_error("correction_guard_decision.json missing despite correction_proposal.json present")
+        return None
+    if proposal is None:
+        r.warn_("correction_guard_decision.json present but no correction_proposal.json (orphan decision)")
+    doc = _load(p)
+    if doc.get("preview_only") is not True:
+        r.hard_error("correction_guard_decision.json: preview_only is not true")
+    if doc.get("applied") is not False:
+        r.hard_error("correction_guard_decision.json: applied is not false")
+    if _has_correction_applied(doc):
+        r.hard_error("correction_guard_decision.json: mentions CORRECTION_APPLIED")
+    gr = doc.get("guard_result")
+    if gr not in ("accepted", "rejected"):
+        r.warn_(f"correction_guard_decision.json: guard_result={gr!r} not in {{accepted, rejected}}")
+    if gr == "rejected":
+        rps = doc.get("rejected_params")
+        if not isinstance(rps, list) or not rps:
+            r.warn_("correction_guard_decision.json: rejected without non-empty rejected_params")
+        fb = doc.get("fallback") or {}
+        if fb.get("correction_type") != "no_op":
+            r.warn_("correction_guard_decision.json: rejected without fallback.correction_type=no_op")
+    r.good(f"correction_guard_decision.json: {gr}")
+    return doc
+
+
+def _check_preview(d: Path, r: Report) -> None:
+    """Optional --preview pass. Validates the three preview artifacts if any
+    of them is present, against the §3 schema in
+    docs/runtime_correction_preview_validation.md.
+    """
+    print("\nValidating runtime-correction preview artifacts")
+    events_doc, events = _check_runtime_events(d, r)
+    proposal = _check_correction_proposal(d, events, r)
+    _check_correction_guard(d, proposal, r)
+    if events_doc is None and proposal is None:
+        # The (d / "correction_guard_decision.json").is_file() branch is
+        # handled inside _check_correction_guard via proposal=None ⇒ WARN
+        # only when the file actually exists; if it does not exist we
+        # reach here and report "preview not present".
+        if not (d / "correction_guard_decision.json").is_file():
+            r.good("preview not present (no preview files in this directory)")
+
+
 def cross_check(manifest: dict, rec: dict, guard: dict, r: Report) -> None:
     """Surface any disagreement between manifest, recommendation, and guard."""
     if not (manifest and rec and guard):
@@ -293,6 +442,11 @@ def main() -> int:
     ap.add_argument("--snapshots", default=None,
                     help="if set, also validate each <profile>/ sub-directory "
                          "under this path (typically dashboard_live/public/live-data/snapshots)")
+    ap.add_argument("--preview", action="store_true",
+                    help="opt-in: also validate runtime correction preview artifacts "
+                         "(runtime_events.json + correction_proposal.json + "
+                         "correction_guard_decision.json). Default mode never requires them. "
+                         "See docs/runtime_correction_preview_validation.md.")
     args = ap.parse_args()
 
     d = Path(args.dir)
@@ -307,6 +461,8 @@ def main() -> int:
         if args.snapshots:
             print(f"\nValidating snapshots: {args.snapshots}")
             _check_snapshots(Path(args.snapshots), r)
+        if args.preview:
+            _check_preview(d, r)
     except json.JSONDecodeError as exc:
         print(f"[ERROR] unreadable JSON: {exc}", file=sys.stderr)
         return 1
