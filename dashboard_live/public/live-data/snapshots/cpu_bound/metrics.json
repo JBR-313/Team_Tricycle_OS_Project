@@ -1,0 +1,142 @@
+{
+  "scheduling_algorithm": "MLFQ",
+  "params": {
+    "queues": 2,
+    "quantum": [
+      10,
+      50
+    ],
+    "aging_threshold": 500,
+    "boost_interval": 100
+  },
+  "process_count": 5,
+  "completed_count": 4,
+  "total_execution_time": 11,
+  "avg_response_time": 1.5,
+  "avg_turnaround_time": 8.5,
+  "avg_waiting_time": 5.75,
+  "throughput": 0.364,
+  "max_waiting_time": 6,
+  "starvation_occurred": false,
+  "starvation_pids": [],
+  "preemption_count": 4,
+  "per_process": [
+    {
+      "pid": 3,
+      "arrival_time": null,
+      "first_run_time": 2,
+      "finish_time": null,
+      "response_time": null,
+      "turnaround_time": null,
+      "waiting_time": null
+    },
+    {
+      "pid": 4,
+      "arrival_time": 0,
+      "first_run_time": 0,
+      "finish_time": 9,
+      "response_time": 0,
+      "turnaround_time": 9,
+      "waiting_time": 6
+    },
+    {
+      "pid": 5,
+      "arrival_time": 1,
+      "first_run_time": 2,
+      "finish_time": 9,
+      "response_time": 1,
+      "turnaround_time": 8,
+      "waiting_time": 6
+    },
+    {
+      "pid": 6,
+      "arrival_time": 2,
+      "first_run_time": 4,
+      "finish_time": 11,
+      "response_time": 2,
+      "turnaround_time": 9,
+      "waiting_time": 5
+    },
+    {
+      "pid": 7,
+      "arrival_time": 3,
+      "first_run_time": 6,
+      "finish_time": 11,
+      "response_time": 3,
+      "turnaround_time": 8,
+      "waiting_time": 6
+    }
+  ],
+  "judgment": "SUCCESS",
+  "regret_score": 0.0,
+  "best_algorithm": null,
+  "workload_file": null,
+  "comparison": {
+    "MLFQ": {
+      "avg_waiting_time": 5.75,
+      "avg_response_time": 1.5,
+      "avg_turnaround_time": 8.5,
+      "throughput": 0.364,
+      "max_waiting_time": 6,
+      "preemption_count": 4,
+      "starvation_occurred": false,
+      "burst_prediction_error": null,
+      "judgment": "SUCCESS"
+    },
+    "RR": {
+      "avg_waiting_time": 5.75,
+      "avg_response_time": 1.75,
+      "avg_turnaround_time": 8.75,
+      "throughput": 0.333,
+      "max_waiting_time": 6,
+      "preemption_count": 13,
+      "starvation_occurred": false,
+      "burst_prediction_error": null,
+      "judgment": "SUCCESS"
+    },
+    "FCFS": {
+      "avg_waiting_time": 10.0,
+      "avg_response_time": 10.0,
+      "avg_turnaround_time": 16.75,
+      "throughput": 0.148,
+      "max_waiting_time": 19,
+      "preemption_count": 1,
+      "starvation_occurred": false,
+      "burst_prediction_error": null,
+      "judgment": "FAIL"
+    },
+    "Priority": {
+      "avg_waiting_time": 10.0,
+      "avg_response_time": 10.0,
+      "avg_turnaround_time": 16.75,
+      "throughput": 0.148,
+      "max_waiting_time": 19,
+      "preemption_count": 27,
+      "starvation_occurred": false,
+      "burst_prediction_error": null,
+      "judgment": "FAIL"
+    },
+    "SJF": {
+      "avg_waiting_time": 10.0,
+      "avg_response_time": 10.0,
+      "avg_turnaround_time": 16.75,
+      "throughput": 0.148,
+      "max_waiting_time": 19,
+      "preemption_count": 1,
+      "starvation_occurred": false,
+      "burst_prediction_error": null,
+      "judgment": "FAIL"
+    },
+    "SRTF": {
+      "avg_waiting_time": 17.0,
+      "avg_response_time": 17.0,
+      "avg_turnaround_time": 23.0,
+      "throughput": 0.143,
+      "max_waiting_time": 20,
+      "preemption_count": 28,
+      "starvation_occurred": false,
+      "burst_prediction_error": null,
+      "judgment": "FAIL"
+    }
+  }
+}

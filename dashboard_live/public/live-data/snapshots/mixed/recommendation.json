@@ -9,14 +9,14 @@
     "aging_threshold": 500,
     "boost_interval": 100
   },
-  "reason": "The workload is entirely interactive with short bursts (avg 1.52) and no CPU-bound processes, so MLFQ with two queues and small quanta (10, 50) provides excellent response time and fairness. Aging and boost intervals prevent starvation, though the workload has no starvation risk.",
+  "reason": "The workload is mixed with both CPU-bound and interactive processes, moderate priority variance, and burst count distribution. MLFQ with two queues (short quantum for interactive, long quantum for CPU-bound) and aging prevents starvation while maintaining good response time and throughput.",
   "target_metric": "avg_response_time",
-  "confidence": 0.95,
+  "confidence": 0.92,
   "recommended_scheduling_algorithm": "MLFQ",
   "_meta": {
     "source": "tools/llm_advisor.py",
     "model": "solar-pro3",
-    "generated_at": "2026-05-26T08:08:44.732109+00:00",
+    "generated_at": "2026-05-26T08:10:09.919916+00:00",
     "workload_summary": "/home/seonguk/projects/Team_Tricycle_OS_Project/outputs/live/workload_summary.json"
   }
 }

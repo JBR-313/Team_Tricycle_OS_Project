@@ -1,0 +1,16 @@
+{
+    "process_count": 5,
+    "avg_arrival_gap": 1.75,
+    "cpu_bound_ratio": 0.4,
+    "interactive_ratio": 0.6,
+    "avg_priority": 1.8,
+    "priority_variance": 1.2,
+    "has_starvation_risk": true,
+    "burst_count_distribution": {
+        "min": 2,
+        "max": 3,
+        "avg": 2.6
+    },
+    "total_cpu_work": 119,
+    "workload_file": "workloads/long_cpu_bound_first.json"
+}

@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "generated_at": "2026-05-26T08:12:30Z",
+  "profiles": [
+    {
+      "profile": "interactive",
+      "path": "snapshots/interactive",
+      "backend": "xv6",
+      "seed": 42,
+      "workload_type": "interactive",
+      "llm_selected_algorithm": "MLFQ",
+      "judgment": "SUCCESS",
+      "regret_score": 0.0,
+      "starvation_occurred": false,
+      "generated_at": "2026-05-26T08:09:23Z"
+    },
+    {
+      "profile": "cpu_bound",
+      "path": "snapshots/cpu_bound",
+      "backend": "xv6",
+      "seed": 42,
+      "workload_type": "cpu_bound",
+      "llm_selected_algorithm": "MLFQ",
+      "judgment": "SUCCESS",
+      "regret_score": 0.0,
+      "starvation_occurred": false,
+      "generated_at": "2026-05-26T08:10:07Z"
+    },
+    {
+      "profile": "mixed",
+      "path": "snapshots/mixed",
+      "backend": "xv6",
+      "seed": 42,
+      "workload_type": "mixed",
+      "llm_selected_algorithm": "MLFQ",
+      "judgment": "SUCCESS",
+      "regret_score": 0.0,
+      "starvation_occurred": false,
+      "generated_at": "2026-05-26T08:11:47Z"
+    },
+    {
+      "profile": "priority_sensitive",
+      "path": "snapshots/priority_sensitive",
+      "backend": "xv6",
+      "seed": 42,
+      "workload_type": "priority_sensitive",
+      "llm_selected_algorithm": "MLFQ",
+      "judgment": "SUCCESS",
+      "regret_score": 0.0,
+      "starvation_occurred": false,
+      "generated_at": "2026-05-26T08:12:30Z"
+    }
+  ]
+}
