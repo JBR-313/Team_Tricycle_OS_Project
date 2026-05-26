@@ -4,7 +4,7 @@
 
 LLM Sched Copilot is an **LLM-for-OS** project that uses an LLM as a high-level decision support layer for xv6 CPU scheduling.
 
-The LLM analyzes workload summaries and Scheduling Trace Logs, recommends a suitable **Scheduling Algorithm**, suggests algorithm parameters, proposes runtime corrections when scheduling problems are detected, and explains the execution result in natural language.
+The LLM analyzes workload summaries and Scheduling Trace Logs, recommends a suitable **Scheduling Algorithm**, suggests algorithm parameters, and explains the execution result in natural language. Closed-loop runtime correction (detect → propose → guard → apply) is **Partial / Future Work** — see §12.1.
 
 The LLM does **not** replace the xv6 scheduler.  
 xv6 remains the execution authority.  
@@ -25,9 +25,9 @@ Instead of using the LLM as a simple chatbot, this project uses the LLM as a sch
 
 - The LLM interprets workload characteristics.
 - The LLM recommends a Scheduling Algorithm and parameters.
-- The LLM proposes runtime corrections when trace monitoring detects problems.
+- The LLM proposes runtime corrections when trace monitoring detects problems. *(Partial / Future Work — only event detection ships today; see §12.1.)*
 - The LLM explains Scheduling Trace Logs and Scheduling Metrics.
-- The LLM generates feedback rules for future recommendations.
+- The LLM generates feedback rules for future recommendations. *(Partial / Future Work — no production feedback-rule generator today; see §12.1.)*
 
 The actual Scheduling Algorithm execution is performed by xv6.
 
@@ -228,7 +228,15 @@ The recommendation is sent to the Algorithm Guard before execution.
 
 ### 5.2 Running
 
-#### 5.2.1 Runtime Correction Proposer
+#### 5.2.1 Runtime Correction Proposer *(Partial / Future Work)*
+
+> This subsection describes the **planned** closed-loop runtime
+> correction design — the **target**, not what ships today. On
+> current main only `tools/event_detector.py` exists. The proposer,
+> the LLM call, the guard re-check on a correction, the apply step
+> in xv6, and the `CORRECTION_APPLIED` trace event the dashboard
+> would render are all Future Work. See the §12.1 Implementation
+> Status row.
 
 During execution, the Trace Monitor watches the Scheduling Trace Log.
 
@@ -303,7 +311,12 @@ Example output:
 
 The Trace Explainer helps users understand not only what happened, but why it happened.
 
-#### 5.3.2 Feedback Rule Generator
+#### 5.3.2 Feedback Rule Generator *(Partial / Future Work)*
+
+> Design target, not shipped today. No production feedback-rule
+> generator exists in `tools/`. The example below is the **planned**
+> JSON shape, included so the design is visible to readers. See
+> §12.1.
 
 If the LLM recommendation was poor, the system asks the LLM to generate a feedback rule.
 
@@ -422,19 +435,32 @@ FAIL         = LLM result is clearly worse than the best result
 The GUI is not the core scheduler.  
 It is the observability dashboard that visualizes the whole LLM-assisted scheduling process.
 
-The GUI shows:
+The GUI shows (as `dashboard_live`, the primary React/Vite UI on
+`http://localhost:5174`):
 
-- workload summary
-- LLM Scheduling Algorithm recommendation
-- Algorithm Guard result
-- live or replayed Scheduling Trace Log
-- Gantt chart
-- ready queue timeline
-- process state table
-- runtime correction event
-- before/after metrics
-- Trace Explainer result
-- Feedback Rule Generator result
+- **Demo flow** card (top-left): 5 numbered steps with click-to-flash
+  chips to outline the matching card on screen for ~1.4 s.
+- Workload Summary card.
+- LLM Recommendation card + Algorithm Guard card.
+- **Why this algorithm? (Recommendation Evidence)** card —
+  consolidates LLM reason, workload traits, guard scores, and
+  provenance.
+- **Metric trade-off (Counterfactual Metric View)** card — best
+  algorithm per metric; current target metric row highlighted.
+- live or replayed Scheduling Trace Log (Gantt, Process Lanes,
+  Trace Stack).
+- Process state table.
+- before/after metrics (Algorithm Comparison + Metric
+  Visualization).
+- Evaluation Result (judgment + regret).
+- Trace Explainer result (LLM Explanation card).
+- Header status bar with backend badge (**`XV6 TRACE`** /
+  `SIMULATOR FALLBACK` / `FALLBACK`), snapshot selector, snapshot
+  pill (e.g. `SNAPSHOT: cpu_bound`), manifest version, last
+  updated timestamp.
+
+> Runtime-correction events and Feedback Rule output are **not**
+> rendered today — they are Partial / Future Work (see §12.1).
 
 Main dashboard message:
 
@@ -444,7 +470,18 @@ Main dashboard message:
 
 ## 10. Example Demo Scenario
 
-### Scenario: Starvation under Priority Scheduling
+> **The shipped demo flow today** is: workload → LLM recommendation
+> → Algorithm Guard → xv6 schedtest execution (per algorithm on the
+> same seed + profile) → Metrics Evaluator → snapshot tour across
+> the four curated xv6 profiles. See `docs/demo_runbook.md`,
+> `docs/demo_checklist.md`, and `docs/presenter_script.md`.
+>
+> The scenario below is the **target narrative for closed-loop
+> runtime correction** — it is Partial / Future Work today
+> (only event detection ships). Read it as the planned story, not
+> as what the demo currently performs.
+
+### Scenario: Starvation under Priority Scheduling *(Future Work)*
 
 1. User goal:
    - interactive jobs should respond quickly
@@ -482,24 +519,45 @@ Main dashboard message:
 
 ## 11. Data Files
 
-Planned data files:
+Actual layout today — what the orchestrator writes and the
+dashboard reads. `docs/dashboard_data_contract.md` is canonical;
+`tools/validate_dashboard_contract.py --strict --snapshots …`
+enforces it.
 
 ```text
-workloads/*.json
-outputs/workload_summary.json
-outputs/recommendation.json
-outputs/guard_decision.json
-outputs/trace.jsonl
-outputs/metrics.json
-outputs/runtime_events.json
-outputs/correction.json
-outputs/trace_explanation.json
-outputs/feedback_rules.md
+workloads/*.json                       # curated workload definitions
+
+# Orchestrator output — primary flat live-data (what dashboard_live
+# reads on first paint and what scripts/final_demo_check.py validates):
+dashboard_live/public/live-data/manifest.json
+dashboard_live/public/live-data/recommendation.json
+dashboard_live/public/live-data/guard_decision.json
+dashboard_live/public/live-data/workload_summary.json
+dashboard_live/public/live-data/metrics.json
+dashboard_live/public/live-data/trace_explanation.json
+dashboard_live/public/live-data/trace_<rr|fcfs|priority|mlfq|sjf|srtf>.jsonl
+
+# Committed per-profile xv6 snapshots (selector in the header
+# switches between them; snapshots_manifest.json is the index):
+dashboard_live/public/live-data/snapshots_manifest.json
+dashboard_live/public/live-data/snapshots/interactive/…
+dashboard_live/public/live-data/snapshots/cpu_bound/…
+dashboard_live/public/live-data/snapshots/mixed/…
+dashboard_live/public/live-data/snapshots/priority_sensitive/…
+```
+
+Planned but **not shipped** today (Partial / Future Work, see
+§12.1):
+
+```text
+outputs/runtime_events.json   # event_detector output (only event detection ships)
+outputs/correction.json       # the proposer / guard re-check loop is not wired
+outputs/feedback_rules.md     # no production feedback-rule generator
 ```
 
 ---
 
-## 12. Planned Repository Structure
+## 12. Repository Structure
 
 ```text
 .
@@ -556,12 +614,9 @@ simulator.
 ### Run dashboard_live (primary)
 
 ```bash
-# Step 1: generate live data with the Orchestrator (fixed seed for a reproducible demo)
-# xv6 backend (final demo / experiment path):
-python3 scripts/orchestrator.py --backend xv6 --seed 42 --workload interactive --run-all
-
-# Simulator backend (fast dev / fallback path):
-python3 scripts/orchestrator.py --backend simulator --seed 42 --workload interactive --run-all
+# Step 1: one-command demo prep (compile + xv6 orchestrator + strict validator).
+# Runs the on-stage release contract from docs/final_demo_acceptance.md.
+python3 scripts/final_demo_check.py
 
 # Step 2: start dashboard
 cd dashboard_live
@@ -569,16 +624,35 @@ npm install
 npm run dev     # http://localhost:5174
 ```
 
+Step 1 alternatives, if you need finer control:
+
+```bash
+# Run a specific backend / workload directly:
+python3 scripts/orchestrator.py --backend xv6 --seed 42 --workload interactive --run-all
+python3 scripts/orchestrator.py --backend simulator --seed 42 --workload interactive --run-all
+
+# Broader pre-demo confidence — re-run xv6 + strict validate across
+# all four curated profiles (interactive, cpu_bound, mixed, priority_sensitive):
+python3 scripts/multi_profile_demo_check.py
+```
+
 > The old command `python3 scripts/run_live_dashboard_pipeline.py` is a
 > deprecated shim. Prefer the Orchestrator command above.
 
 `dashboard_live` shows:
-- **Data Source** / backend indicator (XV6 TRACE vs SIMULATOR FALLBACK) in the header status bar
-- **Manifest version** (e.g. `v3`) to confirm data freshness
-- **Last Updated** timestamp from `manifest.json`
-- **Live Polling** indicator (blinking dot = polling active; ■ = replay mode)
-- **Yellow fallback warning banner** when no live data is available — run the pipeline to dismiss it
-- **Red trace error indicator** if any JSONL trace file fails to parse
+- **Backend badge** (`XV6 TRACE` / `SIMULATOR FALLBACK` / `FALLBACK`) in the header status bar.
+- **Snapshot selector** — visible when `snapshots_manifest.json` exists. Switch between the four committed xv6 profile snapshots (`interactive`, `cpu_bound`, `mixed`, `priority_sensitive`); a purple `SNAPSHOT: <profile>` pill appears next to the dropdown when one is active. Default is the flat live-data root.
+- **Manifest version** (e.g. `v16`) to confirm data freshness.
+- **Last Updated** timestamp from `manifest.json`.
+- **Live Polling** indicator (blinking dot = polling active; ■ = replay mode). Polling pauses while a snapshot is selected.
+- **Yellow fallback warning banner** when no live data is available — run the pipeline to dismiss it.
+- **Red trace error indicator** if any JSONL trace file fails to parse.
+- **Demo flow** card (top-left) — 5 numbered steps with click-to-flash chips to outline the matching card on screen for ~1.4 s.
+
+Multi-profile snapshots are published by
+`python3 scripts/export_profile_snapshots.py`. The script runs the
+orchestrator + strict validator per profile and writes the result
+into `dashboard_live/public/live-data/snapshots/<profile>/`.
 
 ### Run dashboard_test (UI lab)
 
@@ -610,8 +684,13 @@ Concise current status (full evidence in `docs/implementation_status.md`):
 | xv6 workload profiles — `interactive`, `cpu_bound`, `mixed`, `priority_sensitive` | **Implemented** | all 4 pass `multi_profile_demo_check.py --backend xv6` end-to-end ([audit](docs/xv6_profile_support.md)) |
 | Orchestrator — simulator backend (`--backend simulator`) | **Implemented** | dev / fallback only |
 | `scripts/final_demo_check.py` (compile + orchestrator + strict contract validator) | **Implemented** | one-command demo-prep |
-| `tools/validate_dashboard_contract.py` (`--strict`) | **Implemented** | catches empty traces, missing manifest fields, cross-file algo disagreement |
-| `dashboard_live` (React + `public/live-data/`) | **Implemented** | **final demo UI** — backend badge + manifest meta + per-row Judge |
+| `scripts/multi_profile_demo_check.py` (xv6 backend across all curated profiles) | **Implemented** | broader pre-demo confidence (not a substitute for the on-stage check) |
+| `scripts/export_profile_snapshots.py` + committed per-profile xv6 snapshots | **Implemented** | dashboard switches across `interactive` / `cpu_bound` / `mixed` / `priority_sensitive` without re-running QEMU |
+| `scripts/analyze_algorithm_winners.py` | **Implemented** | offline verifier for the algorithm-diversity audit |
+| `tools/validate_dashboard_contract.py` (`--strict --snapshots …`) | **Implemented** | catches empty traces, missing manifest fields, cross-file algo disagreement; `--snapshots` extends the same checks per profile snapshot |
+| `dashboard_live` (React + `public/live-data/`) | **Implemented** | **final demo UI** — backend badge + snapshot selector + manifest meta + per-row Judge |
+| `dashboard_live` Demo flow + Why this algorithm + Metric trade-off cards | **Implemented** | DemoGuide (click-to-flash), RecommendationEvidence ("Why this algorithm?"), CounterfactualMetricView ("Metric trade-off") — see PRs #32 #43 #46 #47 |
+| `.github/workflows/ci.yml` (lightweight CI) | **Implemented** | py_compile + strict validator on committed live-data + dashboard builds. **No QEMU/xv6 in CI** — local `final_demo_check.py` remains authoritative |
 | `dashboard_test` (React + static fixtures) | **Implemented** | UI lab only |
 | `dashboard/` (Streamlit) | Legacy | fallback only, not the demo path |
 | `trace_parser.py` real-log support + lenient `RUN_BEGIN` recovery | **Implemented** | survives kernel/user printf interleave |
