@@ -164,26 +164,39 @@ git checkout main
 git pull --ff-only origin main
 ```
 
-### 1. Generate live data on the real xv6 backend
+### 1. One command — sanity-check + generate live data
+
+The presenter's single demo-prep command:
 
 ```bash
-python3 scripts/orchestrator.py --backend xv6 --seed 42 --workload interactive --run-all
+python3 scripts/final_demo_check.py
 ```
 
-What this does, in order:
+Three fail-fast stages — the script bails on the first non-zero stage,
+so you only see the green path:
 
-1. `workload_analyzer.py` → `workload_summary.json`
-2. `llm_advisor.py` → `recommendation.json` (Solar Pro 3; demo fallback if no key)
-3. `algorithm_guard.py` → `guard_decision.json`
-4. **Build xv6 (CPUS=1)**, then for each algorithm (LLM-selected first):
-   boot QEMU → type `schedtest <algo> 42 interactive` → capture serial console
-   to `outputs/xv6_raw_<algo>_seed42.log` → window on `RUN_BEGIN`/`RUN_END` →
-   parse to `outputs/live/trace_<algo>.jsonl` → rebase ticks to 0
-5. Aggregate `metrics.json` (per-algorithm `comparison` block + judgment)
-6. Copy everything to `dashboard_live/public/live-data/` + write fresh
-   `manifest.json` (with `backend=xv6`, incremented `version`)
+1. `py_compile tools/*.py scripts/*.py` (catch import / syntax errors)
+2. `python3 scripts/orchestrator.py --backend xv6 --seed 42 --workload interactive --run-all`
+   — the real xv6 backend (Builds xv6 CPUS=1, boots QEMU per algorithm,
+   types `schedtest <algo> 42 interactive`, captures the serial console,
+   windows the run, parses to `trace_<algo>.jsonl`, aggregates
+   `metrics.json`, and publishes to `dashboard_live/public/live-data/`).
+3. `python3 tools/validate_dashboard_contract.py --strict ...` — refuses
+   to greenlight a broken demo. Empty traces, missing manifest fields,
+   recommendation/guard/manifest algorithm disagreement, etc. all fail
+   the script.
 
-If everything succeeds you should see `[DONE] Orchestrator pipeline complete.`
+On success you'll see `[OK] All pre-demo checks passed.` and the one
+next-step line printed below. The script does NOT auto-open a browser
+— start the dashboard manually so you control the terminal.
+
+Useful flags:
+
+- `--backend simulator` — use the simulator instead of xv6 (see
+  step 4 below for when to use this).
+- `--skip-orchestrator` — fast re-check (compile + validate only) when
+  the live-data is already fresh.
+- `--no-strict-validator` — make the validator non-blocking.
 
 ### 2. Start the live dashboard
 
@@ -222,12 +235,29 @@ Then walk the page top → bottom:
 ### 4. Fallback command — if xv6/QEMU does not work on the demo machine
 
 If the kernel fails to build, QEMU is missing, or a serial-console capture
-times out, switch backends without changing anything else:
+times out, switch backends with the same check script:
 
 ```bash
-python3 scripts/orchestrator.py --backend simulator --seed 42 --workload interactive --run-all
+python3 scripts/final_demo_check.py --backend simulator
 # refresh dashboard_live; the badge will switch to SIMULATOR FALLBACK
 ```
 
 The dashboard will visibly downgrade to `Backend: SIMULATOR FALLBACK` so the
 audience can see that the data is from the host model, not real xv6.
+
+### 5. Honest limitations to acknowledge during the demo
+
+- **No websocket streaming.** The dashboard polls `manifest.json`
+  periodically; there is no push channel.
+- **Runtime correction loop is partial.** `tools/event_detector.py` exists,
+  but the proposer → LLM call → guard re-check → apply step → trace
+  `CORRECTION_APPLIED` event are not wired. Don't claim closed-loop.
+- **Solar Pro 3 API key.** Without `.env`, the orchestrator falls back to
+  `outputs/demo/recommendation.json` and stamps
+  `metadata_source=demo_fallback`; the dashboard then shows
+  `Backend: FALLBACK`. Should not occur in a real demo.
+- **xv6 traces are short educational traces.** 5 children per curated
+  profile, ~30–80 events per algorithm. Simulator traces are typically
+  richer. The starvation + judgment rules now both apply an absolute
+  tick floor (see `tools/metrics.py` and `scripts/orchestrator.py`) so
+  sub-tick noise on these short workloads is no longer flagged.
