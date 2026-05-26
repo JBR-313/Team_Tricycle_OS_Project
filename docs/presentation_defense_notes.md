@@ -175,6 +175,7 @@ Source: `tools/event_detector.py`; `docs/implementation_status.md`.
 | Question | Where to point |
 |----------|----------------|
 | **"Why did the LLM choose this algorithm?"** | **"Why this algorithm?" evidence card** — workload traits the LLM cites (interactive ratio, avg burst, avg priority), full LLM reason (scrollable), LLM confidence, guard verdict + compat/confidence scores, provenance, final judgment. One card; read it aloud. |
+| **"Why does the LLM always pick MLFQ across every profile?"** | **"Metric trade-off" card.** MLFQ wins `avg_response_time` (the current target) on every committed xv6 profile, so the LLM is honestly right; but the table shows where another algorithm WOULD win if the goal changed — e.g. on `priority_sensitive` RR wins waiting, turnaround, and max-waiting. Diversity is real, just not on the default target metric. See `docs/algorithm_decision_diversity_audit.md`. |
 | "Did the LLM actually run xv6?" | Header backend badge → `XV6 TRACE` |
 | "How do you stop the LLM picking a bad algorithm?" | Algorithm Guard card (verdict + reason) and the guard scores on the evidence card |
 | "What if the LLM is wrong?" | Comparison table — same workload, every algorithm, target-metric judgment. Evidence card also shows the final SUCCESS/NEAR-SUCCESS/FAIL + regret. |

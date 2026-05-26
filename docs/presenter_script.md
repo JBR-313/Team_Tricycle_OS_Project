@@ -114,6 +114,16 @@ Show the Judge column under `avg_response_time`, then flip the
 metric dropdown to e.g. `avg_waiting_time`, point out that the Judge
 re-derives.
 
+If anyone asks "why does the LLM always pick MLFQ?", point at the
+**Metric trade-off** card in the left column. It shows the best
+algorithm per metric on this workload — the response-time row is
+highlighted because that's the current target. On
+`priority_sensitive` you'll see RR winning waiting / turnaround /
+max-waiting; on `interactive` Priority wins turnaround. The LLM is
+honestly best on the metric it was asked to optimise, and the card
+makes the trade-off visible without changing any scheduler
+behaviour.
+
 ---
 
 ## Beat 6 — Honest limitations (≈30s)
