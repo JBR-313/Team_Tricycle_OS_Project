@@ -274,9 +274,9 @@ Possible correction types:
 - aging threshold adjustment
 - time quantum adjustment
 
-The correction is also checked by the Algorithm Guard.
+The correction would be re-checked by the Algorithm Guard.
 
-The correction is applied from the next scheduling point, not by interrupting every timer tick with an LLM call.
+In the design target, the correction would be applied at the next scheduling point, not by interrupting every timer tick with an LLM call. **Today this apply step is still Future Work** (see §12.1).
 
 ---
 

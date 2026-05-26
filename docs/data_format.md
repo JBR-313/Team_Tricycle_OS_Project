@@ -167,7 +167,7 @@ See `docs/trace_format.md` for the full event type specification.
 {"tick": 2,  "algo": "MLFQ", "event": "DISPATCH",  "pid": 2, "state": "RUNNING",  "queue": 0}
 {"tick": 4,  "algo": "MLFQ", "event": "PREEMPT",   "pid": 2, "state": "RUNNABLE", "queue": 1, "reason": "quantum_expired"}
 {"tick": 30, "algo": "MLFQ", "event": "QUEUE_CHANGE", "pid": 1, "state": "RUNNABLE", "from_queue": 0, "to_queue": 1, "reason": "demotion"}
-{"tick": 45, "algo": "MLFQ", "event": "CORRECTION_APPLIED", "pid": -1, "state": null, "correction_type": "parameter_update", "new_params": {"aging_threshold": 20}}
+{"tick": 45, "algo": "MLFQ", "event": "CORRECTION_APPLIED", "pid": -1, "state": null, "correction_type": "parameter_update", "new_params": {"aging_threshold": 20}}   // (Future Work — not emitted by today's preview-only pipeline)
 {"tick": 60, "algo": "MLFQ", "event": "EXIT",      "pid": 2, "state": "ZOMBIE",   "queue": 1, "turnaround": 58, "waiting": 50, "response": 2}
 ```
 
