@@ -25,6 +25,7 @@ import WorkloadSummary     from './components/WorkloadSummary.jsx'
 import AlgorithmComparison from './components/AlgorithmComparison.jsx'
 import MetricVisualization from './components/MetricVisualization.jsx'
 import RecommendationEvidence from './components/RecommendationEvidence.jsx'
+import CounterfactualMetricView from './components/CounterfactualMetricView.jsx'
 
 const POLL_INTERVAL_MS = 1000
 
@@ -206,6 +207,7 @@ export default function App() {
             metrics={metrics}
             manifest={manifest}
           />
+          <CounterfactualMetricView metrics={metrics} recommendation={recommendation} />
           <EvaluationResult   metrics={metrics} recommendation={recommendation} />
           <LLMExplanation     traceExplanation={traceExplanation} />
         </div>

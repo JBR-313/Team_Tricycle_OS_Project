@@ -119,6 +119,38 @@ export function computeAlgorithmJudgment(algoMetrics, allComparisonMetrics, targ
   return 'FAIL'
 }
 
+// Best algorithm per canonical metric, computed from a metrics.comparison
+// block. Skips entries that report starvation_occurred=true (they cannot
+// be the "best" pick — mirrors the existing Judge rule).
+//
+// Returns { metric: { algo, value, higher_better } } for every metric in
+// METRIC_KEYS where at least one non-starving candidate has a numeric value.
+// Metrics with no candidates are omitted. preemption_count is intentionally
+// included so callers can choose to display or skip it.
+export function computeBestPerMetric(comparison) {
+  if (!comparison || typeof comparison !== 'object') return {}
+  const out = {}
+  for (const key of Object.values(METRIC_KEYS)) {
+    const higher = isHigherBetterMetric(key)
+    let bestAlgo = null
+    let bestVal = higher ? -Infinity : Infinity
+    for (const [algo, row] of Object.entries(comparison)) {
+      if (!row || typeof row !== 'object') continue
+      if (row.starvation_occurred === true) continue
+      const v = row[key]
+      if (typeof v !== 'number') continue
+      if (higher ? v > bestVal : v < bestVal) {
+        bestAlgo = algo
+        bestVal = v
+      }
+    }
+    if (bestAlgo !== null) {
+      out[key] = { algo: bestAlgo, value: bestVal, higher_better: higher }
+    }
+  }
+  return out
+}
+
 export function getBackend(manifest) {
   if (!manifest) return 'simulator'
   if (manifest.backend) {
