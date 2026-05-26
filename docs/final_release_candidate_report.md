@@ -97,61 +97,53 @@ will re-validate every step.
 
 ---
 
-## 6. Known issue — not a regression of the strict contract
+## 6. Resolved — interactive snapshot RR row anomaly
 
-While walking the committed snapshots, the per-row `Comparison`
-data for the **interactive** profile shows
-`RR.avg_response_time = 34.2` and `RR.avg_waiting_time = 34.4`,
-which is inconsistent with the other algorithms on the same
-short workload (all ≤ 0.67 ticks) and with the other profiles'
-RR rows.
+Fixed by **PR #64** (`fix(orchestrator): guard algo=<TARGET>
+fallback so xv6 boot lines can't anchor the window`).
 
-Root cause: when `dashboard_live/public/live-data/snapshots/
-interactive/` was generated (PR #38), the xv6 RUN_BEGIN line for
-the RR run was very likely interleaved by a kernel `[SCHED]
-algo=RR` line, so the orchestrator's lenient
-`_extract_run_window` fell back to anchoring on
-`algo=RR` and picked up xv6's default-RR boot output from
-`tick=1` onwards. The trace then included ~32 spurious
-`pid=1` / `pid=2` (init/sh) DISPATCH events at `tick=0`, which
-shifted RR's first-child dispatch to `tick=34` and pushed the
-average response/waiting time up.
+Original finding: the per-row `Comparison` data for the
+**interactive** profile showed `RR.avg_response_time = 34.2` and
+`RR.avg_waiting_time = 34.4`, wildly inconsistent with every
+other algorithm on the same short workload.
 
-This does **not** violate the strict dashboard contract — every
-required field is present and well-typed; the `--strict
---snapshots --preview` validator passes 67/0/0 on it. But the
-number is misleading on stage. Treatment for the next PR (P1
-in this goal):
+Root cause: when the snapshot was generated in PR #38, the xv6
+RUN_BEGIN line for the RR run was interleaved by a kernel
+`[SCHED] algo=RR` boot line; the orchestrator's lenient
+`_extract_run_window` fell back to anchoring on `algo=RR` and
+picked up xv6's default-RR boot output from `tick=1` onwards.
+~32 spurious `pid=1` / `pid=2` (init/sh) DISPATCH events at
+`tick=0` shifted RR's first-child dispatch to `tick=34`.
 
-- Tighten the orchestrator's `algo=<TARGET>` fallback so it only
-  fires AFTER a `[SCHEDTEST]` marker has been observed (which
-  guarantees the schedtest userspace program is running and
-  prevents the boot-time RR lines from anchoring the window).
-- Re-generate the `interactive` snapshot only.
+Fix: in the `algo=<TARGET>` fallback only, require that a
+`[SCHEDTEST]` marker has been observed earlier in the line
+stream before the anchor predicate is allowed to fire. The
+schedtest userspace program is the only emitter of `[SCHEDTEST]`
+markers, so its presence guarantees we are past the boot phase.
 
-The other three committed snapshots (`cpu_bound`, `mixed`,
-`priority_sensitive`) show plausible RR values and are
-**unaffected**.
+Re-generated values after the fix (avg_response_time /
+avg_waiting_time):
+
+| profile             | resp | wait | note |
+|---------------------|------|------|------|
+| interactive         | **0.20** | **0.40** | fixed (was 34.2 / 34.4) |
+| cpu_bound           | 1.75 | 5.75 | unchanged |
+| mixed               | 1.33 | 2.67 | unchanged |
+| priority_sensitive  | 2.40 | 4.80 | unchanged |
+
+Strict validator still passes 67/0/0 with `--snapshots --preview`.
 
 ---
 
 ## 7. Verdict
 
-**YELLOW** — every automated check passes, but the
-`interactive` snapshot ships an artifact-level anomaly in the
-RR row (§6). The on-stage demo would render this row in
-`AlgorithmComparison` and `CounterfactualMetricView`. The
-P1 fix in this goal closes the gap; until merged, the
-verdict stays YELLOW.
-
-After P1 lands:
+**GREEN.** Every automated check in §3 passes; the §6 known issue
+is closed by PR #64; the committed snapshots now match what the
+audience would reasonably expect on every workload.
 
 - ✅ §3 table all PASS
-- ✅ §6 known issue resolved
-- ✅ The committed snapshots match what the audience would
-  reasonably expect
-
-… and this report can be amended to **GREEN**.
+- ✅ §6 known issue resolved (PR #64)
+- ✅ Committed snapshots are demo-ready
 
 ---
 
