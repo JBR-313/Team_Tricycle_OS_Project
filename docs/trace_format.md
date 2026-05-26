@@ -228,9 +228,18 @@ A process has moved from one MLFQ queue to another (demotion or aging promotion)
 
 ---
 
-### CORRECTION_APPLIED
+### CORRECTION_APPLIED *(Future Work — not emitted today)*
 
-A runtime correction proposed by the LLM and validated by Algorithm Guard has been applied.
+> Reserved trace event for the closed-loop runtime-correction path.
+> The current pipeline ships **preview-only** correction artifacts
+> (`runtime_events.json`, `correction_proposal.json`,
+> `correction_guard_decision.json`) and does **not** emit
+> `CORRECTION_APPLIED`. See
+> `docs/runtime_correction_preview_design.md` §7. The schema
+> below is the design target.
+
+When the closed loop is wired, a runtime correction proposed and
+guard-validated would be applied at the next scheduling point.
 
 ```json
 {"tick": 45, "algo": "MLFQ",  "event": "CORRECTION_APPLIED", "pid": -1, "state": null, "correction_type": "parameter_update", "new_params": {"aging_threshold": 20, "boost_interval": 80}}
