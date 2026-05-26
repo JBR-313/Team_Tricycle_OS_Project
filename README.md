@@ -601,23 +601,29 @@ See `docs/demo_runbook.md` for full pipeline details.
 
 ## 12.1 Implementation Status
 
-The project is mid-refactor toward the Orchestrator-centric flow. Honest status
-summary (full table in `docs/implementation_status.md`):
+Concise current status (full evidence in `docs/implementation_status.md`):
 
-- xv6 RR / FCFS / Priority+Aging / MLFQ: **Implemented**.
-- xv6 SJF / SRTF (burst predictor): **Implemented**.
-- Orchestrator simulator backend (fast dev / fallback): **Implemented**.
-- Orchestrator xv6 backend (final demo / experiment path — QEMU automation +
-  `schedtest <algo> <seed> <profile>` + kernel trace windowing): **Implemented**.
-- `trace_parser.py` real-log support: **Implemented**.
-- Runtime correction loop (event detect → propose → LLM → guard → apply →
-  `CORRECTION_APPLIED` → dashboard): **Partial / Future Work** — only event
-  detection exists.
-- Live streaming: **polling only** (no websocket).
+| Component | Status | Role |
+|-----------|--------|------|
+| xv6 scheduler — RR / FCFS / Priority+Aging / MLFQ / SJF / SRTF | **Implemented** | execution authority |
+| Orchestrator — xv6 backend (`scripts/orchestrator.py --backend xv6`) | **Implemented** | **final demo / experiment path** |
+| Orchestrator — simulator backend (`--backend simulator`) | **Implemented** | dev / fallback only |
+| `scripts/final_demo_check.py` (compile + orchestrator + strict contract validator) | **Implemented** | one-command demo-prep |
+| `tools/validate_dashboard_contract.py` (`--strict`) | **Implemented** | catches empty traces, missing manifest fields, cross-file algo disagreement |
+| `dashboard_live` (React + `public/live-data/`) | **Implemented** | **final demo UI** — backend badge + manifest meta + per-row Judge |
+| `dashboard_test` (React + static fixtures) | **Implemented** | UI lab only |
+| `dashboard/` (Streamlit) | Legacy | fallback only, not the demo path |
+| `trace_parser.py` real-log support + lenient `RUN_BEGIN` recovery | **Implemented** | survives kernel/user printf interleave |
+| LLM Advisor (Solar Pro 3) + Algorithm Guard | **Implemented** | LLM may fall back to demo recommendation if no API key |
+| Runtime correction loop (detect → propose → LLM → guard → apply → `CORRECTION_APPLIED`) | **Partial / Future Work** | only event detection exists today |
+| Live streaming | **Polling only** | no websocket; `manifest.json` poll |
+
+> **LLM suggests. Algorithm Guard checks. xv6 executes. Metrics verify. GUI explains.**
 
 See `docs/implementation_status.md` for evidence files, run commands, and
-remaining risks per feature, and `docs/orchestrator_design.md` for the control
-plane and fairness design.
+remaining risks per feature; `docs/orchestrator_design.md` for the control
+plane and fairness design; and `docs/demo_runbook.md` for the presenter
+checklist.
 
 ---
 
