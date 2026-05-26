@@ -123,14 +123,29 @@ applied at next scheduling point → CORRECTION_APPLIED trace event →
 dashboard
 ```
 
-What exists today: **only `event_detector.py`**. It can spot starvation,
-poor response time, or excessive preemption from the trace, and it
-writes a candidate event JSON.
+What exists today (**preview only**): `event_detector.py` plus
+deterministic `correction_proposer.py` and `correction_guard.py`,
+all wired through `scripts/orchestrator.py` into a
+`RuntimeCorrectionPreview` card on the dashboard. The proposer
+maps each detected event type to a concrete correction (e.g.
+starvation → `aging_strengthen`, halve the aging threshold;
+high response time on FCFS → `algorithm_change` to RR). The
+guard re-validates the proposal against the existing
+`PARAM_RANGES` and emits `accepted` / `rejected`. Every output
+file is stamped `preview_only=true, applied=false`. On a healthy
+on-stage run the dashboard card shows
+*"Runtime monitor: no correction needed"* — that is the
+honest answer when nothing tripped the detector. To show the
+rule table in action run
+`python3 scripts/correction_preview_smoke.py`, which exercises
+all five canonical event-type scenarios against the proposer
+and guard without touching xv6.
 
-What does **not** exist today: the proposer, the LLM call for a
-correction, the guard re-check on the correction, the actual apply step
-inside xv6, and the `CORRECTION_APPLIED` trace event the dashboard
-would render.
+What does **not** exist today: the actual apply step inside xv6
+(kernel mid-run setter for algorithm / params, schedtest
+listener, host→guest channel) and the `CORRECTION_APPLIED`
+trace event the dashboard would render distinctly from the
+preview. That is still intentional Future Work.
 
 This is honestly marked `Partial / Future Work` in:
 - `README.md` §12.1 status table
@@ -180,7 +195,7 @@ Source: `tools/event_detector.py`; `docs/implementation_status.md`.
 | "How do you stop the LLM picking a bad algorithm?" | Algorithm Guard card (verdict + reason) and the guard scores on the evidence card |
 | "What if the LLM is wrong?" | Comparison table — same workload, every algorithm, target-metric judgment. Evidence card also shows the final SUCCESS/NEAR-SUCCESS/FAIL + regret. |
 | "Did this actually go through the LLM, or is it canned?" | Evidence card → provenance pill. `LLM: solar-pro3` ⇒ real call. `demo fallback (no LLM call)` (warning-tinted) ⇒ canned. |
-| "Can the LLM change strategy mid-run?" | Runtime correction is Partial / Future Work (be honest) |
+| "Can the LLM change strategy mid-run?" | Runtime correction is **preview-only** today. The dashboard's RuntimeCorrectionPreview card shows the proposer + guard verdict; on the healthy demo it reads "Runtime monitor: no correction needed". The actual mid-run apply (kernel mid-run setter + `CORRECTION_APPLIED` trace event) is intentional Future Work — see §5. To demonstrate the rule table off-stage, run `python3 scripts/correction_preview_smoke.py`. |
 | "Is this real-time?" | No — `manifest.json` polling; final result is replayable per tick |
 | "What if the API is down?" | Demo fallback (`Backend: FALLBACK`); recommendation/guard come from `outputs/demo/`. Evidence card surfaces this explicitly too. |
 
