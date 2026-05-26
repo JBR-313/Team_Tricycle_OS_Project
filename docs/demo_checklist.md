@@ -59,6 +59,8 @@ Read these in order. Each step should take 30–60 seconds.
    - **Backend badge** — must read `Backend: XV6 TRACE` for a real run.
      If it says `SIMULATOR FALLBACK` or `FALLBACK`, announce it.
    - **Manifest meta** — `workload`, `llm`, `algos`, `seed`, `events`.
+   - **Snapshot selector** — only appears when committed xv6 profile
+     snapshots exist (see step 7). Starts on `Default (current run)`.
    - **Algorithm selector** — switch through each algorithm; the
      LLM-selected one is first.
    - **Replay / Live** toggle and tick slider.
@@ -79,6 +81,25 @@ Read these in order. Each step should take 30–60 seconds.
 
 6. **LLM Explanation / Evaluation Result** — natural-language summary
    of the trace, regret score, and overall judgment.
+
+7. **Profile snapshot tour (optional, ~30 seconds).** If the snapshot
+   selector is visible, switch through the committed xv6 snapshots
+   one at a time:
+   - `interactive` (the on-stage default — same data, picks MLFQ).
+   - `cpu_bound` — different workload table, same xv6 backend, the
+     LLM's recommendation and the Judge re-derive for the new run.
+   - `mixed`, `priority_sensitive` — same.
+
+   When a snapshot is active a purple `SNAPSHOT: <profile>` pill
+   appears in the header next to the dropdown so the audience sees
+   the source change. The backend badge stays `XV6 TRACE` because
+   every snapshot is xv6. Return to `Default (current run)` when
+   done.
+
+   This step proves the LLM-Advisor + Guard + xv6 + Metrics + GUI
+   loop works across more than one workload, not just the
+   interactive demo. See `docs/profile_snapshot_plan.md` for the
+   underlying schema.
 
 ---
 

@@ -86,6 +86,14 @@ this should read `LLM: solar-pro3`.
 algorithm selector through one or two others. Mention "same workload
 across every algorithm".
 
+If the header shows the **Snapshot selector**, end this beat by
+switching to one other profile (e.g. `cpu_bound`) and pointing out
+that the recommendation, the trace, and the Judge all re-derive for
+a completely different xv6 workload — same Advisor → Guard → xv6 →
+Metrics loop, four different curated workloads. The backend badge
+stays `XV6 TRACE` because every snapshot is real xv6. Return to
+`Default (current run)` before moving on.
+
 ---
 
 ## Beat 5 — Metric comparison (≈30s)
