@@ -133,12 +133,19 @@ behaviour.
 
 > Three things we are deliberately honest about:
 >
-> 1. **Runtime correction is partial.** Today's pipeline does the
->    *before* and *after* — it recommends and explains. The closed
->    loop where the LLM proposes a mid-run correction, the Guard
->    re-checks it, and xv6 applies it at the next scheduling point
->    is `event_detector.py` only. The rest is intentional Future
->    Work.
+> 1. **Runtime correction is preview-only.** Today's pipeline runs
+>    `event_detector → correction_proposer → correction_guard`
+>    after each run and publishes the result to the dashboard as a
+>    `RuntimeCorrectionPreview` card. On the healthy interactive
+>    demo the card shows "Runtime monitor: no correction needed"
+>    — the detector ran and found nothing above its thresholds. To
+>    show the proposer + guard would have proposed under a problem
+>    case, run `python3 scripts/correction_preview_smoke.py` in a
+>    separate terminal. The card always reads
+>    *"Preview only — not applied to xv6"*. Closing the loop to
+>    a real mid-run apply (kernel mid-run setter,
+>    `CORRECTION_APPLIED` trace event) is still intentional
+>    Future Work.
 > 2. **The dashboard polls.** There is no websocket; the GUI updates
 >    on the next `manifest.json` poll. Live mode reflects the most
 >    recent orchestrator publish, not a real-time stream.
