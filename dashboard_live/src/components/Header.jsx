@@ -8,7 +8,13 @@ export default function Header({
   dataStatus,
   manifest,
   totalTraceEvents,
+  snapshotsManifest,
+  selectedSnapshot,
+  onSelectedSnapshotChange,
 }) {
+  const snapshotProfiles = Array.isArray(snapshotsManifest?.profiles)
+    ? snapshotsManifest.profiles : []
+  const hasSnapshots = snapshotProfiles.length > 0
   const mf = manifest || {}
   // Backend source: 'xv6' | 'simulator' | 'fallback'. A demo_fallback metadata
   // flag (set by the orchestrator) downgrades the badge to FALLBACK for honesty.
@@ -120,6 +126,47 @@ export default function Header({
       )}
 
       <div className="header-spacer" />
+
+      {/* Snapshot selector — visible only when snapshots_manifest.json exists.
+          Default option clears the snapshot and uses the flat /live-data root. */}
+      {hasSnapshots && (
+        <>
+          <span className="header-algo-label" title="Pre-generated xv6 profile snapshots">
+            Snapshot
+          </span>
+          <select
+            className="algo-select"
+            value={selectedSnapshot?.profile || ''}
+            onChange={e => {
+              const v = e.target.value
+              if (!v) { onSelectedSnapshotChange?.(null); return }
+              const entry = snapshotProfiles.find(p => p.profile === v)
+              if (entry) onSelectedSnapshotChange?.(entry)
+            }}
+            title="Switch between the default live-data and the committed xv6 profile snapshots"
+          >
+            <option value="">Default (current run)</option>
+            {snapshotProfiles.map(p => (
+              <option key={p.profile} value={p.profile}>
+                {p.profile}{p.judgment ? ` · ${p.judgment}` : ''}
+              </option>
+            ))}
+          </select>
+          {selectedSnapshot && (
+            <span
+              className="pill"
+              style={{
+                background: '#ede9fe', color: '#6d28d9',
+                fontSize: '0.55rem', marginLeft: 4,
+              }}
+              title={`Snapshot from ${selectedSnapshot.path}`}
+            >
+              SNAPSHOT: {selectedSnapshot.profile}
+            </span>
+          )}
+          <div className="header-spacer" />
+        </>
+      )}
 
       <span className="header-algo-label">Algorithm</span>
       <select
