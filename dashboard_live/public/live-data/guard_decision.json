@@ -7,7 +7,7 @@
       10,
       50
     ],
-    "aging_threshold": 1000,
+    "aging_threshold": 500,
     "boost_interval": 100
   },
   "target_metric": "avg_response_time",
@@ -16,7 +16,7 @@
   "reason": "Accepted: MLFQ is suitable for response_time (compat=0.95, confidence=0.95).",
   "_meta": {
     "source": "tools/algorithm_guard.py",
-    "generated_at": "2026-05-26T05:36:45.798967+00:00",
+    "generated_at": "2026-05-26T06:09:42.755711+00:00",
     "recommendation_source": "recommendation.json"
   },
   "scheduling_algorithm": "MLFQ",
