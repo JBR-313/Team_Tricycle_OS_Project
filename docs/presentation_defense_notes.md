@@ -139,7 +139,12 @@ honest answer when nothing tripped the detector. To show the
 rule table in action run
 `python3 scripts/correction_preview_smoke.py`, which exercises
 all five canonical event-type scenarios against the proposer
-and guard without touching xv6.
+and guard without touching xv6. The validator also has an
+opt-in `--preview` mode (`python3 tools/validate_dashboard_contract.py
+--strict --preview …`) that enforces the honesty invariants
+(`preview_only=true`, `applied=false`, no `CORRECTION_APPLIED`)
+schematically — CI runs both the smoke and the validator on every
+PR. See `docs/runtime_correction_preview_validation.md`.
 
 What does **not** exist today: the actual apply step inside xv6
 (kernel mid-run setter for algorithm / params, schedtest
