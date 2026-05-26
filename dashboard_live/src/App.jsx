@@ -6,6 +6,7 @@ import {
   loadManifest, loadRecommendation, loadGuardDecision,
   loadWorkloadSummary, loadMetrics, loadAllTraces,
   loadSnapshotsManifest, setLiveDataBase, getLiveDataBase, DEFAULT_BASE,
+  loadRuntimeEvents, loadCorrectionProposal, loadCorrectionGuardDecision,
 } from './data/liveDataClient.js'
 import {
   fallbackManifest, fallbackRecommendation, fallbackGuardDecision,
@@ -27,6 +28,7 @@ import MetricVisualization from './components/MetricVisualization.jsx'
 import RecommendationEvidence from './components/RecommendationEvidence.jsx'
 import CounterfactualMetricView from './components/CounterfactualMetricView.jsx'
 import DemoGuide from './components/DemoGuide.jsx'
+import RuntimeCorrectionPreview from './components/RuntimeCorrectionPreview.jsx'
 
 const POLL_INTERVAL_MS = 1000
 
@@ -59,6 +61,9 @@ export default function App() {
   const [manifestVersion, setManifestVersion] = useState(null)
   const [snapshotsManifest, setSnapshotsManifest] = useState(null)
   const [selectedSnapshot, setSelectedSnapshotState] = useState(null) // null = default flat live-data
+  const [runtimeEvents, setRuntimeEvents] = useState(null)
+  const [correctionProposal, setCorrectionProposal] = useState(null)
+  const [correctionGuardDecision, setCorrectionGuardDecision] = useState(null)
 
   const manifestVersionRef = useRef(null)
 
@@ -96,6 +101,18 @@ export default function App() {
         const exRes = await fetch(`${getLiveDataBase()}/trace_explanation.json`)
         if (exRes.ok) setTraceExplanation(await exRes.json())
       } catch { /* optional file */ }
+
+      // Optional preview-only runtime-correction artifacts. Each loader
+      // silently returns null when its file is absent (the common path
+      // on a healthy run), so the RuntimeCorrectionPreview card hides.
+      const [re, cp, cd] = await Promise.all([
+        loadRuntimeEvents(),
+        loadCorrectionProposal(),
+        loadCorrectionGuardDecision(),
+      ])
+      setRuntimeEvents(re)
+      setCorrectionProposal(cp)
+      setCorrectionGuardDecision(cd)
 
     } catch (err) {
       setLoadError(err.message)
@@ -210,6 +227,11 @@ export default function App() {
             manifest={manifest}
           />
           <CounterfactualMetricView metrics={metrics} recommendation={recommendation} />
+          <RuntimeCorrectionPreview
+            runtimeEvents={runtimeEvents}
+            correctionProposal={correctionProposal}
+            correctionGuardDecision={correctionGuardDecision}
+          />
           <EvaluationResult   metrics={metrics} recommendation={recommendation} />
           <LLMExplanation     traceExplanation={traceExplanation} />
         </div>

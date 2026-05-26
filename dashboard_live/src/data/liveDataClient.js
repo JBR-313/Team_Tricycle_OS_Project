@@ -45,6 +45,24 @@ export async function loadSnapshotsManifest() {
   return res.json()
 }
 
+// Optional preview-only runtime-correction artifacts written by
+// scripts/orchestrator.py:_run_correction_preview. Each loader silently
+// returns null on 404 so the dashboard's RuntimeCorrectionPreview card
+// can hide itself when the preview is not available for the current
+// run / snapshot. These files are NOT on the strict contract schema.
+async function _maybeJson(path) {
+  try {
+    const res = await fetch(`${_base}/${path}`)
+    if (!res.ok) return null
+    return await res.json()
+  } catch {
+    return null
+  }
+}
+export async function loadRuntimeEvents()          { return _maybeJson('runtime_events.json') }
+export async function loadCorrectionProposal()     { return _maybeJson('correction_proposal.json') }
+export async function loadCorrectionGuardDecision(){ return _maybeJson('correction_guard_decision.json') }
+
 // Returns { events: [...], errors: [...bad-line messages] }
 // Events are normalized through the schema-compat layer (tick/algo spellings)
 // using `defaultAlgo` when an event omits its own algo, then sorted by tick.
