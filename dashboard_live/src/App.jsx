@@ -5,6 +5,7 @@ import {
   ALGOS,
   loadManifest, loadRecommendation, loadGuardDecision,
   loadWorkloadSummary, loadMetrics, loadAllTraces,
+  loadSnapshotsManifest, setLiveDataBase, getLiveDataBase, DEFAULT_BASE,
 } from './data/liveDataClient.js'
 import {
   fallbackManifest, fallbackRecommendation, fallbackGuardDecision,
@@ -54,6 +55,8 @@ export default function App() {
   const [loadError,       setLoadError]       = useState(null)
   const [traceErrors,     setTraceErrors]     = useState({})
   const [manifestVersion, setManifestVersion] = useState(null)
+  const [snapshotsManifest, setSnapshotsManifest] = useState(null)
+  const [selectedSnapshot, setSelectedSnapshotState] = useState(null) // null = default flat live-data
 
   const manifestVersionRef = useRef(null)
 
@@ -84,9 +87,11 @@ export default function App() {
 
       if (mf) manifestVersionRef.current = `${mf.version}:${mf.updated_at}`
 
-      // Restore explanation from trace_explanation.json if available
+      // Restore explanation from trace_explanation.json if available.
+      // Fetch from the currently-active base so snapshot-mode picks up
+      // the snapshot's own explanation instead of the flat root's.
       try {
-        const exRes = await fetch('/live-data/trace_explanation.json')
+        const exRes = await fetch(`${getLiveDataBase()}/trace_explanation.json`)
         if (exRes.ok) setTraceExplanation(await exRes.json())
       } catch { /* optional file */ }
 
@@ -98,9 +103,28 @@ export default function App() {
 
   useEffect(() => { loadAll() }, [loadAll])
 
+  // ── Snapshot index (read from /live-data root; absent ⇒ feature hidden)
+  useEffect(() => {
+    loadSnapshotsManifest()
+      .then(setSnapshotsManifest)
+      .catch(() => setSnapshotsManifest(null))
+  }, [])
+
+  // ── Snapshot selector: swap loader base + reload everything ──────────────
+  const setSelectedSnapshot = useCallback((entry) => {
+    const base = entry?.path ? `${DEFAULT_BASE}/${entry.path}` : DEFAULT_BASE
+    setLiveDataBase(base)
+    setSelectedSnapshotState(entry || null)
+    manifestVersionRef.current = null
+    setTick(0)
+    loadAll()
+  }, [loadAll])
+
   // ── Live polling ──────────────────────────────────────────────────────────
   useEffect(() => {
-    if (!liveMode) return
+    // Snapshots are static — never poll them. The "Live" toggle should
+    // only watch the flat live-data root.
+    if (!liveMode || selectedSnapshot) return
     const id = setInterval(async () => {
       try {
         const mf = await loadManifest()
@@ -112,7 +136,7 @@ export default function App() {
       } catch { /* polling errors are silent */ }
     }, POLL_INTERVAL_MS)
     return () => clearInterval(id)
-  }, [liveMode, loadAll])
+  }, [liveMode, loadAll, selectedSnapshot])
 
   // ── Derive per-algo events ────────────────────────────────────────────────
   const algoKey  = ALGOS.includes(algo) ? algo : 'MLFQ'
@@ -165,6 +189,9 @@ export default function App() {
         dataStatus={dataStatus}
         manifest={manifest}
         totalTraceEvents={totalTraceEvents}
+        snapshotsManifest={snapshotsManifest}
+        selectedSnapshot={selectedSnapshot}
+        onSelectedSnapshotChange={setSelectedSnapshot}
       />
 
       <div className="dashboard-main">

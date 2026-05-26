@@ -1,6 +1,17 @@
 import { normalizeTraceEvent, getEventTick } from './schemaCompat.js'
 
-const BASE = '/live-data'
+// The dashboard normally serves files from /live-data. When a snapshot
+// profile is selected in the header the base is swapped to
+// /live-data/snapshots/<profile>; on "Default" it is restored. The
+// snapshots_manifest.json itself always lives at the root, regardless
+// of the currently-selected base.
+const DEFAULT_BASE = '/live-data'
+let _base = DEFAULT_BASE
+
+export function getLiveDataBase() { return _base }
+export function setLiveDataBase(b) { _base = b || DEFAULT_BASE }
+export function resetLiveDataBase() { _base = DEFAULT_BASE }
+export { DEFAULT_BASE }
 
 const ALGO_FILE_MAP = {
   RR:       'trace_rr.jsonl',
@@ -14,15 +25,24 @@ const ALGO_FILE_MAP = {
 export const ALGOS = Object.keys(ALGO_FILE_MAP)
 
 async function fetchJson(path) {
-  const res = await fetch(`${BASE}/${path}`)
+  const res = await fetch(`${_base}/${path}`)
   if (!res.ok) throw new Error(`fetch failed: ${path} (${res.status})`)
   return res.json()
 }
 
 async function fetchText(path) {
-  const res = await fetch(`${BASE}/${path}`)
+  const res = await fetch(`${_base}/${path}`)
   if (!res.ok) throw new Error(`fetch failed: ${path} (${res.status})`)
   return res.text()
+}
+
+// Snapshots manifest lives at the root base regardless of the currently-
+// selected snapshot; fetched directly so a selected snapshot does not
+// hide the index of available snapshots.
+export async function loadSnapshotsManifest() {
+  const res = await fetch(`${DEFAULT_BASE}/snapshots_manifest.json`)
+  if (!res.ok) throw new Error(`snapshots_manifest.json (${res.status})`)
+  return res.json()
 }
 
 // Returns { events: [...], errors: [...bad-line messages] }
