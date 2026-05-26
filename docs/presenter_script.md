@@ -39,8 +39,17 @@ each. Honest about what is real and what is intentional future work.
 > queues. The dashboard shows the full recommendation card on the
 > right; it is exactly what the LLM returned, no post-editing.
 
-→ Point at the **LLM Recommendation** card. Read the algorithm,
-target metric, and the reason field.
+→ Point at the **LLM Recommendation** card for the algorithm + target
++ params, then the **"Why this algorithm?"** evidence card right below.
+The evidence card consolidates the workload traits the LLM keyed off
+(interactive ratio, avg burst, avg priority) next to the LLM's full
+reason and the LLM confidence — that one card answers the "why" in
+about five seconds. Read the LLM reason aloud directly from it.
+
+The provenance pill in that card tells the audience whether they're
+looking at a real LLM call (`LLM: solar-pro3`) or the committed demo
+fallback (`demo fallback (no LLM call)` — warning-tinted). On stage,
+this should read `LLM: solar-pro3`.
 
 ---
 
