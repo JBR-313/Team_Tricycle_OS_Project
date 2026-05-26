@@ -57,7 +57,7 @@ from schema_compat import (  # noqa: E402
     normalize_algorithm_name,
     normalize_target_metric,
 )
-from metrics import compute as compute_metrics  # noqa: E402
+from metrics import compute_metrics  # noqa: E402
 
 ORCHESTRATOR_VERSION = "1.0.0"
 
