@@ -57,22 +57,26 @@ export default function AlgorithmComparison({ metrics, recommendation: rec, sele
           </thead>
           <tbody>
             {rows.map(([algo, vals]) => {
-              const isRec = algo === recAlgo
+              const a = normalizeAlgo(algo)
+              const isRec = a === recAlgo
               return (
                 <tr key={algo} className={isRec ? 'recommended' : ''}>
                   <td style={{ fontWeight: isRec ? 700 : 400, color: isRec ? '#7c3aed' : '#334155' }}>
                     <span style={{
                       display: 'inline-block', width: 6, height: 6, borderRadius: '50%',
-                      background: ALGO_COLORS[algo] || '#94a3b8', marginRight: 4, verticalAlign: 'middle',
+                      background: ALGO_COLORS[a] || '#94a3b8', marginRight: 4, verticalAlign: 'middle',
                     }} />
-                    {algo}
+                    {a}
                   </td>
                   {COLS.map(c => {
                     const raw = vals[c.key]
-                    const v   = fmt(raw, c.key)
+                    let v   = fmt(raw, c.key)
                     let style = {}
                     if (c.key === 'judgment') {
-                      style = { color: { SUCCESS: '#059669', 'NEAR-SUCCESS': '#1d4ed8', FAIL: '#dc2626' }[v] || '#334155', fontWeight: 700 }
+                      // Metric-aware: recompute for the selected metric (starvation => FAIL),
+                      // never trust the stale stored comparison[algo].judgment.
+                      v = computeAlgorithmJudgment(vals, allComparisonMetrics, tgt)
+                      style = { color: { SUCCESS: '#059669', 'NEAR-SUCCESS': '#1d4ed8', FAIL: '#dc2626', UNKNOWN: '#64748b' }[v] || '#334155', fontWeight: 700 }
                     } else if (c.key === 'starvation_occurred') {
                       style = { color: v === 'Yes' ? '#dc2626' : '#059669' }
                     } else if (colStats[c.key] && typeof raw === 'number') {
