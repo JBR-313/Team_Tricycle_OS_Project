@@ -136,6 +136,7 @@ export default function Header({
           </span>
           <select
             className="algo-select"
+            data-demo-target="snapshot"
             value={selectedSnapshot?.profile || ''}
             onChange={e => {
               const v = e.target.value
