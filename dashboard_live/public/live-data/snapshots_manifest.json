@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-05-26T08:12:30Z",
+  "generated_at": "2026-05-26T12:23:39Z",
   "profiles": [
     {
       "profile": "interactive",
@@ -12,7 +12,7 @@
       "judgment": "SUCCESS",
       "regret_score": 0.0,
       "starvation_occurred": false,
-      "generated_at": "2026-05-26T08:09:23Z"
+      "generated_at": "2026-05-26T12:23:39Z"
     },
     {
       "profile": "cpu_bound",

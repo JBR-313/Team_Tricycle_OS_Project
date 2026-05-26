@@ -435,6 +435,16 @@ def _extract_run_window(raw_path: Path, algo: str | None = None) -> str:
          this; we fall back to anchoring on the first line that names the
          target algorithm — `algo=<target>` — which is always emitted by the
          kernel once the run has switched.
+
+         **RR-specific guard:** the kernel boots with RR as the default
+         scheduler, so it emits `algo=RR` lines from very early in boot
+         (init/sh dispatches). To prevent the fallback from anchoring on
+         those boot lines we additionally require that a `[SCHEDTEST]`
+         marker has been observed first — that guarantees the schedtest
+         userspace program is actually running. This closes a real bug:
+         the snapshot generated in PR #38 picked up ~32 boot-time
+         `pid=1`/`pid=2` DISPATCH events that inflated RR's
+         avg_response_time on the `interactive` profile to 34.2.
     RUN_END is robust enough by itself (we have not seen it mid-print).
     """
     raw_text = raw_path.read_text()
@@ -455,7 +465,22 @@ def _extract_run_window(raw_path: Path, algo: str | None = None) -> str:
     result = _window(lambda ln: "RUN_BEGIN" in ln)
     if not result and algo:
         target = f"algo={algo.upper()}"
-        result = _window(lambda ln: target in ln)
+        # Two-stage predicate: require a [SCHEDTEST] marker AT OR BEFORE
+        # the target match. We track whether [SCHEDTEST] has been seen in
+        # the line stream so far.
+        out: list[str] = []
+        in_win = False
+        schedtest_seen = False
+        for ln in lines:
+            if "[SCHEDTEST]" in ln:
+                schedtest_seen = True
+            if not in_win and schedtest_seen and target in ln:
+                in_win = True
+            if in_win:
+                out.append(ln)
+            if "RUN_END" in ln:
+                break
+        result = out
     return "\n".join(result) + "\n"
 
 
