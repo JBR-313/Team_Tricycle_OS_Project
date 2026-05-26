@@ -17,16 +17,14 @@
   "avg_waiting_time": 0.2,
   "throughput": 0.312,
   "max_waiting_time": 1,
-  "starvation_occurred": true,
-  "starvation_pids": [
-    4
-  ],
-  "preemption_count": 4,
+  "starvation_occurred": false,
+  "starvation_pids": [],
+  "preemption_count": 3,
   "per_process": [
     {
       "pid": 3,
       "arrival_time": null,
-      "first_run_time": 0,
+      "first_run_time": 2,
       "finish_time": null,
       "response_time": null,
       "turnaround_time": null,
@@ -78,8 +76,8 @@
       "waiting_time": 0
     }
   ],
-  "judgment": "FAIL",
-  "regret_score": 1.0,
+  "judgment": "SUCCESS",
+  "regret_score": 0.0,
   "best_algorithm": null,
   "workload_file": null,
   "comparison": {
@@ -89,10 +87,10 @@
       "avg_turnaround_time": 2.4,
       "throughput": 0.312,
       "max_waiting_time": 1,
-      "preemption_count": 4,
-      "starvation_occurred": true,
+      "preemption_count": 3,
+      "starvation_occurred": false,
       "burst_prediction_error": null,
-      "judgment": "FAIL"
+      "judgment": "SUCCESS"
     },
     "RR": {
       "avg_waiting_time": 0.25,
@@ -100,52 +98,52 @@
       "avg_turnaround_time": 2.5,
       "throughput": 0.312,
       "max_waiting_time": 1,
-      "preemption_count": 13,
-      "starvation_occurred": true,
+      "preemption_count": 12,
+      "starvation_occurred": false,
       "burst_prediction_error": null,
       "judgment": "FAIL"
     },
     "FCFS": {
+      "avg_waiting_time": 0.2,
+      "avg_response_time": 0.2,
+      "avg_turnaround_time": 2.4,
+      "throughput": 0.312,
+      "max_waiting_time": 1,
+      "preemption_count": 1,
+      "starvation_occurred": false,
+      "burst_prediction_error": null,
+      "judgment": "FAIL"
+    },
+    "Priority": {
+      "avg_waiting_time": 0.67,
+      "avg_response_time": 0.67,
+      "avg_turnaround_time": 2.0,
+      "throughput": 0.312,
+      "max_waiting_time": 2,
+      "preemption_count": 13,
+      "starvation_occurred": false,
+      "burst_prediction_error": null,
+      "judgment": "FAIL"
+    },
+    "SJF": {
       "avg_waiting_time": 0.4,
       "avg_response_time": 0.4,
       "avg_turnaround_time": 2.8,
       "throughput": 0.312,
       "max_waiting_time": 2,
-      "preemption_count": 0,
-      "starvation_occurred": true,
-      "burst_prediction_error": null,
-      "judgment": "FAIL"
-    },
-    "Priority": {
-      "avg_waiting_time": 0.5,
-      "avg_response_time": 0.5,
-      "avg_turnaround_time": 2.75,
-      "throughput": 0.312,
-      "max_waiting_time": 2,
-      "preemption_count": 14,
-      "starvation_occurred": true,
-      "burst_prediction_error": null,
-      "judgment": "FAIL"
-    },
-    "SJF": {
-      "avg_waiting_time": 0.8,
-      "avg_response_time": 0.8,
-      "avg_turnaround_time": 3.4,
-      "throughput": 0.312,
-      "max_waiting_time": 3,
-      "preemption_count": 0,
-      "starvation_occurred": true,
+      "preemption_count": 1,
+      "starvation_occurred": false,
       "burst_prediction_error": null,
       "judgment": "FAIL"
     },
     "SRTF": {
       "avg_waiting_time": 0.5,
       "avg_response_time": 0.5,
-      "avg_turnaround_time": 2.75,
+      "avg_turnaround_time": 2.5,
       "throughput": 0.312,
       "max_waiting_time": 2,
-      "preemption_count": 13,
-      "starvation_occurred": true,
+      "preemption_count": 12,
+      "starvation_occurred": false,
       "burst_prediction_error": null,
       "judgment": "FAIL"
     }

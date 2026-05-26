@@ -14,8 +14,6 @@
 {"tick": null, "algo": "MLFQ", "event": "CHILD_START", "source": "xv6", "kind": "schedtest", "pid": 8, "priority": 10, "seed": 42, "profile": "interactive"}
 {"tick": null, "algo": "MLFQ", "event": "CHILD_EXIT", "source": "xv6", "kind": "schedtest", "pid": 8, "seed": 42, "profile": "interactive"}
 {"tick": null, "algo": "MLFQ", "event": "RUN_END", "source": "xv6", "kind": "schedtest", "seed": 42, "profile": "interactive"}
-{"tick": 0, "algo": "MLFQ", "event": "PREEMPT", "source": "xv6", "kind": "sched", "pid": 3, "state": "RUNNABLE", "queue": 0, "priority": 10, "reason": "quantum_expired", "seed": 42, "profile": "interactive"}
-{"tick": 0, "algo": "MLFQ", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 3, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
 {"tick": 0, "algo": "MLFQ", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 4, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
 {"tick": 2, "algo": "MLFQ", "event": "QUEUE_CHANGE", "source": "xv6", "kind": "sched", "pid": 4, "from_queue": 0, "to_queue": 1, "reason": "demotion", "seed": 42, "profile": "interactive"}
 {"tick": 2, "algo": "MLFQ", "event": "PREEMPT", "source": "xv6", "kind": "sched", "pid": 4, "state": "RUNNABLE", "queue": 1, "priority": 10, "reason": "quantum_expired", "seed": 42, "profile": "interactive"}

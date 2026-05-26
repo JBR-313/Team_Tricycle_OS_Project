@@ -8,8 +8,16 @@ from pathlib import Path
 # not real processes, so they are skipped during per-process accounting.
 SYSTEM_PID = -1
 
-# starvation_threshold defaults to this multiple of the average waiting time.
+# Starvation rule has TWO conjunctive thresholds:
+#   1. Relative: waited > STARVATION_MULTIPLIER * avg_waiting_time
+#   2. Absolute: waited >= MIN_STARVATION_WAIT_TICKS
+# Both must hold. The relative rule alone is unstable on tiny xv6 traces:
+# e.g. avg_wait=0.2, max_wait=1 -> 1 > 0.6 wrongly flags a 1-tick wait as
+# starvation. Adding an absolute floor (default 5 ticks) means short xv6
+# workloads with trivial waits no longer FAIL, while genuine starvation in
+# longer simulator runs (where waits are tens of ticks) still triggers.
 STARVATION_MULTIPLIER = 3
+MIN_STARVATION_WAIT_TICKS = 5
 
 # Regret/judgment thresholds (see Evaluation Plan).
 SUCCESS_REGRET = 0.10
@@ -308,18 +316,30 @@ def infer_params(events):
 # -------------------------------------------------
 def evaluate_starvation(per_process, cpu_used, avg_waiting_time, makespan):
     """
-    A process starves when it waits longer than the starvation threshold
-    (default: 3x the average waiting time of completed processes).
+    A process starves when BOTH conditions hold:
+        waited > STARVATION_MULTIPLIER * avg_waiting_time   (relative)
+        waited >= MIN_STARVATION_WAIT_TICKS                 (absolute floor)
 
       - completed processes are judged by their final waiting_time
       - processes that never completed are judged by their waiting so far,
         i.e. makespan - arrival - cpu_used (this catches a process that was
         starved badly enough that it never got to finish)
+
+    The absolute floor exists because the multiplier alone is unstable on
+    very short traces. xv6 workloads finish in tens of ticks with most
+    waits at 0, so a single 1-tick wait can be 5x the (near-zero) average
+    and falsely register as starvation. A genuine starving process in a
+    simulator run easily clears both thresholds, so detection sensitivity
+    on real cases is preserved.
     """
     if avg_waiting_time is None or avg_waiting_time <= 0:
         return False, [], None
 
-    threshold = STARVATION_MULTIPLIER * avg_waiting_time
+    relative_threshold = STARVATION_MULTIPLIER * avg_waiting_time
+    # Reported threshold is the binding one (whichever is larger), so the
+    # downstream metrics.json reflects the value a wait actually had to
+    # clear to be considered starvation.
+    effective_threshold = max(relative_threshold, MIN_STARVATION_WAIT_TICKS)
     starving = []
 
     for p in per_process:
@@ -332,10 +352,12 @@ def evaluate_starvation(per_process, cpu_used, avg_waiting_time, makespan):
         else:
             waited = None
 
-        if waited is not None and waited > threshold:
+        if (waited is not None
+                and waited > relative_threshold
+                and waited >= MIN_STARVATION_WAIT_TICKS):
             starving.append(pid)
 
-    return bool(starving), sorted(starving), round(float(threshold), 2)
+    return bool(starving), sorted(starving), round(float(effective_threshold), 2)
 
 
 # -------------------------------------------------

@@ -16,7 +16,7 @@
   "reason": "Accepted: MLFQ is suitable for response_time (compat=0.95, confidence=0.95).",
   "_meta": {
     "source": "tools/algorithm_guard.py",
-    "generated_at": "2026-05-26T05:06:43.750533+00:00",
+    "generated_at": "2026-05-26T05:28:54.933278+00:00",
     "recommendation_source": "recommendation.json"
   },
   "scheduling_algorithm": "MLFQ",
