@@ -656,6 +656,77 @@ def ensure_metadata_files(out_dir: Path, dry_run: bool):
                 print(f"  [WARN] no source for {fname}")
 
 
+def _run_correction_preview(out_dir: Path, live_dir: Path, selected_algo: str) -> None:
+    """Run event_detector -> correction_proposer -> correction_guard.
+
+    All preview-only — files carry preview_only=true / applied=false and
+    are NOT applied to xv6. The pipeline is non-blocking: any failure
+    surfaces as a [WARN] and the demo continues.
+    """
+    print("\n[7] Runtime correction preview (preview-only, no xv6 apply)")
+    rec = live_dir / "recommendation.json"
+    metrics = live_dir / "metrics.json"
+    trace = live_dir / f"trace_{selected_algo.lower()}.jsonl"
+    if not (rec.is_file() and metrics.is_file() and trace.is_file()):
+        print("  [skip] missing recommendation/metrics/trace; preview not run")
+        return
+
+    events_out = out_dir / "runtime_events.json"
+    proposal_out = out_dir / "correction_proposal.json"
+    decision_out = out_dir / "correction_guard_decision.json"
+    # Drop any prior preview artifacts so a clean run with no events leaves
+    # nothing stale behind for the dashboard to read.
+    for p in (events_out, proposal_out, decision_out,
+              live_dir / "runtime_events.json",
+              live_dir / "correction_proposal.json",
+              live_dir / "correction_guard_decision.json"):
+        try:
+            p.unlink(missing_ok=True)
+        except Exception:  # noqa: BLE001
+            pass
+
+    rc = subprocess.run(
+        [sys.executable, str(TOOLS_DIR / "event_detector.py"),
+         "--trace", str(trace), "--metrics", str(metrics),
+         "--out", str(events_out)],
+        capture_output=False,
+    ).returncode
+    if rc != 0 or not events_out.is_file():
+        print(f"  [WARN] event_detector exited {rc}; preview skipped")
+        return
+
+    # event_detector always writes a file; check whether it contains events.
+    events_doc = _read_json(events_out)
+    if not (isinstance(events_doc, dict) and events_doc.get("events")):
+        print("  [info] no runtime events detected — preview omitted (dashboard hides card)")
+        copy_file(events_out, live_dir / "runtime_events.json", False)
+        return
+
+    copy_file(events_out, live_dir / "runtime_events.json", False)
+
+    rc = subprocess.run(
+        [sys.executable, str(TOOLS_DIR / "correction_proposer.py"),
+         "--events", str(events_out), "--recommendation", str(rec),
+         "--out", str(proposal_out)],
+        capture_output=False,
+    ).returncode
+    if rc != 0 or not proposal_out.is_file():
+        print(f"  [WARN] correction_proposer exited {rc}; preview stops at events")
+        return
+    copy_file(proposal_out, live_dir / "correction_proposal.json", False)
+
+    rc = subprocess.run(
+        [sys.executable, str(TOOLS_DIR / "correction_guard.py"),
+         "--proposal", str(proposal_out), "--out", str(decision_out)],
+        capture_output=False,
+    ).returncode
+    if rc != 0 or not decision_out.is_file():
+        print(f"  [WARN] correction_guard exited {rc}; preview stops at proposal")
+        return
+    copy_file(decision_out, live_dir / "correction_guard_decision.json", False)
+    print("  preview published (preview_only=true, applied=false)")
+
+
 def export_to_live_data(out_dir: Path, live_dir: Path, *, backend: str, seed: int,
                         workload_type: str, workload_stem: str, selected: str,
                         run_order: list[str], dry_run: bool,
@@ -807,6 +878,14 @@ def main() -> int:
         ).returncode
         if rc != 0:
             print(f"  [WARN] contract validator exited {rc}")
+
+    # Optional preview-only runtime-correction loop:
+    #   event_detector -> correction_proposer -> correction_guard
+    # Files land alongside the flat live-data and are picked up by the
+    # dashboard's RuntimeCorrectionPreview card (added in a follow-up PR).
+    # Nothing is applied to xv6 — preview_only=true, applied=false.
+    if not dry_run:
+        _run_correction_preview(out_dir, live_dir, selected)
 
     print("\n[DONE] Orchestrator pipeline complete.")
     print("  -> Run: cd dashboard_live && npm run dev")
