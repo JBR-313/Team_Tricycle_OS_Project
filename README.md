@@ -270,6 +270,19 @@ The correction is also checked by the Algorithm Guard.
 
 The correction is applied from the next scheduling point, not by interrupting every timer tick with an LLM call.
 
+**Current implementation (rule-based, simulator backend):**
+
+```bash
+python3 tools/event_detector.py      --trace <trace.jsonl> --metrics metrics.json --out runtime_events.json
+python3 tools/correction_proposer.py --events runtime_events.json --guard guard_decision.json --out correction.json
+python3 tools/scheduler_simulator.py --workload <wl.json> --guard guard_decision.json --out-dir outputs/live --correction correction.json
+```
+
+The Orchestrator runs this automatically after the simulator backend
+(`[6] detect+propose` → `[7] apply`, emitting `CORRECTION_APPLIED` in the trace).
+LLM-assisted proposals and **xv6 mid-run application** remain Future Work — see
+`docs/runtime_correction_design.md`.
+
 ---
 
 ### 5.3 After Running
@@ -606,13 +619,19 @@ summary (full table in `docs/implementation_status.md`):
 
 - xv6 RR / FCFS / Priority+Aging / MLFQ: **Implemented**.
 - xv6 SJF / SRTF (burst predictor): **Implemented**.
+- `schedtest` seed/profile workload generation: **Implemented** — deterministic
+  per `(seed, profile)`, same seed ⇒ identical workload across algorithms.
 - Orchestrator simulator backend: **Implemented**.
-- Orchestrator xv6 backend (QEMU automation + `schedtest` seed/profile + rich
-  kernel traces): **In progress / not yet end-to-end**.
-- `trace_parser.py` real-log support: **Implemented** (recently fixed).
-- Runtime correction loop (event detect → propose → LLM → guard → apply →
-  `CORRECTION_APPLIED` → dashboard): **Partial / Future Work** — only event
-  detection exists.
+- Orchestrator xv6 backend (QEMU boot + per-algorithm capture + parse): **Working
+  but manual-run reliant** — driven by the orchestrator; not yet hardened for CI.
+- `trace_parser.py` real-log support: **Implemented**.
+- dashboard_live 3-step layout (Recommend / Execute / Evaluate) + metric-aware
+  `AlgorithmComparison` judgment: **Implemented**.
+- Runtime correction loop (detect → propose → guard-validate → apply →
+  `CORRECTION_APPLIED` → dashboard): **Simulator backend: implemented**
+  (`event_detector` → `correction_proposer` → `scheduler_simulator --correction`).
+  **Future Work**: LLM-assisted proposals and **xv6 mid-run application** (needs a
+  kernel control channel — see `docs/runtime_correction_design.md`).
 
 See `docs/implementation_status.md` for evidence files, run commands, and
 remaining risks per feature, and `docs/orchestrator_design.md` for the control

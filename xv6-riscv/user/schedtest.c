@@ -13,9 +13,9 @@ static const char *ALGO_NAMES[] = {"RR", "FCFS", "PRIORITY", "MLFQ", "SJF", "SRT
 
 #define MAXPROC 8
 
-// One planned process in a curated workload.
+// One generated process in the workload.
 struct procdef {
-  int arrival;        // intended arrival tick (metadata; this phase forks immediately)
+  int arrival;        // arrival tick (forks are immediate, so ~0 / metadata)
   int cpu_burst;      // CPU time to consume, in ticks
   int priority;       // scheduling priority (lower number = higher priority)
   const char *label;  // workload label
@@ -27,40 +27,25 @@ struct workload {
   struct procdef procs[MAXPROC];
 };
 
-// Fixed curated workload tables, one per profile.  No JSON parsing inside xv6
-// and no random generation yet: the workload is deterministic by profile name.
-// The seed argument is parsed and logged for reproducibility but does not yet
-// alter the workload (random generation is a later phase).
-static struct workload WORKLOADS[] = {
-  { "interactive", 5, {
-      {0,  3, 5, "interactive"},
-      {2,  1, 2, "interactive"},
-      {5,  2, 3, "interactive"},
-      {10, 4, 7, "cpu"},
-      {15, 1, 4, "interactive"},
-  }},
-  { "cpu_bound", 4, {
-      {0, 8, 5, "cpu"},
-      {1, 6, 4, "cpu"},
-      {2, 7, 6, "cpu"},
-      {3, 5, 5, "cpu"},
-  }},
-  { "mixed", 5, {
-      {0, 5, 4, "cpu"},
-      {2, 2, 2, "interactive"},
-      {4, 6, 6, "cpu"},
-      {6, 1, 3, "interactive"},
-      {8, 4, 5, "mixed"},
-  }},
-  { "priority_sensitive", 5, {
-      {0, 6, 8, "cpu"},
-      {1, 4, 1, "interactive"},
-      {2, 5, 9, "cpu"},
-      {3, 3, 2, "interactive"},
-      {4, 4, 5, "mixed"},
-  }},
+// Per-profile generation "shape": the seed draws concrete values from these
+// ranges, so (seed, profile) deterministically produces ONE workload.  The same
+// seed yields an identical workload for every algorithm => fair comparison; a
+// different seed yields a different (but reproducible) workload.
+struct profile_shape {
+  const char *name;
+  int nmin, nmax;            // process count range
+  int burst_min, burst_max;  // CPU burst (ticks) range
+  int prio_min, prio_max;    // priority range
+  const char *label;
 };
-#define NWORKLOADS (sizeof(WORKLOADS) / sizeof(WORKLOADS[0]))
+
+static struct profile_shape SHAPES[] = {
+  { "interactive",        4, 6, 1, 4, 1, 8, "interactive" },
+  { "cpu_bound",          3, 5, 5, 9, 3, 7, "cpu" },
+  { "mixed",              4, 6, 1, 7, 1, 9, "mixed" },
+  { "priority_sensitive", 4, 6, 2, 6, 0, 9, "priority" },
+};
+#define NSHAPES (sizeof(SHAPES) / sizeof(SHAPES[0]))
 
 static int
 algo_mode(const char *s)
@@ -74,13 +59,54 @@ algo_mode(const char *s)
   return -1;
 }
 
-static struct workload*
-find_workload(const char *name)
+static int
+find_shape(const char *name)
 {
-  for(int i = 0; i < (int)NWORKLOADS; i++)
-    if(strcmp(WORKLOADS[i].name, name) == 0)
-      return &WORKLOADS[i];
-  return 0;
+  for(int i = 0; i < (int)NSHAPES; i++)
+    if(strcmp(SHAPES[i].name, name) == 0)
+      return i;
+  return -1;
+}
+
+// Deterministic LCG, seeded from (seed, profile) so each profile differs even
+// under the same numeric seed.
+static uint rng_state = 1;
+
+static void
+seed_rng(int seed, int profile_idx)
+{
+  rng_state = ((uint)seed * 2654435761u) ^ ((uint)(profile_idx + 1) * 40503u);
+  if(rng_state == 0)
+    rng_state = 1;
+}
+
+static int
+rand_range(int lo, int hi)
+{
+  rng_state = rng_state * 1103515245u + 12345u;
+  int span = hi - lo + 1;
+  if(span <= 0)
+    return lo;
+  return lo + (int)((rng_state >> 16) % (uint)span);
+}
+
+// Generate a deterministic workload for (shape, seed) into `out`.
+static void
+generate_workload(int shape_idx, int seed, struct workload *out)
+{
+  struct profile_shape *s = &SHAPES[shape_idx];
+  seed_rng(seed, shape_idx);
+  int n = rand_range(s->nmin, s->nmax);
+  if(n > MAXPROC)
+    n = MAXPROC;
+  out->name = s->name;
+  out->n = n;
+  for(int i = 0; i < n; i++){
+    out->procs[i].arrival   = 0;
+    out->procs[i].cpu_burst = rand_range(s->burst_min, s->burst_max);
+    out->procs[i].priority  = rand_range(s->prio_min, s->prio_max);
+    out->procs[i].label     = s->label;
+  }
 }
 
 // Consume approximately ticks_to_run ticks of CPU time.  uptime() returns the
@@ -157,11 +183,17 @@ main(int argc, char *argv[])
   int seed = (argc >= 3) ? atoi(argv[2]) : 1;
   const char *profile = (argc >= 4) ? argv[3] : "mixed";
 
-  struct workload *wl = find_workload(profile);
-  if(wl == 0){
+  int shape_idx = find_shape(profile);
+  if(shape_idx < 0){
     printf("schedtest: unknown profile: %s\n", profile);
     exit(1);
   }
+
+  // Generate ONCE so every algorithm (including `all`) runs the identical
+  // (seed, profile) workload — required for a fair comparison.
+  struct workload wlbuf;
+  generate_workload(shape_idx, seed, &wlbuf);
+  struct workload *wl = &wlbuf;
 
   // Developer convenience: run every algorithm over the SAME workload/profile,
   // sequentially (LLM-selected-first ordering is the Orchestrator's job; here we

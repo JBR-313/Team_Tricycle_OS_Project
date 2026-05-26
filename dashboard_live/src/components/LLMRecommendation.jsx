@@ -1,48 +1,146 @@
 import Card from './Card.jsx'
+import { ALGO_COLORS } from './constants.js'
+import { computeAlgorithmJudgment, getRecommendedAlgorithm } from '../data/schemaCompat.js'
 
-export default function LLMRecommendation({ recommendation: rec }) {
-  if (!rec) return <Card label="LLM Recommendation" className="card-rec"><div className="loading">Loading…</div></Card>
+const PARAM_LABELS = {
+  queues: 'Queues',
+  quantum: 'Quantum',
+  aging_threshold: 'Aging Threshold',
+  boost_interval: 'Boost Interval',
+  alpha: 'Alpha (α)',
+  initial_burst: 'Initial Burst',
+  time_slice: 'Time Slice',
+}
 
-  const algo   = rec.recommended_scheduling_algorithm
-  const target = rec.target_metric?.replace(/_/g, ' ')
-  const risks  = rec.risks || []
-  const params = rec.params || {}
-  const reason = rec.reason || ''
+const JUDGE_COLOR = {
+  SUCCESS: '#15803d',
+  'NEAR-SUCCESS': '#b45309',
+  FAIL: '#b91c1c',
+}
 
-  const paramStr = Object.entries(params)
-    .map(([k, v]) => `${k}=${Array.isArray(v) ? v.join('/') : v}`)
-    .join('  ')
+const fmtVal = (v) => (Array.isArray(v) ? v.join(' / ') : String(v))
+const labelOf = (k) => PARAM_LABELS[k] || k.replace(/_/g, ' ')
+
+export default function LLMRecommendation({ recommendation, metrics }) {
+  if (!recommendation) {
+    return <Card label="LLM Recommendation" className="card-rec"><div className="loading">Loading…</div></Card>
+  }
+
+  const rec       = recommendation
+  const algo      = getRecommendedAlgorithm(rec)
+  const target    = rec.target_metric?.replace(/_/g, ' ')
+  const risks     = rec.risks || []
+  const params    = rec.params || {}
+  const reason    = rec.reason || ''
+  const interp    = rec.workload_interpretation || {}
+  const wlType    = interp.workload_type?.replace(/_/g, ' ')
+  const mainRisks = interp.main_risks || []
+  const model     = rec.llm_model
+  const paramEntries = Object.entries(params)
+
+  // Rank candidates by the target metric (metric-aware judgment, lower-better for time).
+  const metricKey = rec.target_metric
+  const comparison = (metrics || {}).comparison || {}
+  const allCmp = Object.values(comparison)
+  const alternatives = Object.entries(comparison)
+    .map(([name, m]) => ({
+      name,
+      value: m[metricKey],
+      judgment: computeAlgorithmJudgment(m, allCmp, metricKey),
+    }))
+    .filter(r => typeof r.value === 'number')
+    .sort((a, b) => a.value - b.value)
+  const maxVal = Math.max(...alternatives.map(r => r.value), 1)
 
   return (
     <Card label="LLM Recommendation" className="card-rec">
-      <div style={{ marginBottom: 4, flexShrink: 0 }}>
-        <span className="pill" style={{ background: '#ede9fe', color: '#6d28d9' }}>{algo}</span>
-        <span className="pill" style={{ background: '#dbeafe', color: '#1d4ed8' }}>↳ {target}</span>
-        {risks.map(r => (
+      {/* Hero — the headline decision */}
+      <div className="rec-hero">
+        <div className="rec-hero-algo">{algo}</div>
+        <div className="rec-hero-meta">
+          <span className="rec-hero-target">↳ optimizing <strong>{target}</strong></span>
+          {model && <span className="rec-hero-model">{model}</span>}
+        </div>
+      </div>
+
+      <hr className="divider" />
+
+      {/* Parameters */}
+      {paramEntries.length > 0 && (
+        <div className="rec-section">
+          <div className="rec-section-label">Parameters</div>
+          <div className="rec-param-grid">
+            {paramEntries.map(([k, v]) => (
+              <div key={k} className="rec-param">
+                <div className="rec-param-key">{labelOf(k)}</div>
+                <div className="rec-param-val">{fmtVal(v)}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Reasoning */}
+      {reason && (
+        <div className="rec-section">
+          <div className="rec-section-label">Reasoning</div>
+          <div className="rec-reason">{reason}</div>
+        </div>
+      )}
+
+      {/* Considered alternatives — ranked by the target metric */}
+      {alternatives.length > 0 && (
+        <div className="rec-section rec-alt-section">
+          <div className="rec-section-label">
+            Considered Alternatives · ranked by {target}
+          </div>
+          <div className="rec-alt-list">
+            {alternatives.map(({ name, value, judgment }) => {
+              const isRec = String(name).toLowerCase() === String(algo).toLowerCase()
+              return (
+                <div key={name} className={`rec-alt-row ${isRec ? 'is-rec' : ''}`}>
+                  <span className="rec-alt-name">
+                    {isRec && <span className="rec-alt-star">★</span>}
+                    {name}
+                  </span>
+                  <span className="rec-alt-bar-track">
+                    <span
+                      className="rec-alt-bar-fill"
+                      style={{
+                        width: `${Math.max((value / maxVal) * 100, 3)}%`,
+                        background: isRec ? (ALGO_COLORS[name] || 'var(--accent)') : 'rgba(100,116,139,0.32)',
+                      }}
+                    />
+                  </span>
+                  <span className="rec-alt-val">{value}</span>
+                  {judgment && (
+                    <span className="rec-alt-judge" style={{ color: JUDGE_COLOR[judgment] || 'var(--text-3)' }}>
+                      {judgment === 'NEAR-SUCCESS' ? 'NEAR' : judgment}
+                    </span>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Workload interpretation + risk flags handed to the Guard */}
+      <div className="rec-foot">
+        {wlType && (
+          <span className="pill" style={{ background: '#e0f2fe', color: '#0369a1' }}>{wlType}</span>
+        )}
+        {mainRisks.map(r => (
           <span key={r} className="pill" style={{ background: '#fef3c7', color: '#b45309', fontSize: '0.57rem' }}>
-            {r.replace(/_/g, ' ')}
+            ⚠ {r.replace(/_/g, ' ')}
+          </span>
+        ))}
+        {risks.map(r => (
+          <span key={r} className="pill" style={{ background: '#fee2e2', color: '#b91c1c', fontSize: '0.57rem' }}>
+            risk: {r.replace(/_/g, ' ')}
           </span>
         ))}
       </div>
-      {paramStr && (
-        <div style={{ fontSize: '0.50rem', color: '#b0b8cc', marginBottom: 4, flexShrink: 0, fontFamily: 'monospace', letterSpacing: '0.02em' }}>
-          {paramStr}
-        </div>
-      )}
-      {reason && (
-        <div style={{
-          fontSize: '0.63rem',
-          color: '#334155',
-          lineHeight: 1.55,
-          overflow: 'hidden',
-          display: '-webkit-box',
-          WebkitLineClamp: 3,
-          WebkitBoxOrient: 'vertical',
-          flexShrink: 0,
-        }}>
-          {reason}
-        </div>
-      )}
     </Card>
   )
 }

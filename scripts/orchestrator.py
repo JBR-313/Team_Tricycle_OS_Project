@@ -49,7 +49,7 @@ RAW_LOG_DIR = ROOT / "outputs"  # outputs/xv6_raw_<algo>_seed<seed>.log
 
 # Make schema_compat helpers importable.
 sys.path.insert(0, str(TOOLS_DIR))
-from schema_compat import (  # noqa: E402
+from schema_compat import (  # noqa: E402  # type: ignore[import-not-found]
     CANONICAL_ALGOS,
     get_guard_algorithm,
     get_recommended_algorithm,
@@ -57,7 +57,7 @@ from schema_compat import (  # noqa: E402
     normalize_algorithm_name,
     normalize_target_metric,
 )
-from metrics import compute as compute_metrics  # noqa: E402
+from metrics import compute_metrics  # noqa: E402  # type: ignore[import-not-found]
 
 ORCHESTRATOR_VERSION = "1.0.0"
 
@@ -622,6 +622,58 @@ def ensure_metadata_files(out_dir: Path, dry_run: bool):
                 print(f"  [WARN] no source for {fname}")
 
 
+def run_runtime_correction(out_dir: Path, selected: str, dry_run: bool):
+    """Best-effort runtime-correction PROPOSAL: detect (event_detector) then
+    propose (correction_proposer). This is the detect->propose->guard-validate
+    slice only; it does NOT apply the correction mid-run (that stays Future Work,
+    see docs/runtime_correction_design.md). Non-fatal: never aborts the pipeline.
+    """
+    print("\n[6] Runtime correction (detect + propose)")
+    if dry_run:
+        print("  [DRY-RUN] skipped")
+        return
+    trace   = out_dir / f"trace_{normalize_algorithm_name(selected).lower()}.jsonl"
+    metrics = out_dir / "metrics.json"
+    events  = out_dir / "runtime_events.json"
+    guard   = out_dir / "guard_decision.json"
+    correction = out_dir / "correction.json"
+    if not (trace.exists() and metrics.exists()):
+        print(f"  [skip] missing {_rel(trace)} or metrics.json")
+        return
+    try:
+        _run([sys.executable, str(TOOLS_DIR / "event_detector.py"),
+              "--trace", str(trace), "--metrics", str(metrics), "--out", str(events)], dry_run)
+        if events.exists():
+            _run([sys.executable, str(TOOLS_DIR / "correction_proposer.py"),
+                  "--events", str(events), "--guard", str(guard), "--out", str(correction)], dry_run)
+    except Exception as exc:  # noqa: BLE001
+        print(f"  [WARN] runtime correction step failed (non-fatal): {exc}")
+
+
+def apply_correction(workload: Path, out_dir: Path, dry_run: bool):
+    """Apply a proposed correction by re-running the recommended algorithm with it
+    (simulator backend only; from the next scheduling point). Non-fatal.
+
+    xv6 mid-run application needs a control channel that does not exist yet, so it
+    is intentionally skipped for the xv6 backend (see design doc).
+    """
+    print("\n[7] Apply correction (simulator re-run)")
+    if dry_run:
+        print("  [DRY-RUN] skipped")
+        return
+    corr = _read_json(out_dir / "correction.json")
+    if not corr.get("correction_needed"):
+        print("  [skip] no correction proposed")
+        return
+    _run([
+        sys.executable, str(TOOLS_DIR / "scheduler_simulator.py"),
+        "--workload", str(workload),
+        "--guard", str(out_dir / "guard_decision.json"),
+        "--out-dir", str(out_dir),
+        "--correction", str(out_dir / "correction.json"),
+    ], dry_run)
+
+
 def export_to_live_data(out_dir: Path, live_dir: Path, *, backend: str, seed: int,
                         workload_type: str, workload_stem: str, selected: str,
                         run_order: list[str], dry_run: bool,
@@ -635,6 +687,11 @@ def export_to_live_data(out_dir: Path, live_dir: Path, *, backend: str, seed: in
     copy_file(out_dir / "metrics.json", live_dir / "metrics.json", dry_run)
     for fname in META_FILES:
         copy_file(out_dir / fname, live_dir / fname, dry_run)
+
+    # Runtime-correction artifacts (proposal only; present after the detect+propose step).
+    for fname in ("runtime_events.json", "correction.json"):
+        if (out_dir / fname).exists():
+            copy_file(out_dir / fname, live_dir / fname, dry_run)
 
     # target_metric from recommendation, else default — canonical form
     rec = _read_json(out_dir / "recommendation.json")
@@ -750,7 +807,10 @@ def main() -> int:
         print("\n[FAIL] Backend execution failed. Aborting.")
         return 1
 
-    # After-running phase: ensure metadata + export to live-data + manifest
+    # After-running phase: runtime-correction propose -> apply -> metadata + export
+    run_runtime_correction(out_dir, selected, dry_run)
+    if args.backend == "simulator":
+        apply_correction(workload_path, out_dir, dry_run)
     print("\n[meta] Checking metadata files")
     ensure_metadata_files(out_dir, dry_run)
     export_to_live_data(

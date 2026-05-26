@@ -1,0 +1,9 @@
+{
+  "correction_needed": false,
+  "trigger": null,
+  "from_algorithm": "MLFQ",
+  "reason": "No scheduling problems detected; no correction proposed.",
+  "source": "rule",
+  "guard_validated": true,
+  "applied": false
+}

@@ -82,7 +82,8 @@ class Tracer:
 
 # ── Simulator core ──────────────────────────────────────────────────────────
 class Simulator:
-    def __init__(self, processes: list[Process], algo: str, params: dict):
+    def __init__(self, processes: list[Process], algo: str, params: dict,
+                 correction: Optional[dict] = None):
         self.procs   = processes
         self.algo    = algo.upper()
         self.params  = params
@@ -91,17 +92,46 @@ class Simulator:
         self.current: Optional[Process] = None
         self.dispatch_tick = 0
         self.preemption_count = 0
-
-        # RR / MLFQ quantum
-        if self.algo == "RR":
-            self.quantum = params.get("quantum", 2)
-            if isinstance(self.quantum, list):
-                self.quantum = self.quantum[0]
-        elif self.algo == "MLFQ":
-            self.quanta    = params.get("quantum", [2, 4, 8])
-            self.n_queues  = params.get("queues", 3)
-            self.aging_thr = params.get("aging_threshold", 30)
         self.time_in_slice = 0
+
+        # Optional runtime correction: applied once at/after apply_from_tick
+        # (default None => identical to the original behaviour, zero regression).
+        self.correction = correction
+        self.correction_applied = False
+
+        self._load_params()
+
+    def _load_params(self):
+        """(Re)derive quantum/queue params from self.params for self.algo.
+        Called at init and again when a correction swaps params mid-run."""
+        if self.algo == "RR":
+            q = self.params.get("quantum", 2)
+            self.quantum = q[0] if isinstance(q, list) else q
+        elif self.algo == "MLFQ":
+            self.quanta    = self.params.get("quantum", [2, 4, 8])
+            self.n_queues  = self.params.get("queues", 3)
+            self.aging_thr = self.params.get("aging_threshold", 30)
+
+    def _apply_correction(self):
+        """Apply the runtime correction from the next scheduling point: emit a
+        CORRECTION_APPLIED event and swap to the corrected algorithm/params."""
+        c = self.correction or {}
+        new_params = c.get("params", {}) or {}
+        to_algo = str(c.get("to_algorithm") or self.algo).upper()
+        self.tracer.emit(self.tick, "CORRECTION_APPLIED", -1,
+                         correction_type="parameter_update",
+                         new_params=new_params,
+                         reason=c.get("reason", "runtime_correction"))
+        switched = to_algo != self.algo
+        self.algo = to_algo
+        self.params = new_params
+        self._load_params()
+        self.correction_applied = True
+        if switched and self.current is not None:
+            # Re-select under the new algorithm from the next scheduling point.
+            self.current.state = "RUNNABLE"
+            self.current.ctime = self.tick
+            self.current = None
 
     # ── arrival helpers ──────────────────────────────────────────────────────
     def _arrive(self):
@@ -232,6 +262,11 @@ class Simulator:
         while not self._all_done() and self.tick < max_ticks:
             self._arrive()
 
+            # Apply a pending runtime correction at its scheduling point.
+            if (self.correction and not self.correction_applied
+                    and self.tick >= self.correction.get("apply_from_tick", 1)):
+                self._apply_correction()
+
             # increment wait ticks for all RUNNABLE
             for p in self._runnable():
                 if p is not self.current:
@@ -246,6 +281,7 @@ class Simulator:
                     continue
                 self._dispatch(nxt)
                 p = self.current
+                assert p is not None
 
             # execute one tick
             p.remaining      -= 1
@@ -290,9 +326,10 @@ class Simulator:
         done = [p for p in self.procs if p.state == "DONE"]
         if not done:
             return {}
-        total_time = max(p.finish_time for p in done)
+        total_time = max(p.finish_time for p in done if p.finish_time is not None)
         per_proc = []
         for p in done:
+            assert p.finish_time is not None
             tat = p.finish_time - p.arrival_time
             wt  = tat - p.total_cpu()
             rt  = (p.first_run_time or 0) - p.arrival_time
@@ -386,8 +423,8 @@ def run_all_algorithms(processes: list[Process], guard_params: dict,
     if metric_key not in JUDGE_KEYS:
         metric_key = "avg_response_time"
     higher = is_higher_better_metric(metric_key)
-    vals = [v.get(metric_key) for v in all_results.values()
-            if isinstance(v.get(metric_key), (int, float))]
+    vals: list[float] = [float(v[metric_key]) for v in all_results.values()
+                         if isinstance(v.get(metric_key), (int, float))]
     best_val = (max(vals) if higher else min(vals)) if vals else 0.0
 
     def _judge(m: dict):
@@ -435,12 +472,53 @@ def run_all_algorithms(processes: list[Process], guard_params: dict,
     return metrics
 
 
+# ── apply mode (runtime correction) ─────────────────────────────────────────
+def apply_correction_pass(processes: list[Process], rec_algo: str,
+                          guard_params: dict, correction_path: Path,
+                          out_dir: Path) -> int:
+    """Re-run ONLY the recommended algorithm with the correction applied from its
+    scheduling point, overwrite that trace, and mark the correction applied.
+
+    The run starts under the ORIGINAL params and switches to the corrected ones at
+    `apply_from_tick` (so the trace shows the pre/post-correction behaviour plus a
+    CORRECTION_APPLIED event). Other algorithms' traces and the comparison block
+    are left untouched (they remain the no-correction baseline).
+    """
+    import copy
+    corr = json.load(open(correction_path)) if correction_path.exists() else {}
+    if not corr.get("correction_needed"):
+        print("[apply] correction.json says no correction needed; nothing to apply.")
+        return 0
+
+    correction = {
+        "apply_from_tick": corr.get("apply_from_tick", 1),
+        "params": corr.get("params", {}) or {},
+        "to_algorithm": corr.get("to_algorithm", rec_algo),
+        "reason": corr.get("reason", "runtime_correction"),
+    }
+    sim = Simulator(copy.deepcopy(processes), rec_algo, guard_params, correction=correction)
+    sim.run()
+
+    trace_path = out_dir / f"trace_{rec_algo.lower()}.jsonl"
+    sim.tracer.save(trace_path)
+
+    n_applied = sum(1 for e in sim.tracer.events if e.get("event") == "CORRECTION_APPLIED")
+    corr["applied"] = n_applied > 0
+    correction_path.write_text(json.dumps(corr, indent=2) + "\n")
+    print(f"[apply] re-ran {rec_algo} with correction "
+          f"(CORRECTION_APPLIED x{n_applied}) -> {trace_path}; applied={corr['applied']}")
+    return 0
+
+
 # ── CLI ─────────────────────────────────────────────────────────────────────
 def main() -> int:
     ap = argparse.ArgumentParser(description="Host-side xv6 scheduler simulator")
     ap.add_argument("--workload", default=str(PROJECT_ROOT / "workloads" / "interactive_heavy.json"))
     ap.add_argument("--guard",    default=str(PROJECT_ROOT / "outputs" / "guard_decision.json"))
     ap.add_argument("--out-dir",  default=str(PROJECT_ROOT / "outputs"))
+    ap.add_argument("--correction", default="",
+                    help="apply mode: path to correction.json; re-runs ONLY the "
+                         "recommended algorithm with the correction and overwrites its trace")
     args = ap.parse_args()
 
     wl_path   = Path(args.workload)
@@ -468,6 +546,12 @@ def main() -> int:
     print(f"Loading workload: {wl_path}")
     processes = load_processes(wl_path)
     print(f"  {len(processes)} processes")
+
+    # Apply mode: re-run only the recommended algorithm with a correction.
+    if args.correction:
+        return apply_correction_pass(
+            processes, rec_algo, guard_params, Path(args.correction), out_dir,
+        )
 
     print("Simulating all algorithms...")
     metrics = run_all_algorithms(processes, guard_params, rec_algo, out_dir, target_metric)

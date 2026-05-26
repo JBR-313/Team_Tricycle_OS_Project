@@ -12,6 +12,7 @@ import {
 } from './data/fallbackData.js'
 
 import Header              from './components/Header.jsx'
+import Card                from './components/Card.jsx'
 import LLMRecommendation   from './components/LLMRecommendation.jsx'
 import AlgorithmGuard      from './components/AlgorithmGuard.jsx'
 import EvaluationResult    from './components/EvaluationResult.jsx'
@@ -25,6 +26,77 @@ import AlgorithmComparison from './components/AlgorithmComparison.jsx'
 import MetricVisualization from './components/MetricVisualization.jsx'
 
 const POLL_INTERVAL_MS = 1000
+
+const STEPS = ['Recommend', 'Execute', 'Evaluate']
+
+const STATE_DOT = {
+  Running:    '#2563eb',
+  Ready:      '#7c3aed',
+  Waiting:    '#d97706',
+  Terminated: '#64748b',
+}
+
+// Inline "Running Now" info card for the Execute screen (live stats from trace).
+function ExecuteInfoCard({ events, tick, algo }) {
+  const stats = useMemo(() => {
+    const visible = events.filter(e => e.tick <= tick)
+    const state = {}
+    let preemptions = 0
+    for (const ev of visible) {
+      if (ev.event === 'PREEMPT') preemptions++
+      if (ev.pid < 0) continue
+      if (['ARRIVE', 'PREEMPT', 'WAKEUP'].includes(ev.event)) state[ev.pid] = 'Ready'
+      else if (ev.event === 'DISPATCH') state[ev.pid] = 'Running'
+      else if (ev.event === 'SLEEP')    state[ev.pid] = 'Waiting'
+      else if (ev.event === 'EXIT')     state[ev.pid] = 'Terminated'
+    }
+    const counts = { Running: 0, Ready: 0, Waiting: 0, Terminated: 0 }
+    for (const s of Object.values(state)) counts[s]++
+    const running = Object.entries(state).find(([, s]) => s === 'Running')?.[0] ?? null
+    const totalProcs = new Set(events.filter(e => e.pid > 0).map(e => e.pid)).size
+    return { counts, running, totalProcs, done: counts.Terminated, preemptions }
+  }, [events, tick])
+
+  const { counts, running, totalProcs, done, preemptions } = stats
+  const pct = totalProcs ? Math.round((done / totalProcs) * 100) : 0
+
+  return (
+    <Card className="exec-info-card">
+      <div className="card-label">Running Now</div>
+      <div className="exec-info-pid" style={{ color: running ? 'var(--accent)' : 'var(--text-3)' }}>
+        {running ? `P${running}` : '—'}
+      </div>
+      <div className="exec-info-sub">Tick {tick} · {algo}</div>
+      <hr className="divider" />
+      <div className="exec-stat-block">
+        <div className="exec-stat-head">
+          <span>Progress</span>
+          <span className="exec-stat-strong">{done}/{totalProcs}</span>
+        </div>
+        <div className="exec-progress-track">
+          <div className="exec-progress-fill" style={{ width: `${pct}%` }} />
+        </div>
+      </div>
+      <div className="exec-stat-block">
+        <div className="exec-stat-head"><span>State</span></div>
+        {['Running', 'Ready', 'Waiting', 'Terminated'].map(s => (
+          <div key={s} className="exec-state-row">
+            <span className="exec-state-dot" style={{ background: STATE_DOT[s] }} />
+            <span className="exec-state-name">{s === 'Terminated' ? 'Done' : s}</span>
+            <span className="exec-state-count">{counts[s]}</span>
+          </div>
+        ))}
+      </div>
+      <div className="exec-stat-block">
+        <div className="exec-state-row">
+          <span className="exec-state-name">Preemptions</span>
+          <span className="exec-state-count">{preemptions}</span>
+        </div>
+      </div>
+      <div className="exec-info-foot">Source: <strong>trace</strong></div>
+    </Card>
+  )
+}
 
 function formatUpdatedAt(iso) {
   if (!iso || iso === '1970-01-01T00:00:00Z') return null
@@ -40,6 +112,8 @@ export default function App() {
   const [tick, setTick]         = useState(0)
   const [liveMode, setLiveMode] = useState(false)
   const [selectedMetric, setSelectedMetric] = useState('avg_response_time')
+  const [step, setStep] = useState('Recommend')
+  const [debugOpen, setDebugOpen] = useState(false)
 
   const [traces,          setTraces]          = useState(fallbackTraces)
   const [recommendation,  setRecommendation]  = useState(null)
@@ -124,6 +198,16 @@ export default function App() {
     if (liveMode) setTick(maxTick)
   }, [liveMode, maxTick])
 
+  // On first data load (replay mode), jump to a mid-run tick so the Execute
+  // screen shows activity instead of an empty tick=0 view.
+  const didInitTick = useRef(false)
+  useEffect(() => {
+    if (!didInitTick.current && !liveMode && maxTick > 1) {
+      didInitTick.current = true
+      setTick(Math.round(maxTick * 0.55))
+    }
+  }, [maxTick, liveMode])
+
   // Total trace event count across all loaded algorithms (for header info)
   const totalTraceEvents = useMemo(
     () => Object.values(traces).reduce((sum, evs) => sum + (evs?.length || 0), 0),
@@ -166,29 +250,77 @@ export default function App() {
         totalTraceEvents={totalTraceEvents}
       />
 
-      <div className="dashboard-main">
-        {/* ── LEFT COLUMN ── */}
-        <div className="dashboard-col">
-          <LLMRecommendation  recommendation={recommendation} />
-          <AlgorithmGuard     guardDecision={guardDecision} />
-          <EvaluationResult   metrics={metrics} recommendation={recommendation} />
-          <LLMExplanation     traceExplanation={traceExplanation} />
+      <div className="dashboard-steps-wrap">
+        {/* Step navigation */}
+        <div className="step-nav">
+          {STEPS.map((s, i) => (
+            <button
+              key={s}
+              className={`header-step-btn ${step === s ? 'active' : ''}`}
+              onClick={() => setStep(s)}
+            >
+              <span className="step-num">{i + 1}</span>{s}
+            </button>
+          ))}
         </div>
 
-        {/* ── CENTER COLUMN ── */}
-        <div className="dashboard-col">
-          <MainGantt    events={events} currentTick={tick} maxTick={maxTick} algo={algo} />
-          <ProcessState events={events} currentTick={tick} />
-          <TraceStack   events={events} currentTick={tick} />
-        </div>
+        {/* ── SCREEN 1: RECOMMEND ── */}
+        {step === 'Recommend' && (
+          <div className="screen-recommend">
+            <div className="rec-top">
+              <WorkloadSummary workloadSummary={workloadSummary} />
+            </div>
+            <div className="rec-left">
+              <LLMRecommendation recommendation={recommendation} metrics={metrics} />
+            </div>
+            <div className="rec-right">
+              <AlgorithmGuard guardDecision={guardDecision} />
+              <LLMExplanation traceExplanation={traceExplanation} />
+            </div>
+          </div>
+        )}
 
-        {/* ── RIGHT COLUMN ── */}
-        <div className="dashboard-col">
-          <ProcessLanes        events={events} currentTick={tick} maxTick={maxTick} algo={algo} />
-          <WorkloadSummary     workloadSummary={workloadSummary} />
-          <AlgorithmComparison metrics={metrics} recommendation={recommendation} selectedMetric={selectedMetric} />
-          <MetricVisualization metrics={metrics} recommendation={recommendation} selectedMetric={selectedMetric} onSelectedMetricChange={setSelectedMetric} />
-        </div>
+        {/* ── SCREEN 2: EXECUTE ── */}
+        {step === 'Execute' && (
+          <div className="screen-execute">
+            <div className="exec-gantt">
+              <MainGantt events={events} currentTick={tick} maxTick={maxTick} algo={algo} />
+            </div>
+            <div className="exec-bottom">
+              <ExecuteInfoCard events={events} tick={tick} algo={algo} />
+              <ProcessState events={events} currentTick={tick} />
+              <ProcessLanes events={events} currentTick={tick} maxTick={maxTick} algo={algo} />
+            </div>
+            <div className={`exec-debug card ${debugOpen ? 'exec-debug-open' : ''}`}>
+              <button className="exec-debug-toggle" onClick={() => setDebugOpen(o => !o)}>
+                <span>{debugOpen ? '▾' : '▸'}</span>
+                Debug Trace Events
+                <span className="exec-debug-count">
+                  {events.filter(e => e.tick <= tick).length} events @ tick {tick}
+                </span>
+              </button>
+              {debugOpen && (
+                <div className="exec-debug-body">
+                  <TraceStack events={events} currentTick={tick} />
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── SCREEN 3: EVALUATE ── */}
+        {step === 'Evaluate' && (
+          <div className="screen-evaluate">
+            <div className="eval-top">
+              <EvaluationResult metrics={metrics} recommendation={recommendation} />
+              <LLMExplanation traceExplanation={traceExplanation} />
+            </div>
+            <div className="eval-bottom">
+              <MetricVisualization metrics={metrics} recommendation={recommendation} selectedMetric={selectedMetric} onSelectedMetricChange={setSelectedMetric} />
+              <AlgorithmComparison metrics={metrics} recommendation={recommendation} selectedMetric={selectedMetric} />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
