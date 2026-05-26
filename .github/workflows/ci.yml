@@ -36,6 +36,21 @@ jobs:
           python3 tools/validate_dashboard_contract.py \
             --strict --dir dashboard_live/public/live-data
 
+      - name: correction-preview smoke (proposer + guard on synthetic events)
+        run: |
+          python3 scripts/correction_preview_smoke.py
+
+      - name: strict validate preview artifacts (--preview opt-in)
+        run: |
+          # The committed live-data intentionally ships no preview files;
+          # this step asserts the validator's --preview mode is honest:
+          # "preview not present" is the expected pass on a clean tree.
+          # If a future PR ever ships a preview artifact, every
+          # honesty invariant (preview_only=true, applied=false, no
+          # CORRECTION_APPLIED) becomes enforced here.
+          python3 tools/validate_dashboard_contract.py \
+            --strict --preview --dir dashboard_live/public/live-data
+
   dashboard_live:
     name: dashboard_live build
     runs-on: ubuntu-latest
