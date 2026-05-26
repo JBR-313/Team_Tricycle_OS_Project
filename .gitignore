@@ -1,10 +1,31 @@
 # API keys — never commit
 .env
+.env.*
+!.env.example
 
 # Python
 __pycache__/
 *.pyc
 *.pyo
+.venv/
+venv/
 
-# Build outputs
+# Build outputs (xv6 raw logs, build logs, demo scratch)
 outputs/
+
+# Defensive: catch stray logs outside outputs/. Tracked files (e.g.
+# logs/foo.log if someone deliberately git-added one) are unaffected.
+*.log
+
+# Node — each dashboard also has its own .gitignore covering these,
+# but keep them at root so a fresh subdir doesn't slip past.
+node_modules/
+dist/
+.vite/
+*.local
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
