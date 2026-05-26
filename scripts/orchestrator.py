@@ -778,6 +778,19 @@ def main() -> int:
         metadata_source=metadata_source,
     )
 
+    # Final phase: validate the published live-data against the dashboard
+    # contract. Non-strict so a single missing field does not block the demo,
+    # but any [WARN]/[ERROR] surfaces in the orchestrator output.
+    if not dry_run:
+        print("\n[6] Validate dashboard contract")
+        rc = subprocess.run(
+            [sys.executable, str(TOOLS_DIR / "validate_dashboard_contract.py"),
+             "--dir", str(live_dir)],
+            capture_output=False,
+        ).returncode
+        if rc != 0:
+            print(f"  [WARN] contract validator exited {rc}")
+
     print("\n[DONE] Orchestrator pipeline complete.")
     print("  -> Run: cd dashboard_live && npm run dev")
     return 0
