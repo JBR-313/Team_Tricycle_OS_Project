@@ -6,7 +6,7 @@
       10,
       50
     ],
-    "aging_threshold": 500,
+    "aging_threshold": 1000,
     "boost_interval": 100
   },
   "process_count": 6,
@@ -93,9 +93,9 @@
       "judgment": "SUCCESS"
     },
     "RR": {
-      "avg_waiting_time": 0.33,
-      "avg_response_time": 0.33,
-      "avg_turnaround_time": 1.67,
+      "avg_waiting_time": 0.5,
+      "avg_response_time": 0.25,
+      "avg_turnaround_time": 2.25,
       "throughput": 0.312,
       "max_waiting_time": 1,
       "preemption_count": 12,
@@ -104,45 +104,45 @@
       "judgment": "SUCCESS"
     },
     "FCFS": {
-      "avg_waiting_time": 0.4,
-      "avg_response_time": 0.4,
-      "avg_turnaround_time": 2.8,
+      "avg_waiting_time": 0.2,
+      "avg_response_time": 0.2,
+      "avg_turnaround_time": 2.4,
       "throughput": 0.312,
-      "max_waiting_time": 2,
-      "preemption_count": 0,
+      "max_waiting_time": 1,
+      "preemption_count": 1,
       "starvation_occurred": false,
       "burst_prediction_error": null,
       "judgment": "SUCCESS"
     },
     "Priority": {
-      "avg_waiting_time": 0.67,
-      "avg_response_time": 0.67,
-      "avg_turnaround_time": 2.0,
+      "avg_waiting_time": 0.2,
+      "avg_response_time": 0.2,
+      "avg_turnaround_time": 2.4,
       "throughput": 0.312,
-      "max_waiting_time": 2,
-      "preemption_count": 13,
+      "max_waiting_time": 1,
+      "preemption_count": 12,
       "starvation_occurred": false,
       "burst_prediction_error": null,
-      "judgment": "FAIL"
+      "judgment": "SUCCESS"
     },
     "SJF": {
-      "avg_waiting_time": 0.4,
-      "avg_response_time": 0.4,
-      "avg_turnaround_time": 2.8,
+      "avg_waiting_time": 0.2,
+      "avg_response_time": 0.2,
+      "avg_turnaround_time": 2.4,
       "throughput": 0.312,
-      "max_waiting_time": 2,
-      "preemption_count": 0,
+      "max_waiting_time": 1,
+      "preemption_count": 1,
       "starvation_occurred": false,
       "burst_prediction_error": null,
       "judgment": "SUCCESS"
     },
     "SRTF": {
-      "avg_waiting_time": 0.5,
-      "avg_response_time": 0.5,
-      "avg_turnaround_time": 2.75,
+      "avg_waiting_time": 0.2,
+      "avg_response_time": 0.2,
+      "avg_turnaround_time": 2.4,
       "throughput": 0.312,
-      "max_waiting_time": 2,
-      "preemption_count": 13,
+      "max_waiting_time": 1,
+      "preemption_count": 12,
       "starvation_occurred": false,
       "burst_prediction_error": null,
       "judgment": "SUCCESS"
