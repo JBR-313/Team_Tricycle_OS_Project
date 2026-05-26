@@ -61,8 +61,6 @@ export default function App() {
   const [manifestVersion, setManifestVersion] = useState(null)
   const [snapshotsManifest, setSnapshotsManifest] = useState(null)
   const [selectedSnapshot, setSelectedSnapshotState] = useState(null) // null = default flat live-data
-  // Step-based presentation layout. See docs/dashboard_live_step_layout_plan.md.
-  const [step, setStep] = useState('Recommend')
   const [runtimeEvents, setRuntimeEvents] = useState(null)
   const [correctionProposal, setCorrectionProposal] = useState(null)
   const [correctionGuardDecision, setCorrectionGuardDecision] = useState(null)
@@ -213,81 +211,45 @@ export default function App() {
         snapshotsManifest={snapshotsManifest}
         selectedSnapshot={selectedSnapshot}
         onSelectedSnapshotChange={setSelectedSnapshot}
-        step={step}
-        onStepChange={setStep}
       />
 
       <div className="dashboard-main">
-      {/* Persistent: DemoGuide visible on every step so click-to-flash
-          works regardless of which screen is active. See plan §6 (option A). */}
-      <DemoGuide />
-
-      {/* Recommend — the "before-run" story */}
-      {step === 'Recommend' && (
-        <div className="screen-recommend">
-          <div className="rec-top">
-            <WorkloadSummary workloadSummary={workloadSummary} />
-          </div>
-          <div className="rec-left">
-            <LLMRecommendation recommendation={recommendation} />
-            <RecommendationEvidence
-              recommendation={recommendation}
-              guardDecision={guardDecision}
-              workloadSummary={workloadSummary}
-              metrics={metrics}
-              manifest={manifest}
-            />
-          </div>
-          <div className="rec-right">
-            <AlgorithmGuard guardDecision={guardDecision} />
-            <CounterfactualMetricView metrics={metrics} recommendation={recommendation} />
-          </div>
+        {/* ── LEFT COLUMN ── */}
+        <div className="dashboard-col">
+          <DemoGuide />
+          <LLMRecommendation  recommendation={recommendation} />
+          <AlgorithmGuard     guardDecision={guardDecision} />
+          <RecommendationEvidence
+            recommendation={recommendation}
+            guardDecision={guardDecision}
+            workloadSummary={workloadSummary}
+            metrics={metrics}
+            manifest={manifest}
+          />
+          <CounterfactualMetricView metrics={metrics} recommendation={recommendation} />
+          <RuntimeCorrectionPreview
+            runtimeEvents={runtimeEvents}
+            correctionProposal={correctionProposal}
+            correctionGuardDecision={correctionGuardDecision}
+          />
+          <EvaluationResult   metrics={metrics} recommendation={recommendation} />
+          <LLMExplanation     traceExplanation={traceExplanation} />
         </div>
-      )}
 
-      {/* Execute — the live xv6 schedule */}
-      {step === 'Execute' && (
-        <div className="screen-execute">
-          <div className="exec-gantt">
-            <MainGantt events={events} currentTick={tick} maxTick={maxTick} algo={algo} />
-          </div>
-          <div className="exec-bottom">
-            <ProcessState events={events} currentTick={tick} />
-            <ProcessLanes events={events} currentTick={tick} maxTick={maxTick} algo={algo} />
-            <RuntimeCorrectionPreview
-              runtimeEvents={runtimeEvents}
-              correctionProposal={correctionProposal}
-              correctionGuardDecision={correctionGuardDecision}
-            />
-          </div>
-          <div className="exec-trace">
-            <TraceStack events={events} currentTick={tick} />
-          </div>
+        {/* ── CENTER COLUMN ── */}
+        <div className="dashboard-col">
+          <MainGantt    events={events} currentTick={tick} maxTick={maxTick} algo={algo} />
+          <ProcessState events={events} currentTick={tick} />
+          <TraceStack   events={events} currentTick={tick} />
         </div>
-      )}
 
-      {/* Evaluate — the "after-run" story */}
-      {step === 'Evaluate' && (
-        <div className="screen-evaluate">
-          <div className="eval-top">
-            <EvaluationResult metrics={metrics} recommendation={recommendation} />
-            <LLMExplanation traceExplanation={traceExplanation} />
-          </div>
-          <div className="eval-bottom">
-            <MetricVisualization
-              metrics={metrics}
-              recommendation={recommendation}
-              selectedMetric={selectedMetric}
-              onSelectedMetricChange={setSelectedMetric}
-            />
-            <AlgorithmComparison
-              metrics={metrics}
-              recommendation={recommendation}
-              selectedMetric={selectedMetric}
-            />
-          </div>
+        {/* ── RIGHT COLUMN ── */}
+        <div className="dashboard-col">
+          <ProcessLanes        events={events} currentTick={tick} maxTick={maxTick} algo={algo} />
+          <WorkloadSummary     workloadSummary={workloadSummary} />
+          <AlgorithmComparison metrics={metrics} recommendation={recommendation} selectedMetric={selectedMetric} />
+          <MetricVisualization metrics={metrics} recommendation={recommendation} selectedMetric={selectedMetric} onSelectedMetricChange={setSelectedMetric} />
         </div>
-      )}
       </div>
     </div>
   )

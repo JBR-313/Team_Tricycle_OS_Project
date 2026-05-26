@@ -1,8 +1,6 @@
 import { ALGOS } from '../data/liveDataClient.js'
 import { getBackend } from '../data/schemaCompat.js'
 
-const STEPS = ['Recommend', 'Execute', 'Evaluate']
-
 export default function Header({
   algo, onAlgoChange,
   currentTick, maxTick, onTickChange,
@@ -13,8 +11,6 @@ export default function Header({
   snapshotsManifest,
   selectedSnapshot,
   onSelectedSnapshotChange,
-  step,
-  onStepChange,
 }) {
   const snapshotProfiles = Array.isArray(snapshotsManifest?.profiles)
     ? snapshotsManifest.profiles : []
@@ -44,27 +40,6 @@ export default function Header({
           </div>
         </div>
       </div>
-
-      {/* Step navigation — Recommend / Execute / Evaluate. Visible only
-          when the parent App provides step state (otherwise the live
-          dashboard renders without step nav, preserving backwards
-          compatibility for any caller that hasn't migrated yet). */}
-      {step && typeof onStepChange === 'function' && (
-        <div className="header-steps">
-          {STEPS.map((s, i) => (
-            <button
-              key={s}
-              type="button"
-              className={`header-step-btn ${step === s ? 'active' : ''}`}
-              onClick={() => onStepChange(s)}
-              title={`Switch to ${s} screen`}
-            >
-              <span className="step-num">{i + 1}</span>
-              {s}
-            </button>
-          ))}
-        </div>
-      )}
 
       <div className="header-spacer" />
 

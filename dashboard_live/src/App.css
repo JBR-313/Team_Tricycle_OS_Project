@@ -12,23 +12,16 @@
   padding: 10px;
 }
 
-/* ── Step-based screens (PR after #67). DemoGuide sits as a small
-   strip at the top; the active screen fills the remaining height. ── */
+/* ── Three equal columns ── */
 .dashboard-main {
   display: grid;
-  grid-template-rows: auto 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
   gap: 10px;
   height: 100%;
   overflow: hidden;
 }
 
-/* DemoGuide stays compact at the top of every screen. */
-.dashboard-main > .card-demo-guide {
-  max-height: 110px;
-}
-
-/* Legacy 3-column container kept so any future PR can fall back if
-   needed; not used by the current App.jsx step layout. */
+/* ── Column: flex stack ── */
 .dashboard-col {
   display: flex;
   flex-direction: column;
@@ -36,116 +29,6 @@
   overflow: hidden;
   min-height: 0;
 }
-
-/* ── Header step buttons ──────────────────────────────────────── */
-.header-steps {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-}
-.header-step-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.55);
-  border: 1px solid rgba(80, 90, 120, 0.18);
-  color: #475569;
-  font-size: 0.66rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 120ms ease-out, color 120ms ease-out, border-color 120ms ease-out;
-}
-.header-step-btn:hover {
-  background: rgba(237, 233, 254, 0.7);
-  color: #6d28d9;
-  border-color: rgba(124, 58, 237, 0.35);
-}
-.header-step-btn.active {
-  background: #ede9fe;
-  color: #6d28d9;
-  border-color: #c4b5fd;
-  box-shadow: 0 1px 4px rgba(124, 58, 237, 0.18);
-}
-.header-step-btn .step-num {
-  display: inline-flex;
-  justify-content: center;
-  align-items: center;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: rgba(124, 58, 237, 0.12);
-  color: #6d28d9;
-  font-size: 0.58rem;
-  font-weight: 700;
-}
-.header-step-btn.active .step-num {
-  background: #c4b5fd;
-  color: #4c1d95;
-}
-
-/* ── Screen: Recommend ────────────────────────────────────────── */
-.screen-recommend {
-  display: grid;
-  grid-template-rows: auto 1fr;
-  grid-template-columns: 1.2fr 1fr;
-  grid-template-areas:
-    "top top"
-    "left right";
-  gap: 10px;
-  height: 100%;
-  overflow: hidden;
-}
-.screen-recommend .rec-top   { grid-area: top; min-height: 0; }
-.screen-recommend .rec-left  { grid-area: left; display: flex; flex-direction: column; gap: 8px; min-height: 0; overflow: hidden; }
-.screen-recommend .rec-right { grid-area: right; display: flex; flex-direction: column; gap: 8px; min-height: 0; overflow: hidden; }
-
-/* ── Screen: Execute ──────────────────────────────────────────── */
-.screen-execute {
-  display: grid;
-  grid-template-rows: 2fr 1fr auto;
-  gap: 10px;
-  height: 100%;
-  overflow: hidden;
-}
-.screen-execute .exec-gantt   { min-height: 0; overflow: hidden; display: flex; }
-.screen-execute .exec-gantt > .card { flex: 1; }
-.screen-execute .exec-bottom  {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 10px;
-  min-height: 0;
-  overflow: hidden;
-}
-.screen-execute .exec-bottom > .card { min-height: 0; }
-.screen-execute .exec-trace   { min-height: 0; overflow: hidden; display: flex; max-height: 30%; }
-.screen-execute .exec-trace > .card { flex: 1; }
-
-/* ── Screen: Evaluate ─────────────────────────────────────────── */
-.screen-evaluate {
-  display: grid;
-  grid-template-rows: 1fr 1fr;
-  gap: 10px;
-  height: 100%;
-  overflow: hidden;
-}
-.screen-evaluate .eval-top {
-  display: grid;
-  grid-template-columns: 1.2fr 1fr;
-  gap: 10px;
-  min-height: 0;
-  overflow: hidden;
-}
-.screen-evaluate .eval-bottom {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  min-height: 0;
-  overflow: hidden;
-}
-.screen-evaluate .eval-top > .card,
-.screen-evaluate .eval-bottom > .card { min-height: 0; }
 
 /* ── Glass card ── */
 .card {
