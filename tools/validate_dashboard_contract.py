@@ -240,12 +240,59 @@ def cross_check(manifest: dict, rec: dict, guard: dict, r: Report) -> None:
 
 # ── main ──────────────────────────────────────────────────────────────────────
 
+def _check_dir(d: Path, r: Report) -> None:
+    """Run every per-directory check against `d` and report into `r`."""
+    manifest = check_manifest(d, r)
+    rec = check_recommendation(d, r)
+    guard = check_guard(d, r)
+    check_metrics(d, r)
+    check_traces(d, r)
+    cross_check(manifest, rec, guard, r)
+
+
+def _check_snapshots(snapshots_dir: Path, r: Report) -> None:
+    """Validate every <profile>/ sub-directory under snapshots_dir.
+
+    Reads the optional `snapshots_manifest.json` next to it (one level
+    above) only for cross-reference; missing manifest is non-fatal.
+    """
+    if not snapshots_dir.is_dir():
+        r.warn_(f"snapshots directory not found: {snapshots_dir}")
+        return
+    profiles = sorted(p for p in snapshots_dir.iterdir() if p.is_dir())
+    if not profiles:
+        r.warn_(f"snapshots directory is empty: {snapshots_dir}")
+        return
+    # Optional manifest cross-link: parent of snapshots_dir holds it.
+    sm_path = snapshots_dir.parent / "snapshots_manifest.json"
+    listed: set[str] = set()
+    if sm_path.is_file():
+        sm = _load(sm_path)
+        listed = {entry.get("profile") for entry in sm.get("profiles", [])
+                  if isinstance(entry, dict)}
+        r.good(f"snapshots_manifest.json found ({len(listed)} profile(s) listed)")
+    else:
+        r.warn_(f"snapshots_manifest.json not found at {sm_path}")
+
+    for prof_dir in profiles:
+        prof = prof_dir.name
+        print(f"\n--- snapshot: {prof} ---")
+        _check_dir(prof_dir, r)
+        if listed and prof not in listed:
+            r.warn_(f"snapshot dir {prof}/ exists but not in snapshots_manifest.json")
+    for prof in listed - {p.name for p in profiles}:
+        r.warn_(f"snapshots_manifest.json lists {prof!r} but no dir exists")
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate dashboard live-data contract")
     ap.add_argument("--dir", default=str(DEFAULT_DIR),
                     help="live-data directory to validate")
     ap.add_argument("--strict", action="store_true",
                     help="treat WARN as ERROR and exit non-zero")
+    ap.add_argument("--snapshots", default=None,
+                    help="if set, also validate each <profile>/ sub-directory "
+                         "under this path (typically dashboard_live/public/live-data/snapshots)")
     args = ap.parse_args()
 
     d = Path(args.dir)
@@ -256,12 +303,10 @@ def main() -> int:
 
     r = Report(strict=args.strict)
     try:
-        manifest = check_manifest(d, r)
-        rec = check_recommendation(d, r)
-        guard = check_guard(d, r)
-        check_metrics(d, r)
-        check_traces(d, r)
-        cross_check(manifest, rec, guard, r)
+        _check_dir(d, r)
+        if args.snapshots:
+            print(f"\nValidating snapshots: {args.snapshots}")
+            _check_snapshots(Path(args.snapshots), r)
     except json.JSONDecodeError as exc:
         print(f"[ERROR] unreadable JSON: {exc}", file=sys.stderr)
         return 1
