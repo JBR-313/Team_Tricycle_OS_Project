@@ -18,11 +18,12 @@ See `docs/orchestrator_design.md` for the full design and the fairness rule, and
 > exercises end-to-end on the demo machine. `scripts/multi_profile_demo_check.py`
 > reruns the same xv6 + strict-validator chain across every curated
 > profile (`interactive`, `cpu_bound`, `mixed`, `priority_sensitive`)
-> for broader confidence — it is **not** a substitute for the demo
-> check. GitHub Actions CI (`.github/workflows/ci.yml`) is lightweight
-> only (py_compile + strict validator on committed live-data + the two
-> dashboard builds); **it does not run QEMU/xv6** and a green CI badge
-> does not replace the local demo check. See
+> for broader confidence — all four currently pass on xv6 per
+> `docs/xv6_profile_support.md`; it is **not** a substitute for the
+> demo check. GitHub Actions CI (`.github/workflows/ci.yml`) is
+> lightweight only (py_compile + strict validator on committed
+> live-data + the two dashboard builds); **it does not run QEMU/xv6**
+> and a green CI badge does not replace the local demo check. See
 > `docs/final_demo_acceptance.md` §0 for the authoritative breakdown.
 
 ---

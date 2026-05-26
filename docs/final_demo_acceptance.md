@@ -22,6 +22,12 @@ once before running anything.
 On demo day, only layer A is on the critical path. Layers B and C are
 defense in depth.
 
+**xv6 profile coverage** — as of the last audit (`docs/xv6_profile_support.md`),
+all four curated xv6 profiles (`interactive`, `cpu_bound`, `mixed`,
+`priority_sensitive`) pass layer B end-to-end. `short_jobs` and
+`starvation_risk` are simulator-only by design and are SKIPPED, not
+substituted, by the multi-profile checker.
+
 ---
 
 ## 1. Pre-demo sanity script (one command)

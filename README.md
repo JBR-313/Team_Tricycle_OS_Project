@@ -607,6 +607,7 @@ Concise current status (full evidence in `docs/implementation_status.md`):
 |-----------|--------|------|
 | xv6 scheduler — RR / FCFS / Priority+Aging / MLFQ / SJF / SRTF | **Implemented** | execution authority |
 | Orchestrator — xv6 backend (`scripts/orchestrator.py --backend xv6`) | **Implemented** | **final demo / experiment path** |
+| xv6 workload profiles — `interactive`, `cpu_bound`, `mixed`, `priority_sensitive` | **Implemented** | all 4 pass `multi_profile_demo_check.py --backend xv6` end-to-end ([audit](docs/xv6_profile_support.md)) |
 | Orchestrator — simulator backend (`--backend simulator`) | **Implemented** | dev / fallback only |
 | `scripts/final_demo_check.py` (compile + orchestrator + strict contract validator) | **Implemented** | one-command demo-prep |
 | `tools/validate_dashboard_contract.py` (`--strict`) | **Implemented** | catches empty traces, missing manifest fields, cross-file algo disagreement |
