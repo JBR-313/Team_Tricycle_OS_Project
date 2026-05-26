@@ -1,16 +1,22 @@
 {
-  "algorithm": "RR",
+  "algorithm": "MLFQ",
   "params": {
-    "quantum": 2
+    "queues": 2,
+    "quantum": [
+      10,
+      50
+    ],
+    "aging_threshold": 500,
+    "boost_interval": 100
   },
-  "reason": "The workload consists entirely of interactive jobs with very short CPU bursts (avg 1.52, max 2) and no priority variance. Round Robin with a small quantum (2 ticks) provides excellent response time by ensuring each process gets frequent CPU access, while the short bursts prevent excessive context switching overhead.",
+  "reason": "The workload is entirely interactive with short bursts (avg 1.52) and no CPU-bound processes, so MLFQ with two queues and short quanta provides excellent response time and fairness. The aging parameters prevent any potential starvation, and the boost interval helps maintain interactive performance.",
   "target_metric": "avg_response_time",
   "confidence": 0.95,
-  "recommended_scheduling_algorithm": "RR",
+  "recommended_scheduling_algorithm": "MLFQ",
   "_meta": {
     "source": "tools/llm_advisor.py",
     "model": "solar-pro3",
-    "generated_at": "2026-05-25T08:06:27.718958+00:00",
+    "generated_at": "2026-05-26T05:06:43.607957+00:00",
     "workload_summary": "/home/seonguk/projects/Team_Tricycle_OS_Project/outputs/live/workload_summary.json"
   }
 }

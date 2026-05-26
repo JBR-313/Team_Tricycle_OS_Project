@@ -557,11 +557,11 @@ simulator.
 
 ```bash
 # Step 1: generate live data with the Orchestrator (fixed seed for a reproducible demo)
-# Simulator backend (works end to end today):
-python3 scripts/orchestrator.py --backend simulator --seed 42 --workload interactive --run-all
-
-# xv6 backend (in progress — QEMU automation not yet end-to-end):
+# xv6 backend (final demo / experiment path):
 python3 scripts/orchestrator.py --backend xv6 --seed 42 --workload interactive --run-all
+
+# Simulator backend (fast dev / fallback path):
+python3 scripts/orchestrator.py --backend simulator --seed 42 --workload interactive --run-all
 
 # Step 2: start dashboard
 cd dashboard_live
@@ -606,13 +606,14 @@ summary (full table in `docs/implementation_status.md`):
 
 - xv6 RR / FCFS / Priority+Aging / MLFQ: **Implemented**.
 - xv6 SJF / SRTF (burst predictor): **Implemented**.
-- Orchestrator simulator backend: **Implemented**.
-- Orchestrator xv6 backend (QEMU automation + `schedtest` seed/profile + rich
-  kernel traces): **In progress / not yet end-to-end**.
-- `trace_parser.py` real-log support: **Implemented** (recently fixed).
+- Orchestrator simulator backend (fast dev / fallback): **Implemented**.
+- Orchestrator xv6 backend (final demo / experiment path — QEMU automation +
+  `schedtest <algo> <seed> <profile>` + kernel trace windowing): **Implemented**.
+- `trace_parser.py` real-log support: **Implemented**.
 - Runtime correction loop (event detect → propose → LLM → guard → apply →
   `CORRECTION_APPLIED` → dashboard): **Partial / Future Work** — only event
   detection exists.
+- Live streaming: **polling only** (no websocket).
 
 See `docs/implementation_status.md` for evidence files, run commands, and
 remaining risks per feature, and `docs/orchestrator_design.md` for the control

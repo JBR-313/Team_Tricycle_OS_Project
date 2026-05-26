@@ -423,15 +423,21 @@ def qemu_run_schedtest(algo_lower: str, seed: int, profile: str, raw_path: Path,
 
 
 def _extract_run_window(raw_path: Path) -> str:
-    """Return only the lines between RUN_BEGIN and RUN_END (inclusive)."""
+    """Return only the lines between RUN_BEGIN and RUN_END (inclusive).
+
+    Be lenient: kernel printf occasionally interleaves with the user-space
+    `[SCHEDTEST] event=RUN_BEGIN ...` line and splits the prefix off, leaving a
+    fragment like `=RUN_BEGIN algo=MLFQ ...`. Match on the bare `RUN_BEGIN` /
+    `RUN_END` substring so the window still anchors when that happens.
+    """
     out: list[str] = []
     in_win = False
     for ln in raw_path.read_text().splitlines():
-        if "event=RUN_BEGIN" in ln:
+        if "RUN_BEGIN" in ln:
             in_win = True
         if in_win:
             out.append(ln)
-        if "event=RUN_END" in ln:
+        if "RUN_END" in ln:
             break
     return "\n".join(out) + "\n"
 

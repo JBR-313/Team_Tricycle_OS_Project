@@ -1,14 +1,16 @@
 {
-    "workload_name": "interactive_heavy",
-    "num_processes": 25,
-    "avg_burst": 1.52,
-    "min_burst": 1,
-    "max_burst": 2,
-    "burst_variance": 0.26,
-    "short_job_ratio": 1.0,
-    "long_job_ratio": 0.0,
+    "process_count": 25,
+    "avg_arrival_gap": 1,
+    "cpu_bound_ratio": 0.0,
     "interactive_ratio": 1.0,
-    "priority_range": 0,
-    "arrival_spread": 24,
-    "target_metric": "response_time"
+    "avg_priority": 1,
+    "priority_variance": 0,
+    "has_starvation_risk": false,
+    "burst_count_distribution": {
+        "min": 1,
+        "max": 2,
+        "avg": 1.52
+    },
+    "total_cpu_work": 38,
+    "workload_file": "workloads/interactive_heavy.json"
 }

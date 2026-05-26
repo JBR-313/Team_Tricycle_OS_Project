@@ -103,11 +103,11 @@ python3 scripts/orchestrator.py --backend {xv6,simulator} --seed N --workload PR
 Examples:
 
 ```bash
-# Simulator backend (works today)
-python3 scripts/orchestrator.py --backend simulator --seed 42 --workload interactive --run-all
-
-# xv6 backend (in progress — QEMU automation not yet end-to-end)
+# xv6 backend (final demo / experiment path)
 python3 scripts/orchestrator.py --backend xv6 --seed 42 --workload interactive --run-all
+
+# Simulator backend (fast dev / fallback path)
+python3 scripts/orchestrator.py --backend simulator --seed 42 --workload interactive --run-all
 ```
 
 | Flag | Meaning |
@@ -118,9 +118,11 @@ python3 scripts/orchestrator.py --backend xv6 --seed 42 --workload interactive -
 | `--run-all` | Run every algorithm sequentially on the same seed/profile, LLM-selected first. |
 | `--algo NAME` | Run a single named algorithm instead of all of them. |
 
-> Status note: the `--backend` / `--seed` / `--run-all` CLI and the xv6 backend
-> are part of the in-progress Orchestrator work. The simulator path is the one
-> that runs end to end today. See `docs/implementation_status.md`.
+> Status note: both backends run end to end today. The xv6 backend is the
+> final demo / experiment path; the simulator is the fast dev / fallback
+> path. See `docs/implementation_status.md` for honest per-feature status and
+> known limitations on xv6 traces (short runs, multiplier-based starvation
+> rule).
 
 ### Workload profile mapping
 

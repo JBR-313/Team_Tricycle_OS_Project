@@ -115,7 +115,7 @@ export default function Header({
       {/* Fallback warning banner */}
       {dataStatus.mode === 'fallback' && (
         <div className="ds-fallback-banner">
-          No live data — showing fallback. Run <code>python3 scripts/run_live_dashboard_pipeline.py</code>
+          No live data — showing fallback. Run <code>python3 scripts/orchestrator.py --backend xv6 --seed 42 --workload interactive --run-all</code>
         </div>
       )}
 
