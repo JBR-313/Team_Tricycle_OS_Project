@@ -1,0 +1,69 @@
+name: ci
+
+# Lightweight pre-demo checks. Intentionally does NOT run QEMU/xv6 in CI
+# (QEMU/RISC-V toolchain on GitHub-hosted runners adds significant time and
+# brittleness). The authoritative pre-demo check is local:
+#   python3 scripts/final_demo_check.py
+# See docs/final_demo_acceptance.md for the on-stage release contract.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch: {}
+
+jobs:
+  python:
+    name: python compile + contract validator
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: py_compile every Python module
+        run: |
+          shopt -s nullglob
+          py_files=( tools/*.py scripts/*.py )
+          if [ ${#py_files[@]} -eq 0 ]; then
+            echo "no Python files found"
+            exit 1
+          fi
+          python3 -m py_compile "${py_files[@]}"
+      - name: strict validate committed dashboard live-data
+        run: |
+          python3 tools/validate_dashboard_contract.py \
+            --strict --dir dashboard_live/public/live-data
+
+  dashboard_live:
+    name: dashboard_live build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: dashboard_live
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: dashboard_live/package-lock.json
+      - run: npm ci
+      - run: npm run build
+
+  dashboard_test:
+    name: dashboard_test build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: dashboard_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: dashboard_test/package-lock.json
+      - run: npm ci
+      - run: npm run build
