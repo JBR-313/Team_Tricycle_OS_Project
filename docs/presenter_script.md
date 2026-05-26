@@ -26,6 +26,9 @@ each. Honest about what is real and what is intentional future work.
 > something a human can understand.
 
 → Show the dashboard header. Backend badge must read `XV6 TRACE`.
+The top-left **Demo flow** card lists the 5 steps you'll walk
+through — click any numbered chip during the demo to flash the
+matching element on screen (no slide change needed).
 
 ---
 

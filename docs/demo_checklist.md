@@ -50,6 +50,12 @@ visible so the audience sees the dev-server log.
 
 ## C. What to click / show in `dashboard_live`
 
+> **Cheat sheet on screen.** The top-left **Demo flow** card lists
+> the same 5 steps with click-to-flash chips — clicking step N
+> outlines the matching card for ~1.4 s. Use it on stage when you
+> need to point at something without taking your eyes off the
+> dashboard.
+
 Read these in order. Each step should take 30–60 seconds.
 
 1. **Header bar (left → right).**
