@@ -26,6 +26,7 @@ import AlgorithmComparison from './components/AlgorithmComparison.jsx'
 import MetricVisualization from './components/MetricVisualization.jsx'
 import RecommendationEvidence from './components/RecommendationEvidence.jsx'
 import CounterfactualMetricView from './components/CounterfactualMetricView.jsx'
+import DemoGuide from './components/DemoGuide.jsx'
 
 const POLL_INTERVAL_MS = 1000
 
@@ -198,6 +199,7 @@ export default function App() {
       <div className="dashboard-main">
         {/* ── LEFT COLUMN ── */}
         <div className="dashboard-col">
+          <DemoGuide />
           <LLMRecommendation  recommendation={recommendation} />
           <AlgorithmGuard     guardDecision={guardDecision} />
           <RecommendationEvidence
