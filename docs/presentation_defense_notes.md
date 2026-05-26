@@ -174,12 +174,14 @@ Source: `tools/event_detector.py`; `docs/implementation_status.md`.
 
 | Question | Where to point |
 |----------|----------------|
+| **"Why did the LLM choose this algorithm?"** | **"Why this algorithm?" evidence card** — workload traits the LLM cites (interactive ratio, avg burst, avg priority), full LLM reason (scrollable), LLM confidence, guard verdict + compat/confidence scores, provenance, final judgment. One card; read it aloud. |
 | "Did the LLM actually run xv6?" | Header backend badge → `XV6 TRACE` |
-| "How do you stop the LLM picking a bad algorithm?" | Algorithm Guard card |
-| "What if the LLM is wrong?" | Comparison table — same workload, every algorithm, target-metric judgment |
+| "How do you stop the LLM picking a bad algorithm?" | Algorithm Guard card (verdict + reason) and the guard scores on the evidence card |
+| "What if the LLM is wrong?" | Comparison table — same workload, every algorithm, target-metric judgment. Evidence card also shows the final SUCCESS/NEAR-SUCCESS/FAIL + regret. |
+| "Did this actually go through the LLM, or is it canned?" | Evidence card → provenance pill. `LLM: solar-pro3` ⇒ real call. `demo fallback (no LLM call)` (warning-tinted) ⇒ canned. |
 | "Can the LLM change strategy mid-run?" | Runtime correction is Partial / Future Work (be honest) |
 | "Is this real-time?" | No — `manifest.json` polling; final result is replayable per tick |
-| "What if the API is down?" | Demo fallback (`Backend: FALLBACK`); recommendation/guard come from `outputs/demo/` |
+| "What if the API is down?" | Demo fallback (`Backend: FALLBACK`); recommendation/guard come from `outputs/demo/`. Evidence card surfaces this explicitly too. |
 
 ---
 
