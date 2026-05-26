@@ -146,6 +146,15 @@ def build_processes(events):
             if p["arrival_time"] is None:
                 p["arrival_time"] = tick
 
+        elif event == "PROC_DEF" and "arrival" in ev:
+            # xv6 schedtest emits PROC_DEF per process before the run with the
+            # planned arrival tick; carry it into arrival_time so xv6 traces
+            # produce response/turnaround/waiting metrics (simulator path uses
+            # ARRIVE events and is unaffected).
+            p = ensure(pid)
+            if p["arrival_time"] is None:
+                p["arrival_time"] = ev["arrival"]
+
         elif event == "DISPATCH":
             p = ensure(pid)
             if p["first_run_time"] is None:
