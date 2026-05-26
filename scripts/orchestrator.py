@@ -535,6 +535,14 @@ def build_xv6_metrics(out_dir: Path, selected: str, run_order: list[str],
     mkey, lower_better = _metric_key(target_metric)
     vals = [c[mkey] for c in comparison.values() if isinstance(c.get(mkey), (int, float))]
     best = (min(vals) if lower_better else max(vals)) if vals else 0.0
+    # Absolute tick noise floor for the regret denominator. xv6 traces are tick-
+    # granular and very short, so when best≈0 a relative-only delta blows up:
+    # FCFS at avg_response_time=0.2 vs MLFQ=0.0 isn't a meaningful regression,
+    # it's sub-tick rounding. JUDGMENT_ABS_FLOOR clamps the denominator and
+    # also short-circuits SUCCESS when the absolute gap fits inside it. On
+    # simulator traces where waits run into the tens, this floor is dwarfed
+    # by `abs(best)` and has no effect.
+    JUDGMENT_ABS_FLOOR = 0.5
 
     def _judge(c: dict) -> tuple[str, float]:
         # Canonical thresholds; starvation forces FAIL.
@@ -543,7 +551,10 @@ def build_xv6_metrics(out_dir: Path, selected: str, run_order: list[str],
         v = c.get(mkey)
         if not isinstance(v, (int, float)):
             return "UNKNOWN", 0.0
-        denom = max(abs(best), 1e-9)
+        # Sub-tick noise: gaps smaller than the absolute floor are SUCCESS.
+        if "through" not in mkey and abs(v - best) <= JUDGMENT_ABS_FLOOR:
+            return "SUCCESS", 0.0
+        denom = max(abs(best), JUDGMENT_ABS_FLOOR)
         delta = round((best - v) / denom if not lower_better else (v - best) / denom, 3)
         if delta <= 0.10:
             return "SUCCESS", delta

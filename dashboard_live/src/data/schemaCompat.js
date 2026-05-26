@@ -86,6 +86,14 @@ const METRIC_KEYS = {
   preemption_count: 'preemption_count',
 }
 
+// Sub-tick absolute floor for the regret denominator. Mirrors the same floor
+// in scripts/orchestrator.py:_judge. xv6 traces are tick-granular and very
+// short, so when best≈0 a relative-only delta blows up: e.g. FCFS at
+// avg_response_time=0.2 vs MLFQ=0.0 is sub-tick rounding, not a regression.
+// On simulator traces (waits in tens of ticks) this floor is dwarfed and has
+// no practical effect.
+const JUDGMENT_ABS_FLOOR = 0.5
+
 // Metric-aware judgment for ONE algorithm row vs the whole comparison set.
 export function computeAlgorithmJudgment(algoMetrics, allComparisonMetrics, targetMetric) {
   if (!algoMetrics) return 'UNKNOWN'
@@ -99,7 +107,12 @@ export function computeAlgorithmJudgment(algoMetrics, allComparisonMetrics, targ
   if (!vals.length) return 'UNKNOWN'
   const higher = isHigherBetterMetric(metric)
   const best = higher ? Math.max(...vals) : Math.min(...vals)
-  const denom = Math.max(Math.abs(best), 1e-9)
+  // Sub-tick noise: tick-granular metrics within the absolute floor of the
+  // best are SUCCESS. Throughput is dimensionless, so the floor is skipped.
+  if (key !== 'throughput' && Math.abs(value - best) <= JUDGMENT_ABS_FLOOR) {
+    return 'SUCCESS'
+  }
+  const denom = Math.max(Math.abs(best), JUDGMENT_ABS_FLOOR)
   const regret = higher ? (best - value) / denom : (value - best) / denom
   if (regret <= 0.10) return 'SUCCESS'
   if (regret <= 0.30) return 'NEAR-SUCCESS'
