@@ -23,6 +23,7 @@ import ProcessLanes        from './components/ProcessLanes.jsx'
 import WorkloadSummary     from './components/WorkloadSummary.jsx'
 import AlgorithmComparison from './components/AlgorithmComparison.jsx'
 import MetricVisualization from './components/MetricVisualization.jsx'
+import RecommendationEvidence from './components/RecommendationEvidence.jsx'
 
 const POLL_INTERVAL_MS = 1000
 
@@ -171,6 +172,13 @@ export default function App() {
         <div className="dashboard-col">
           <LLMRecommendation  recommendation={recommendation} />
           <AlgorithmGuard     guardDecision={guardDecision} />
+          <RecommendationEvidence
+            recommendation={recommendation}
+            guardDecision={guardDecision}
+            workloadSummary={workloadSummary}
+            metrics={metrics}
+            manifest={manifest}
+          />
           <EvaluationResult   metrics={metrics} recommendation={recommendation} />
           <LLMExplanation     traceExplanation={traceExplanation} />
         </div>
