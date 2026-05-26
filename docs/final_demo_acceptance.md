@@ -8,6 +8,20 @@ from, the demo is ready. If any check fails, fix it before walking on stage.
 > `docs/implementation_status.md` for honest per-feature status. Do not move
 > this checklist; it is the authoritative pass/fail contract.
 
+## 0. Validation scope (what counts and what doesn't)
+
+There are three layers of validation in this repo. Read this section
+once before running anything.
+
+| Layer | Tool | What it really proves |
+|-------|------|------------------------|
+| **A. Local final demo check** (this document) | `python3 scripts/final_demo_check.py` | **Authoritative on-stage release contract.** Runs the real xv6 backend with `--seed 42 --workload interactive --run-all`, then strict-validates the live-data. Green here ⇔ the on-stage demo is ready. |
+| **B. Local multi-profile check** | `python3 scripts/multi_profile_demo_check.py` | Broader pre-demo confidence. Re-runs the xv6 orchestrator + strict validator across every curated `XV6_PROFILES` workload (`interactive`, `cpu_bound`, `mixed`, `priority_sensitive`). **Not a substitute for layer A** — the on-stage path stays `interactive` / seed=42. Use this to catch profile-specific regressions before demo day. |
+| **C. GitHub Actions CI** (`.github/workflows/ci.yml`) | runs on every PR / push to `main` | **Lightweight only.** `py_compile`, the strict contract validator against the committed live-data, and the two `npm run build`s. **Does not run QEMU or xv6** — GitHub-hosted runners have no riscv64 toolchain and a real boot per algorithm is too brittle/expensive for CI. Green CI does not mean a real demo will run; the local layer A is still required. |
+
+On demo day, only layer A is on the critical path. Layers B and C are
+defense in depth.
+
 ---
 
 ## 1. Pre-demo sanity script (one command)

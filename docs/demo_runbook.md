@@ -12,6 +12,19 @@ LLM-selected one first), collects traces and metrics, and publishes them to
 See `docs/orchestrator_design.md` for the full design and the fairness rule, and
 `docs/implementation_status.md` for what is implemented vs in progress.
 
+> **Validation scope at a glance.** The final demo path is
+> `--backend xv6 --seed 42 --workload interactive`. That is what
+> `scripts/final_demo_check.py` (and §"Demo command sequence" below)
+> exercises end-to-end on the demo machine. `scripts/multi_profile_demo_check.py`
+> reruns the same xv6 + strict-validator chain across every curated
+> profile (`interactive`, `cpu_bound`, `mixed`, `priority_sensitive`)
+> for broader confidence — it is **not** a substitute for the demo
+> check. GitHub Actions CI (`.github/workflows/ci.yml`) is lightweight
+> only (py_compile + strict validator on committed live-data + the two
+> dashboard builds); **it does not run QEMU/xv6** and a green CI badge
+> does not replace the local demo check. See
+> `docs/final_demo_acceptance.md` §0 for the authoritative breakdown.
+
 ---
 
 ## Dashboard overview
