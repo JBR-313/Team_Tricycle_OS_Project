@@ -15,7 +15,7 @@ static const char *ALGO_NAMES[] = {"RR", "FCFS", "PRIORITY", "MLFQ", "SJF", "SRT
 
 // One planned process in a curated workload.
 struct procdef {
-  int arrival;        // intended arrival tick (metadata; this phase forks immediately)
+  int arrival;        // tick (relative to RUN_BEGIN) at which the parent forks this process
   int cpu_burst;      // CPU time to consume, in ticks
   int priority;       // scheduling priority (lower number = higher priority)
   const char *label;  // workload label
@@ -112,14 +112,26 @@ run_one(const char *algo, int mode, int seed, struct workload *wl)
     exit(1);
   }
 
+  // Reference tick captured before any fork. The parent gates fork() itself
+  // on planned arrival so each child is *first made RUNNABLE* exactly at its
+  // declared arrival. (A previous attempt slept in the child after fork, but
+  // the child still got DISPATCHED briefly before calling pause, which marked
+  // first_run earlier than arrival and produced negative response_time.)
+  int t0 = uptime();
+
   for(int i = 0; i < wl->n; i++){
+    struct procdef *d = &wl->procs[i];
+
+    int need = d->arrival - (uptime() - t0);
+    if(need > 0)
+      pause(need);
+
     int pid = fork();
     if(pid < 0){
       printf("schedtest: fork failed\n");
       break;
     }
     if(pid == 0){
-      struct procdef *d = &wl->procs[i];
       int mypid = getpid();
       if(mode == SCHED_PRIORITY)
         setpriority(mypid, d->priority);
