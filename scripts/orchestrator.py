@@ -422,24 +422,41 @@ def qemu_run_schedtest(algo_lower: str, seed: int, profile: str, raw_path: Path,
     return ok
 
 
-def _extract_run_window(raw_path: Path) -> str:
+def _extract_run_window(raw_path: Path, algo: str | None = None) -> str:
     """Return only the lines between RUN_BEGIN and RUN_END (inclusive).
 
     Be lenient: kernel printf occasionally interleaves with the user-space
-    `[SCHEDTEST] event=RUN_BEGIN ...` line and splits the prefix off, leaving a
-    fragment like `=RUN_BEGIN algo=MLFQ ...`. Match on the bare `RUN_BEGIN` /
-    `RUN_END` substring so the window still anchors when that happens.
+    `[SCHEDTEST] event=RUN_BEGIN ...` line and splits it mid-print. We have
+    observed two failure modes:
+      1. The `[SCHEDTEST] event` prefix is shorn off, leaving `=RUN_BEGIN ...`.
+         Matching the bare `RUN_BEGIN` substring recovers this case.
+      2. The `RUN_BEGIN` word itself is truncated (e.g. `event=RUN_BEGI[SCHED]
+         tick=... algo=RR event=PREEMPT ...`). The first attempt above misses
+         this; we fall back to anchoring on the first line that names the
+         target algorithm — `algo=<target>` — which is always emitted by the
+         kernel once the run has switched.
+    RUN_END is robust enough by itself (we have not seen it mid-print).
     """
-    out: list[str] = []
-    in_win = False
-    for ln in raw_path.read_text().splitlines():
-        if "RUN_BEGIN" in ln:
-            in_win = True
-        if in_win:
-            out.append(ln)
-        if "RUN_END" in ln:
-            break
-    return "\n".join(out) + "\n"
+    raw_text = raw_path.read_text()
+    lines = raw_text.splitlines()
+
+    def _window(predicate) -> list[str]:
+        out: list[str] = []
+        in_win = False
+        for ln in lines:
+            if not in_win and predicate(ln):
+                in_win = True
+            if in_win:
+                out.append(ln)
+            if "RUN_END" in ln:
+                break
+        return out
+
+    result = _window(lambda ln: "RUN_BEGIN" in ln)
+    if not result and algo:
+        target = f"algo={algo.upper()}"
+        result = _window(lambda ln: target in ln)
+    return "\n".join(result) + "\n"
 
 
 def parse_xv6_log(raw_path: Path, algo: str, seed: int, profile: str,
@@ -452,7 +469,7 @@ def parse_xv6_log(raw_path: Path, algo: str, seed: int, profile: str,
         print(f"  [DRY-RUN] parse {_rel(raw_path)} -> {_rel(trace_out)}")
         return True
 
-    window = _extract_run_window(raw_path)
+    window = _extract_run_window(raw_path, algo=algo)
     with tempfile.NamedTemporaryFile("w", suffix=".log", delete=False) as tf:
         tf.write(window)
         win_path = Path(tf.name)

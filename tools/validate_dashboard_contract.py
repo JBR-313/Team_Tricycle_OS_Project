@@ -206,6 +206,10 @@ def check_traces(d: Path, r: Report) -> None:
                 exits += 1
         if bad:
             r.warn_(f"{fname}: {n} events, {bad} malformed/missing fields")
+        elif n == 0:
+            # Empty trace would silently render an empty Gantt at the demo.
+            # Treat as a contract violation, not just an empty file.
+            r.warn_(f"{fname}: empty — backend produced no parsable events")
         else:
             r.good(f"{fname}: {n} events ({sched_seen} sched, {exits} EXIT)")
         if exits == 0 and n > 0:
