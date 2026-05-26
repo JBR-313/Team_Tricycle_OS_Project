@@ -1,7 +1,7 @@
 {
   "backend": "xv6",
   "seed": 42,
-  "workload_type": "interactive",
+  "workload_type": "priority_sensitive",
   "llm_selected_algorithm": "MLFQ",
   "algorithms_executed": [
     "MLFQ",
@@ -11,12 +11,12 @@
     "SJF",
     "SRTF"
   ],
-  "generated_at": "2026-05-26T08:09:23Z",
+  "generated_at": "2026-05-26T08:12:30Z",
   "orchestrator_version": "1.0.0",
   "mode": "xv6-log",
-  "updated_at": "2026-05-26T08:09:23Z",
-  "version": 16,
-  "workload": "interactive_heavy",
+  "updated_at": "2026-05-26T08:12:30Z",
+  "version": 19,
+  "workload": "priority_sensitive",
   "algorithms": [
     "MLFQ",
     "RR",

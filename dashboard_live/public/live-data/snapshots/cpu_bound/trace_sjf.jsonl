@@ -1,0 +1,27 @@
+{"tick": null, "algo": "SJF", "event": "PROC_DEF", "source": "xv6", "kind": "schedtest", "pid": 4, "arrival": 0, "cpu_burst": 8, "priority": 10, "label": "cpu", "seed": 42, "profile": "cpu_bound"}
+{"tick": null, "algo": "SJF", "event": "CHILD_START", "source": "xv6", "kind": "schedtest", "pid": 4, "priority": 10, "seed": 42, "profile": "cpu_bound"}
+{"tick": null, "algo": "SJF", "event": "CHILD_EXIT", "source": "xv6", "kind": "schedtest", "pid": 4, "seed": 42, "profile": "cpu_bound"}
+{"tick": null, "algo": "SJF", "event": "PROC_DEF", "source": "xv6", "kind": "schedtest", "pid": 5, "arrival": 1, "cpu_burst": 6, "priority": 10, "label": "cpu", "seed": 42, "profile": "cpu_bound"}
+{"tick": null, "algo": "SJF", "event": "CHILD_START", "source": "xv6", "kind": "schedtest", "pid": 5, "priority": 10, "seed": 42, "profile": "cpu_bound"}
+{"tick": null, "algo": "SJF", "event": "CHILD_EXIT", "source": "xv6", "kind": "schedtest", "pid": 5, "seed": 42, "profile": "cpu_bound"}
+{"tick": null, "algo": "SJF", "event": "PROC_DEF", "source": "xv6", "kind": "schedtest", "pid": 6, "arrival": 2, "cpu_burst": 7, "priority": 10, "label": "cpu", "seed": 42, "profile": "cpu_bound"}
+{"tick": null, "algo": "SJF", "event": "CHILD_START", "source": "xv6", "kind": "schedtest", "pid": 6, "priority": 10, "seed": 42, "profile": "cpu_bound"}
+{"tick": null, "algo": "SJF", "event": "CHILD_EXIT", "source": "xv6", "kind": "schedtest", "pid": 6, "seed": 42, "profile": "cpu_bound"}
+{"tick": null, "algo": "SJF", "event": "PROC_DEF", "source": "xv6", "kind": "schedtest", "pid": 7, "arrival": 3, "cpu_burst": 5, "priority": 10, "label": "cpu", "seed": 42, "profile": "cpu_bound"}
+{"tick": null, "algo": "SJF", "event": "CHILD_START", "source": "xv6", "kind": "schedtest", "pid": 7, "priority": 10, "seed": 42, "profile": "cpu_bound"}
+{"tick": null, "algo": "SJF", "event": "CHILD_EXIT", "source": "xv6", "kind": "schedtest", "pid": 7, "seed": 42, "profile": "cpu_bound"}
+{"tick": null, "algo": "SJF", "event": "RUN_END", "source": "xv6", "kind": "schedtest", "seed": 42, "profile": "cpu_bound"}
+{"tick": 0, "algo": "SJF", "event": "PREEMPT", "source": "xv6", "kind": "sched", "pid": 3, "state": "RUNNABLE", "queue": 0, "priority": 10, "reason": "quantum_expired", "seed": 42, "profile": "cpu_bound"}
+{"tick": 0, "algo": "SJF", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 3, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "cpu_bound"}
+{"tick": 0, "algo": "SJF", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 4, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "cpu_bound"}
+{"tick": 9, "algo": "SJF", "event": "EXIT", "source": "xv6", "kind": "sched", "pid": 4, "state": "ZOMBIE", "queue": 0, "priority": 10, "seed": 42, "profile": "cpu_bound"}
+{"tick": 9, "algo": "SJF", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 3, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "cpu_bound"}
+{"tick": 9, "algo": "SJF", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 5, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "cpu_bound"}
+{"tick": 15, "algo": "SJF", "event": "EXIT", "source": "xv6", "kind": "sched", "pid": 5, "state": "ZOMBIE", "queue": 0, "priority": 10, "seed": 42, "profile": "cpu_bound"}
+{"tick": 15, "algo": "SJF", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 3, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "cpu_bound"}
+{"tick": 15, "algo": "SJF", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 6, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "cpu_bound"}
+{"tick": 22, "algo": "SJF", "event": "EXIT", "source": "xv6", "kind": "sched", "pid": 6, "state": "ZOMBIE", "queue": 0, "priority": 10, "seed": 42, "profile": "cpu_bound"}
+{"tick": 22, "algo": "SJF", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 3, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "cpu_bound"}
+{"tick": 22, "algo": "SJF", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 7, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "cpu_bound"}
+{"tick": 27, "algo": "SJF", "event": "EXIT", "source": "xv6", "kind": "sched", "pid": 7, "state": "ZOMBIE", "queue": 0, "priority": 10, "seed": 42, "profile": "cpu_bound"}
+{"tick": 27, "algo": "SJF", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 3, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "cpu_bound"}
