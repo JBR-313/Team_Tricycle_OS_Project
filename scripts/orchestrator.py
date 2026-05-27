@@ -6,7 +6,9 @@ Runs the full host-side pipeline end-to-end:
 
     workload selection
         -> workload_analyzer   (workload_summary.json)
-        -> llm_advisor         (recommendation.json; demo fallback if no API key)
+        -> llm_advisor         (recommendation.json; STRICT by default. Opt-in to
+                                 committed demo fixtures with --offline-fixture
+                                 when running without UPSTAGE_API_KEY.)
         -> algorithm_guard     (guard_decision.json)
         -> execution backend   (simulator OR real xv6 under QEMU)
         -> export to dashboard_live live-data + rich manifest.json
@@ -209,8 +211,13 @@ def run_workload_analyzer(workload: Path, out_dir: Path, dry_run: bool):
             print("  [WARN] workload_summary.json not produced; demo fallback used later")
 
 
-def run_advisor(out_dir: Path, dry_run: bool) -> bool:
-    """Run llm_advisor (advise). On ANY failure, fall back to demo recommendation.
+def run_advisor(out_dir: Path, dry_run: bool, *, offline_fixture: bool = False) -> bool:
+    """Run llm_advisor (advise).
+
+    Default behavior is STRICT: if the advisor fails (missing UPSTAGE_API_KEY,
+    network error, schema error, etc.) the orchestrator exits with a clear
+    error so we never silently fake a real Solar Pro 3 call. To use the
+    committed demo recommendation as a fixture, pass --offline-fixture.
 
     Returns True if the demo fallback was used (caller flags metadata_source).
     """
@@ -238,18 +245,34 @@ def run_advisor(out_dir: Path, dry_run: bool) -> bool:
         print(f"  [advisor] exception: {exc}")
         ok = False
 
-    if not ok:
-        print("[advisor] no API key / failed -> using demo recommendation fallback")
-        demo_rec = DEMO_DIR / "recommendation.json"
-        if not demo_rec.exists():
-            sys.exit(f"[orchestrator] demo recommendation fallback missing: {demo_rec}")
-        copy_file(demo_rec, rec_out, dry_run)
-        return True
-    return False
+    if ok:
+        return False
+
+    if not offline_fixture:
+        sys.exit(
+            "[orchestrator] LLM advisor failed (most often: UPSTAGE_API_KEY "
+            "missing or network error). The orchestrator will not silently "
+            "substitute a fake Solar Pro 3 response.\n"
+            "  Fix options:\n"
+            "    1) Put a real key in .env  (cp .env.example .env, then edit)\n"
+            "    2) Re-run with --offline-fixture to explicitly use the committed\n"
+            "       outputs/_demo_fixtures/ fixtures and stamp metadata_source=demo_fallback."
+        )
+
+    print("[advisor] --offline-fixture set -> using committed demo recommendation")
+    demo_rec = DEMO_DIR / "recommendation.json"
+    if not demo_rec.exists():
+        sys.exit(f"[orchestrator] demo recommendation fallback missing: {demo_rec}")
+    copy_file(demo_rec, rec_out, dry_run)
+    return True
 
 
-def run_guard(out_dir: Path, dry_run: bool) -> bool:
-    """Run algorithm_guard. On failure, fall back to demo guard_decision.
+def run_guard(out_dir: Path, dry_run: bool, *, offline_fixture: bool = False) -> bool:
+    """Run algorithm_guard.
+
+    Default behavior is STRICT: if the guard process fails the orchestrator
+    exits with a clear error. To use the committed demo guard_decision as a
+    fixture, pass --offline-fixture.
 
     Returns True if the demo fallback was used (caller flags metadata_source).
     """
@@ -278,7 +301,14 @@ def run_guard(out_dir: Path, dry_run: bool) -> bool:
         ok = False
 
     if not ok:
-        print("[guard] failed -> using demo guard_decision fallback")
+        if not offline_fixture:
+            sys.exit(
+                "[orchestrator] algorithm_guard failed and --offline-fixture "
+                "was not set. Re-run with --offline-fixture to use the committed "
+                "outputs/_demo_fixtures/guard_decision.json fixture, or fix the underlying "
+                "guard error."
+            )
+        print("[guard] --offline-fixture set -> using committed demo guard_decision")
         demo_guard = DEMO_DIR / "guard_decision.json"
         if not demo_guard.exists():
             sys.exit(f"[orchestrator] demo guard fallback missing: {demo_guard}")
@@ -917,6 +947,25 @@ def main() -> int:
     p.add_argument("--out-dir", default=str(OUTPUTS))
     p.add_argument("--live-data-dir", default=str(LIVE_DATA))
     p.add_argument("--dry-run", action="store_true")
+    p.add_argument(
+        "--offline-fixture",
+        dest="offline_fixture",
+        action="store_true",
+        help=(
+            "Opt in to using committed outputs/_demo_fixtures/ fixtures when the LLM "
+            "advisor or algorithm guard fails (e.g. no UPSTAGE_API_KEY, "
+            "network down). Default is STRICT: failures exit with a clear "
+            "error so we never silently fake a Solar Pro 3 call. When set, "
+            "manifest.metadata_source is stamped 'demo_fallback'."
+        ),
+    )
+    # Back-compat synonym for callers that already use --allow-fallback.
+    p.add_argument(
+        "--allow-fallback",
+        dest="offline_fixture",
+        action="store_true",
+        help="Alias for --offline-fixture.",
+    )
     args = p.parse_args()
 
     # Legacy --mode alias maps onto --backend (xv6-log/xv6 -> xv6, else simulator).
@@ -948,8 +997,12 @@ def main() -> int:
 
     # Before-running phase: analyze -> advise -> guard
     run_workload_analyzer(workload_path, out_dir, dry_run)
-    advisor_fellback = run_advisor(out_dir, dry_run)
-    guard_fellback = run_guard(out_dir, dry_run)
+    advisor_fellback = run_advisor(
+        out_dir, dry_run, offline_fixture=args.offline_fixture
+    )
+    guard_fellback = run_guard(
+        out_dir, dry_run, offline_fixture=args.offline_fixture
+    )
     metadata_source = "demo_fallback" if (advisor_fellback or guard_fellback) else None
 
     # Resolve LLM-selected algorithm + run order (selected first).

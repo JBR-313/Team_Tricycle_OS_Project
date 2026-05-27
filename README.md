@@ -858,7 +858,7 @@ Concise current status (full evidence in `docs/implementation_status.md`):
 | `dashboard_test` (React + static fixtures) | **Implemented** | UI lab only |
 | `dashboard/` (Streamlit) | Legacy | fallback only, not the demo path |
 | `trace_parser.py` real-log support + lenient `RUN_BEGIN` recovery | **Implemented** | survives kernel/user printf interleave |
-| LLM Advisor (Solar Pro 3) + Algorithm Guard | **Implemented** | LLM may fall back to demo recommendation if no API key |
+| LLM Advisor (Solar Pro 3) + Algorithm Guard | **Implemented** | Runtime backend is Upstage Solar Pro 3. The orchestrator is **strict by default**: missing/invalid `UPSTAGE_API_KEY` or any advisor failure exits with a clear error. Pass `--offline-fixture` (or `--allow-fallback`) to opt in to the committed `outputs/_demo_fixtures/` fixtures; that path stamps `manifest.metadata_source = "demo_fallback"`. |
 | Runtime correction loop (detect → propose → LLM → guard → apply → `CORRECTION_APPLIED`) | **Partial / Future Work** | only event detection exists today |
 | Live streaming | **Polling only** | no websocket; `manifest.json` poll |
 
@@ -927,9 +927,22 @@ This project directly uses the following OS concepts:
 
 ### LLM Backend
 
-- Upstage Solar Pro 3 API
+- **Runtime LLM backend** — Upstage Solar Pro 3 API, accessed via
+  `tools/solar_client.py` (stdlib `urllib` only, no vendor SDK at
+  runtime).
+- **Development tool** — Claude Code is used only as the coding agent
+  in the editor. It is *not* a runtime project dependency.
 
-API keys must not be committed to GitHub.
+API keys must not be committed to GitHub. The repo only ships
+`.env.example` with placeholders; the real key lives in a local `.env`
+that is git-ignored.
+
+```bash
+cp .env.example .env          # then edit .env to add UPSTAGE_API_KEY
+```
+
+If `UPSTAGE_API_KEY` is missing at call time, `tools/solar_client.py`
+fails fast with a clear error rather than silently faking a response.
 
 ---
 

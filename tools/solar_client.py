@@ -81,8 +81,11 @@ class SolarClient:
         self.api_key = api_key or os.environ.get("UPSTAGE_API_KEY")
         if not self.api_key:
             raise SolarError(
-                "UPSTAGE_API_KEY is not set. Copy tools/.env.example to "
-                "tools/.env and put your Upstage API key there."
+                "UPSTAGE_API_KEY is not set. Copy .env.example to .env at the "
+                "project root and put your Upstage Solar Pro 3 API key there. "
+                "If you intend to run without a real key, pass an explicit "
+                "offline-fixture flag at the call site instead of leaving the "
+                "key blank."
             )
         self.model = model or os.environ.get("SOLAR_MODEL", DEFAULT_MODEL)
         self.base_url = (

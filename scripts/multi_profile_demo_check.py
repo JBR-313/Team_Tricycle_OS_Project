@@ -69,7 +69,8 @@ def _supported_profiles_from_orchestrator() -> set[str]:
     return set(items) if items else set(DEFAULT_PROFILES)
 
 
-def run_one(profile: str, backend: str, seed: int) -> dict:
+def run_one(profile: str, backend: str, seed: int,
+            offline_fixture: bool = False) -> dict:
     """Run orchestrator + strict validator for one profile. Capture summary."""
     t0 = time.time()
     rec: dict = {
@@ -82,13 +83,16 @@ def run_one(profile: str, backend: str, seed: int) -> dict:
     }
 
     print(f"\n--- profile: {profile} ---")
-    rc = _run([
+    cmd = [
         sys.executable, str(SCRIPTS_DIR / "orchestrator.py"),
         "--backend", backend,
         "--seed", str(seed),
         "--workload", profile,
         "--run-all",
-    ])
+    ]
+    if offline_fixture:
+        cmd.append("--offline-fixture")
+    rc = _run(cmd)
     rec["orchestrator_rc"] = rc
     if rc != 0:
         rec["elapsed_s"] = round(time.time() - t0, 1)
@@ -133,6 +137,10 @@ def main() -> int:
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--profiles", default=",".join(DEFAULT_PROFILES),
                     help="comma-separated profile names")
+    ap.add_argument("--offline-fixture", action="store_true",
+                    help=("forward --offline-fixture to the orchestrator so the "
+                          "committed outputs/_demo_fixtures/ fixtures are used when "
+                          "UPSTAGE_API_KEY is missing."))
     args = ap.parse_args()
 
     requested = [p.strip() for p in args.profiles.split(",") if p.strip()]
@@ -156,7 +164,10 @@ def main() -> int:
         print("[FAIL] no runnable profiles")
         return 1
 
-    results = [run_one(p, args.backend, args.seed) for p in runnable]
+    results = [
+        run_one(p, args.backend, args.seed, offline_fixture=args.offline_fixture)
+        for p in runnable
+    ]
 
     # Summary
     print()

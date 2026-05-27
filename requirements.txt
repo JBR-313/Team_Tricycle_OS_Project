@@ -2,4 +2,11 @@ streamlit>=1.32.0
 pandas>=2.0.0
 plotly>=5.18.0
 python-dotenv>=1.0.0
-anthropic>=0.25.0
+
+# Runtime LLM backend: Upstage Solar Pro 3 — accessed via
+# tools/solar_client.py over the OpenAI-compatible HTTP API using stdlib
+# urllib only. No vendor SDK is required at runtime.
+#
+# Claude Code is used as the development tool only (coding agent in the
+# editor); it is NOT a runtime project dependency. Do not add anthropic
+# or openai SDKs here.
