@@ -1,19 +1,21 @@
 #!/usr/bin/env python3
-"""Host-side scheduler simulator (v1.5) for the Team Tricycle OS project.
+"""Host-side scheduler simulator (v1) for the Team Tricycle OS project.
 
-Role C: Scheduler Engine / Trace Collector.
+Role C: Scheduler Engine / Trace Collector (host-side fallback).
 
-This tool reads a workload JSON (the repo's array / ``cpu_burst`` schema),
-optionally reads a guard decision JSON, runs ONE scheduling algorithm, and
-writes a JSONL trace. It is purely host-side: it does not touch xv6 source,
-call any LLM, compute metrics, or render a dashboard.
+This tool reads a workload JSON (single-burst ``cpu_burst`` or repo-wide
+``cpu_bursts`` multi-burst schema), optionally reads a guard decision JSON,
+runs ONE scheduling algorithm, and writes a JSONL trace.
+
+It is purely host-side: it does not touch xv6 source, call any LLM, compute
+metrics, or render a dashboard.
 
 Supported algorithms: RR, FCFS, SJF, PRIORITY.
-MLFQ / SRTF are intentionally not implemented in v1.5; if a guard selects an
-unsupported algorithm the simulator falls back (warning printed to stderr).
+MLFQ / SRTF / I/O sleep+wakeup / xv6 hooks are intentionally NOT implemented
+in v1; an unsupported requested algorithm falls back (warning to stderr).
 
-The simulator is deterministic: given the same workload and arguments it always
-produces byte-identical traces. All tie-breaks are fully specified.
+The simulator is deterministic: given the same workload and arguments it
+always produces byte-identical traces. All tie-breaks are fully specified.
 """
 from __future__ import annotations
 
@@ -31,14 +33,13 @@ from typing import Callable, List, Optional
 
 SUPPORTED_ALGORITHMS = ("RR", "FCFS", "SJF", "PRIORITY")
 
-# Algorithms we recognise by name but deliberately do not implement in v1.5.
-# Listed only so we can emit a precise "not implemented yet" warning.
+# Algorithms we recognise by name but deliberately do not implement in v1.
 KNOWN_UNIMPLEMENTED = ("MLFQ", "SRTF")
 
 DEFAULT_ALGORITHM = "RR"
-DEFAULT_QUANTUM = 10            # tools/README.md: RR default quantum = 10
-DEFAULT_STARVATION_THRESHOLD = 20  # enabled by default; <= 0 disables it
-DEFAULT_PRIORITY = 10           # safe neutral value when priority is missing
+DEFAULT_QUANTUM = 10
+DEFAULT_STARVATION_THRESHOLD = 20
+DEFAULT_PRIORITY = 10
 
 # Trace event names.
 EV_ARRIVE = "ARRIVE"
@@ -51,7 +52,7 @@ EV_STARVATION = "STARVATION_WARNING"
 # Trace state names.
 ST_RUNNABLE = "RUNNABLE"
 ST_RUNNING = "RUNNING"
-ST_TERMINATED = "TERMINATED"
+ST_ZOMBIE = "ZOMBIE"
 ST_IDLE = "IDLE"
 
 
@@ -82,24 +83,25 @@ class Process:
 
     pid: object                       # int or str; preserved verbatim in trace
     arrival_time: int
-    cpu_burst: int
+    total_cpu_burst: int              # total CPU work for this process
     priority: int = DEFAULT_PRIORITY
-    ptype: Optional[str] = None       # original "type" field, preserved if set
+    ptype: Optional[str] = None       # original "type" or "label" value
 
-    remaining: int = field(init=False)   # ticks of CPU left
-    ready_since: int = field(default=-1, init=False)  # when it last became RUNNABLE
-    warned: bool = field(default=False, init=False)   # warned in current wait period
-    arrived: bool = field(default=False, init=False)  # admitted to ready queue yet
+    remaining: int = field(init=False)
+    ready_since: int = field(default=-1, init=False)
+    warned: bool = field(default=False, init=False)
+    arrived: bool = field(default=False, init=False)
+    first_run_time: Optional[int] = field(default=None, init=False)
 
     def __post_init__(self) -> None:
-        self.remaining = self.cpu_burst
+        self.remaining = self.total_cpu_burst
 
 
 def pid_sort_key(pid: object) -> tuple:
     """Deterministic ordering for pids that may be int or str.
 
     Integer pids sort numerically and ahead of string pids; string pids sort
-    lexicographically. This keeps tie-breaks stable regardless of pid type.
+    lexicographically.
     """
     if isinstance(pid, int) and not isinstance(pid, bool):
         return (0, pid, "")
@@ -109,6 +111,56 @@ def pid_sort_key(pid: object) -> tuple:
 # --------------------------------------------------------------------------- #
 # Workload loading + validation
 # --------------------------------------------------------------------------- #
+
+def _resolve_burst(item: dict, label: str, errors: List[str]) -> Optional[int]:
+    """Resolve the total CPU burst from either cpu_burst or cpu_bursts.
+
+    - If ``cpu_burst`` is present, use it directly.
+    - Otherwise, if ``cpu_bursts`` is a non-empty list of positive ints, use
+      sum(cpu_bursts) as the v1 total (multi-burst is flattened in v1).
+    - On any problem, append a message to ``errors`` and return None.
+    """
+    has_single = "cpu_burst" in item
+    has_multi = "cpu_bursts" in item
+
+    if has_single:
+        try:
+            burst = int(item["cpu_burst"])
+        except (TypeError, ValueError):
+            errors.append(f"{label}: cpu_burst must be an integer")
+            return None
+        if burst <= 0:
+            errors.append(f"{label}: cpu_burst must be > 0 (got {burst})")
+            return None
+        return burst
+
+    if has_multi:
+        bursts = item["cpu_bursts"]
+        if not isinstance(bursts, list) or not bursts:
+            errors.append(
+                f"{label}: cpu_bursts must be a non-empty list of positive integers"
+            )
+            return None
+        total = 0
+        for b in bursts:
+            try:
+                bi = int(b)
+            except (TypeError, ValueError):
+                errors.append(
+                    f"{label}: cpu_bursts entries must be integers (got {b!r})"
+                )
+                return None
+            if bi <= 0:
+                errors.append(
+                    f"{label}: cpu_bursts entries must be > 0 (got {bi})"
+                )
+                return None
+            total += bi
+        return total
+
+    errors.append(f"{label}: missing required field 'cpu_burst' or 'cpu_bursts'")
+    return None
+
 
 def load_workload(path: Path) -> List[Process]:
     """Load and validate a workload file. Raises WorkloadError on any problem.
@@ -138,7 +190,7 @@ def load_workload(path: Path) -> List[Process]:
             errors.append(f"{where}: must be a JSON object")
             continue
 
-        missing = [k for k in ("pid", "arrival_time", "cpu_burst") if k not in item]
+        missing = [k for k in ("pid", "arrival_time") if k not in item]
         if missing:
             errors.append(f"{where}: missing required field(s): {', '.join(missing)}")
             continue
@@ -151,16 +203,17 @@ def load_workload(path: Path) -> List[Process]:
         except (TypeError, ValueError):
             errors.append(f"{label}: arrival_time must be an integer")
             continue
-        try:
-            burst = int(item["cpu_burst"])
-        except (TypeError, ValueError):
-            errors.append(f"{label}: cpu_burst must be an integer")
-            continue
-
         if arrival < 0:
             errors.append(f"{label}: arrival_time must be >= 0 (got {arrival})")
-        if burst <= 0:
-            errors.append(f"{label}: cpu_burst must be > 0 (got {burst})")
+
+        burst = _resolve_burst(item, label, errors)
+        if burst is None:
+            continue
+
+        # io_bursts is accepted (and lightly validated) but not simulated in v1.
+        if "io_bursts" in item and not isinstance(item["io_bursts"], list):
+            errors.append(f"{label}: io_bursts must be a list if present")
+            continue
 
         priority = item.get("priority", DEFAULT_PRIORITY)
         try:
@@ -169,7 +222,8 @@ def load_workload(path: Path) -> List[Process]:
             errors.append(f"{label}: priority must be an integer if present")
             continue
 
-        ptype = item.get("type")
+        # "label" is the project-wide schema name; "type" is the v1.5 alias.
+        ptype = item.get("type", item.get("label"))
         processes.append(Process(pid, arrival, burst, priority, ptype))
 
     if errors:
@@ -199,50 +253,70 @@ def load_guard(path: Path) -> dict:
     return data
 
 
+# Algorithm-name keys the guard may use, in resolution priority order.
+_GUARD_ALGO_KEYS = (
+    "algorithm",
+    "scheduling_algorithm",
+    "recommended_scheduling_algorithm",
+    "selected_algorithm",
+    "fallback_algorithm",
+    "fallback_scheduling_algorithm",
+)
+
+_GUARD_FALLBACK_KEYS = ("fallback_algorithm", "fallback_scheduling_algorithm")
+
+
 def resolve_algorithm(cli_algorithm: Optional[str], guard: Optional[dict]) -> str:
     """Apply the algorithm selection precedence and return an UPPER-CASE name.
 
     Precedence:
         1. explicit --algorithm
-        2. guard.algorithm           (current repo schema)
-        3. guard.selected_algorithm  (older/simple schema)
-        4. guard.fallback_algorithm
-        5. RR
+        2. guard.algorithm
+        3. guard.scheduling_algorithm
+        4. guard.recommended_scheduling_algorithm
+        5. guard.selected_algorithm
+        6. guard.fallback_algorithm
+        7. guard.fallback_scheduling_algorithm
+        8. RR
     """
-    candidates = [cli_algorithm]
+    if cli_algorithm:
+        return str(cli_algorithm).strip().upper()
     if guard:
-        candidates += [
-            guard.get("algorithm"),
-            guard.get("selected_algorithm"),
-            guard.get("fallback_algorithm"),
-        ]
-    for cand in candidates:
-        if cand:
-            return str(cand).strip().upper()
+        for key in _GUARD_ALGO_KEYS:
+            cand = guard.get(key)
+            if cand:
+                return str(cand).strip().upper()
     return DEFAULT_ALGORITHM
 
 
+def _guard_fallback(guard: Optional[dict]) -> Optional[str]:
+    if not guard:
+        return None
+    for key in _GUARD_FALLBACK_KEYS:
+        cand = guard.get(key)
+        if cand:
+            return str(cand).strip().upper()
+    return None
+
+
 def coerce_supported(algorithm: str, guard: Optional[dict]) -> str:
-    """Map a requested algorithm onto something v1.5 can actually run.
+    """Map a requested algorithm onto something v1 can actually run.
 
     If the requested algorithm is unsupported (e.g. MLFQ/SRTF), prefer the
-    guard's fallback_algorithm when it is supported, otherwise fall back to RR.
+    guard's fallback algorithm when supported, otherwise fall back to RR.
     Every substitution is reported on stderr.
     """
     if algorithm in SUPPORTED_ALGORITHMS:
         return algorithm
 
     if algorithm in KNOWN_UNIMPLEMENTED:
-        warn(f"algorithm '{algorithm}' is not implemented in v1.5.")
+        warn(f"algorithm '{algorithm}' is not implemented in v1.")
     else:
         warn(f"algorithm '{algorithm}' is unknown.")
 
-    fallback = None
-    if guard and guard.get("fallback_algorithm"):
-        fallback = str(guard["fallback_algorithm"]).strip().upper()
-
+    fallback = _guard_fallback(guard)
     if fallback and fallback in SUPPORTED_ALGORITHMS and fallback != algorithm:
-        warn(f"using guard fallback_algorithm '{fallback}'.")
+        warn(f"using guard fallback '{fallback}'.")
         return fallback
 
     warn(f"falling back to {DEFAULT_ALGORITHM}.")
@@ -254,8 +328,8 @@ def resolve_quantum(cli_quantum: Optional[int], guard: Optional[dict]) -> int:
 
     Precedence:
         1. --quantum
-        2. guard.params.quantum             (current repo schema)
-        3. guard.parameters.time_quantum    (older/simple schema)
+        2. guard.params.quantum
+        3. guard.parameters.time_quantum
         4. DEFAULT_QUANTUM (10)
     """
     if cli_quantum is not None:
@@ -263,7 +337,11 @@ def resolve_quantum(cli_quantum: Optional[int], guard: Optional[dict]) -> int:
     if guard:
         params = guard.get("params")
         if isinstance(params, dict) and params.get("quantum") is not None:
-            return int(params["quantum"])
+            q = params["quantum"]
+            # Some guard schemas pass a list (MLFQ); take the first entry.
+            if isinstance(q, list) and q:
+                q = q[0]
+            return int(q)
         parameters = guard.get("parameters")
         if isinstance(parameters, dict) and parameters.get("time_quantum") is not None:
             return int(parameters["time_quantum"])
@@ -294,67 +372,74 @@ def simulate(
     """Run one algorithm and return the trace as a list of JSON-ready dicts.
 
     RR is preemptive (time-sliced by ``quantum``); FCFS/SJF/PRIORITY are
-    non-preemptive in v1.5. The whole trace is buffered and returned so the
+    non-preemptive in v1. The whole trace is buffered and returned so the
     caller can write it in one shot (no partial files on error).
+
+    Every record carries primary keys ``tick``/``algo`` plus legacy aliases
+    ``time``/``algorithm`` for backward compatibility with v1.5 consumers.
     """
     trace: List[dict] = []
 
-    def emit(time: int, event: str, pid: object, state: str, **extra) -> None:
+    def emit(tick: int, event: str, pid: object, state: Optional[str], **extra) -> None:
         record = {
-            "time": time,
+            "tick": tick,
+            "algo": algorithm,
             "event": event,
             "pid": pid,
-            "algorithm": algorithm,
             "state": state,
+            # Backward-compat aliases (v1.5 schema).
+            "time": tick,
+            "algorithm": algorithm,
         }
         record.update(extra)
         trace.append(record)
 
-    # Processes waiting to arrive, in (arrival_time, pid) order so simultaneous
-    # arrivals enter the ready queue deterministically.
     pending = sorted(processes, key=lambda p: (p.arrival_time, pid_sort_key(p.pid)))
     ready: List[Process] = []
 
-    def admit(time: int) -> None:
+    def admit(tick: int) -> None:
         # Idempotent: admits every not-yet-arrived process whose arrival time
         # has been reached. Safe to call repeatedly at the same tick.
         for proc in pending:
-            if not proc.arrived and proc.arrival_time <= time:
+            if not proc.arrived and proc.arrival_time <= tick:
                 proc.arrived = True
-                proc.ready_since = time
+                proc.ready_since = tick
                 proc.warned = False
                 ready.append(proc)
-                emit(time, EV_ARRIVE, proc.pid, ST_RUNNABLE)
+                emit(
+                    tick, EV_ARRIVE, proc.pid, ST_RUNNABLE,
+                    queue=0,
+                    priority=proc.priority,
+                    burst_hint=None,
+                )
 
-    def check_starvation(time: int, dispatched: Process) -> None:
-        # Called at each dispatch decision, over every RUNNABLE process being
-        # passed over (i.e. not the one about to run). One warning per waiting
-        # period: ready_since resets on ARRIVE / PREEMPT, warned resets too.
+    def check_starvation(tick: int, dispatched: Process) -> None:
         if starvation_threshold <= 0:
             return
         for proc in ready:
             if proc is dispatched:
                 continue
-            wait = time - proc.ready_since
+            wait = tick - proc.ready_since
             if wait >= starvation_threshold and not proc.warned:
+                severity = "high" if wait >= starvation_threshold * 2 else "medium"
                 emit(
-                    time,
-                    EV_STARVATION,
-                    proc.pid,
-                    ST_RUNNABLE,
-                    wait_time=wait,
+                    tick, EV_STARVATION, proc.pid, ST_RUNNABLE,
+                    waiting_since_tick=proc.ready_since,
+                    current_waiting_time=wait,
+                    wait_time=wait,            # backward-compat alias
                     threshold=starvation_threshold,
+                    severity=severity,
                 )
                 proc.warned = True
 
     select_key = _selection_key(algorithm)
     total = len(processes)
     finished = 0
-    time = 0
+    tick = 0
     running: Optional[Process] = None
     quantum_left = 0
 
-    admit(time)
+    admit(tick)
 
     while finished < total:
         if running is None:
@@ -363,9 +448,9 @@ def simulate(
                 upcoming = [p.arrival_time for p in pending if not p.arrived]
                 if not upcoming:
                     break  # safety; should not happen while finished < total
-                emit(time, EV_IDLE, None, ST_IDLE)
-                time = min(upcoming)
-                admit(time)
+                emit(tick, EV_IDLE, None, ST_IDLE)
+                tick = min(upcoming)
+                admit(tick)
                 continue
 
             # Pick the next process (without removing it yet) so the starvation
@@ -375,31 +460,48 @@ def simulate(
             else:
                 index = min(range(len(ready)), key=lambda i: select_key(ready[i]))
             candidate = ready[index]
-            check_starvation(time, dispatched=candidate)
+            check_starvation(tick, dispatched=candidate)
 
             ready.pop(index)
             running = candidate
-            running.warned = False          # reset: it is leaving the queue
+            running.warned = False
+            if running.first_run_time is None:
+                running.first_run_time = tick
             quantum_left = quantum          # only consulted for RR
-            emit(time, EV_DISPATCH, running.pid, ST_RUNNING)
+            emit(tick, EV_DISPATCH, running.pid, ST_RUNNING, queue=0)
 
         # Execute exactly one tick.
         running.remaining -= 1
-        time += 1
+        tick += 1
         quantum_left -= 1
 
         # Admit arrivals at the new tick before re-queuing any preempted
         # process, so freshly-arrived processes sit ahead of it (standard RR).
-        admit(time)
+        admit(tick)
 
         if running.remaining == 0:
-            emit(time, EV_EXIT, running.pid, ST_TERMINATED)
+            arrival = running.arrival_time
+            first_run = running.first_run_time if running.first_run_time is not None else tick
+            turnaround = tick - arrival
+            response = first_run - arrival
+            waiting = turnaround - running.total_cpu_burst
+            emit(
+                tick, EV_EXIT, running.pid, ST_ZOMBIE,
+                queue=0,
+                turnaround=turnaround,
+                waiting=waiting,
+                response=response,
+            )
             running = None
             finished += 1
         elif algorithm == "RR" and quantum_left == 0:
-            emit(time, EV_PREEMPT, running.pid, ST_RUNNABLE)
-            running.ready_since = time
-            running.warned = False          # new waiting period begins
+            emit(
+                tick, EV_PREEMPT, running.pid, ST_RUNNABLE,
+                queue=0,
+                reason="quantum_expired",
+            )
+            running.ready_since = tick
+            running.warned = False
             ready.append(running)           # preempted -> back of the queue
             running = None
         # otherwise the same process keeps running next tick
@@ -431,11 +533,11 @@ def default_output_path(workload_path: Path, algorithm: str) -> Path:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="simulator.py",
-        description="Host-side scheduler simulator v1.5 (RR/FCFS/SJF/PRIORITY).",
+        description="Host-side scheduler simulator v1 (RR/FCFS/SJF/PRIORITY).",
     )
     parser.add_argument(
         "--workload", required=True,
-        help="path to a workload JSON array (repo workloads/ schema)",
+        help="path to a workload JSON array (cpu_burst or cpu_bursts schema)",
     )
     parser.add_argument(
         "--algorithm",
@@ -444,7 +546,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--guard",
-        help="path to a guard_decision.json (supports both repo and legacy schemas)",
+        help="path to a guard_decision.json (supports current and legacy schemas)",
     )
     parser.add_argument(
         "--output",
@@ -468,7 +570,6 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     workload_path = Path(args.workload)
 
-    # --- Load + validate everything BEFORE writing any output ---------------
     try:
         processes = load_workload(workload_path)
     except WorkloadError as exc:
@@ -499,11 +600,9 @@ def main(argv: Optional[List[str]] = None) -> int:
         else default_output_path(workload_path, algorithm)
     )
 
-    # --- Run + write --------------------------------------------------------
     trace = simulate(processes, algorithm, quantum, threshold)
     write_trace(trace, output_path)
 
-    # --- Human-readable summary on stdout -----------------------------------
     warnings = sum(1 for r in trace if r["event"] == EV_STARVATION)
     print(f"workload   : {workload_path}  ({len(processes)} processes)")
     print(f"algorithm  : {algorithm}" + (f"  (quantum={quantum})" if algorithm == "RR" else ""))
