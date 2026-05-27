@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Host-side scheduler simulator (v1) for the Team Tricycle OS project.
 
-Role C: Scheduler Engine / Trace Collector (host-side fallback).
+Scheduler Engine / Trace Collector (host-side fallback).
 
 This tool reads a workload JSON (single-burst ``cpu_burst`` or repo-wide
 ``cpu_bursts`` multi-burst schema), optionally reads a guard decision JSON,
