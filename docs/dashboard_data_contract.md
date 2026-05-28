@@ -232,7 +232,7 @@ For a metric, `regret` is computed against the best algorithm in the comparison:
   `max_waiting_time`, `preemption_count`): `regret = (value - best) / |best|`
 - higher-is-better (`throughput`): `regret = (best - value) / |best|`
 
-Thresholds: `SUCCESS` if `regret <= 0.10`, `NEAR-SUCCESS` if `regret <= 0.30`,
+Thresholds: `SUCCESS` if `regret <= 0.10`, `NEAR-SUCCESS` if `regret <= 0.25`,
 else `FAIL`. **Starvation always forces `FAIL`.** `UNKNOWN` when the value is
 missing.
 

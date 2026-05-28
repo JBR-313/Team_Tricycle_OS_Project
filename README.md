@@ -2,6 +2,26 @@
 
 **The LLM-Assisted Scheduler for xv6**
 
+> ## Final Demo Path *(read this first — 30 s)*
+>
+> ```
+> Workload  →  Workload Analyzer  →  LLM Advisor  →  Algorithm Guard
+>           →  xv6 + QEMU  →  Trace Parser  →  Metrics Evaluator
+>           →  dashboard_live
+> ```
+>
+> | Question | Answer |
+> |---|---|
+> | What is the **main demo path**? | The arrow above. xv6 + QEMU runs `schedtest`; the LLM only advises. |
+> | Which **dashboard** should I open? | **`dashboard_live/`** (`http://localhost:5174`). Anything else is a sandbox or legacy. The dashboard has three tabs: **LLM / Visualization / Evaluation**. The **RUN** button on the LLM tab triggers a fresh experiment when `scripts/run_server.py` is up. |
+> | Is **xv6** the primary backend? | Yes. `scripts/orchestrator.py --backend xv6` is the demo path. |
+> | Is the **simulator** only a fallback? | Yes. `tools/scheduler_simulator.py` + `--backend simulator` is **dev/test only**. The dashboard shows a `SIMULATOR` badge when it is in use. |
+> | Does **SJF/SRTF** see future bursts? | **No**. The xv6 kernel uses an exponential-averaging (EMA) burst predictor; the simulator was refactored on 2026-05-28 to do the same (`predicted_burst` only — `actual_bursts` never leaks into the picker). LLM may **predict** bursts as hints via `recommendation.predicted_bursts[]`. See [`docs/sjf_srtf_prediction_audit.md`](docs/sjf_srtf_prediction_audit.md). |
+> | What's the **judgment rule**? | Normalized regret on the workload's `target_metric`. SUCCESS ≤ 10%, NEAR-SUCCESS ≤ 25%, else FAIL; starvation forces FAIL. Output includes `selected_metric_value`, `best_metric_value`, `explanation`. See [`docs/evaluation_criteria_audit.md`](docs/evaluation_criteria_audit.md). |
+> | What if I have **no API key**? | Run with `--offline-fixture` — orchestrator uses the committed `outputs/demo/` fixtures and the dashboard shows a `FALLBACK` badge. No silent guessing. |
+> | Which modules are **preview-only**? | The runtime-correction loop: `tools/event_detector.py`, `tools/correction_proposer.py`, `tools/correction_guard.py`, dashboard card `RuntimeCorrectionPreview`. Closed-loop xv6 apply is **Future Work**. |
+> | Where is the **slimming/hardening plan**? | [`docs/codebase_slimming_plan.md`](docs/codebase_slimming_plan.md) (labels & post-demo move queue) and [`docs/final_slimming_smoke_check.md`](docs/final_slimming_smoke_check.md) (verification commands). |
+
 LLM Sched Copilot is an **LLM-for-OS** project that uses an LLM as a high-level decision support layer for xv6 CPU scheduling.
 
 The LLM analyzes workload summaries and Scheduling Trace Logs, recommends a suitable **Scheduling Algorithm**, suggests algorithm parameters, and explains the execution result in natural language. Closed-loop runtime correction (detect → propose → guard → apply) is **Partial / Future Work** — see §12.1.
@@ -93,6 +113,39 @@ The system separates responsibility clearly.
 | GUI | Visualizes recommendation, execution, correction, metrics, and explanation |
 
 The LLM is a **decision support layer**, not the kernel scheduler.
+
+### Final Demo Pipeline — PRIMARY / FALLBACK / LEGACY
+
+For the final demo, **xv6 + QEMU is the primary execution path**. Everything
+else is a dev/test fallback or kept for legacy safety.
+
+```
+Workload (workloads/*.json or schedtest profile)
+   → LLM Advisor (Upstage Solar Pro 3, tools/llm_advisor.py)
+       → Algorithm Guard (tools/algorithm_guard.py)
+           → xv6 + QEMU via scripts/orchestrator.py --backend xv6
+              (kernel/proc.c · user/schedtest.c · [SCHED]/[SCHEDTEST] logs)
+                  → tools/trace_parser.py → trace_<algo>.jsonl
+                      → tools/metrics.py → metrics.json (judgment, regret)
+                          → dashboard_live (React/Vite, port 5174)
+```
+
+| Path | Label | One-line | Audience-visible? |
+|---|---|---|---|
+| `xv6-riscv/` + `scripts/orchestrator.py --backend xv6` | **PRIMARY** | Real xv6 + QEMU execution via `schedtest`; the final demo path. | yes |
+| `dashboard_live/` | **PRIMARY** | Live React/Vite observability dashboard. | yes |
+| `tools/scheduler_simulator.py` + `--backend simulator` | **FALLBACK (dev/test)** | Host-side Python model. Not proof of real xv6 execution; used for UI iteration and when QEMU is unavailable. | yes, with badge `SIMULATOR FALLBACK` |
+| `outputs/demo/` + `--offline-fixture` | **FALLBACK (no API key / no QEMU)** | Committed fixture data so the dashboard still has something to show. Stamps `manifest.metadata_source = "demo_fallback"`. | yes, with badge `FALLBACK` |
+| `dashboard_test/` | **FALLBACK (UI prototype/sandbox)** | Static fixture data for component iteration. **Not real scheduling output by design.** | no (developer-only) |
+| `dashboard/` (Streamlit) | **LEGACY** | Superseded by `dashboard_live`. Kept for the host-only fallback case. Archive plan in [`docs/repo_cleanup_plan.md`](docs/repo_cleanup_plan.md). | no |
+| `xv6-style-scheduler/` | **DEV** | Standalone scheduler study sandbox; not on the demo path. | no |
+| `traces/` (root) | **LEGACY** | Pre-orchestrator trace samples. Canonical fixtures live in `outputs/demo/` and `dashboard_live/public/live-data/snapshots/`. | no |
+
+> The dashboard header shows a backend badge — **`XV6 TRACE`** on the
+> primary path, **`SIMULATOR FALLBACK`** on the dev path, **`FALLBACK`**
+> when only the committed fixtures are in use. If you see anything other
+> than `XV6 TRACE` during the demo, name it out loud — the badge is there
+> precisely so the audience is not misled.
 
 ### Component roles in the new flow
 
@@ -557,53 +610,164 @@ outputs/feedback_rules.md     # no production feedback-rule generator
 
 ---
 
+## 11.1 Workload Format (v2 + hidden burst rule)
+
+Each file in `workloads/` is a JSON object:
+
+```jsonc
+{
+  "id":                      "ambiguous_mixed",       // matches the spec ID
+  "description":             "...",                   // one-line for the dashboard
+  "target_metric":           "avg_waiting_time",      // what we evaluate against
+  "expected_best_algorithm": "SJF",                   // documented expectation
+  "expected_behavior":       "On avg_waiting_time...",// teaching note
+  "schema_version":          2,
+  "processes": [
+    {
+      "pid": 1, "arrival_time": 0, "priority": 5, "label": "cpu_bound",
+      "actual_bursts": [8],     // HIDDEN — execution + evaluation only
+      "cpu_bursts":    [8],     // kept for backward compat (mirror of actual)
+      "io_bursts":     []
+    }
+  ]
+}
+```
+
+**Hidden actual burst rule:** the LLM advisor and the SJF/SRTF picker MUST
+NOT read `actual_bursts`. They see `visible_processes` in
+`workload_summary.json` (pid, arrival_time, priority, label, burst_count,
+io_count) and — for SJF/SRTF — the EMA / LLM-predicted `predicted_burst`.
+
+See [`docs/workload_coverage_matrix.md`](docs/workload_coverage_matrix.md)
+for the 10 curated workloads and which algorithm each one favours.
+
+## 11.2 EMA and LLM Burst Prediction (SJF / SRTF)
+
+- **EMA baseline (default):** `tau_next = (alpha * observed + (100-alpha) * tau_prev) / 100`. Updated when a CPU burst ends (xv6: at `sleep()`; simulator: at end-of-burst). Defaults `alpha=50%, initial=10, [min=1, max=100]`. The simulator emits `[SCHED] event=PRED_UPDATE pid=… predicted_prev=… predicted_next=…` on every refresh.
+- **LLM hint (optional):** when the advisor picks SJF/SRTF it may also return `predicted_bursts: [{pid, predicted_burst|predicted_bursts, confidence, basis}]` based ONLY on visible features. The orchestrator forwards these to the simulator via `Simulator(prediction_source="llm")`. The xv6 backend currently uses EMA only; LLM hints are simulator-side until a future kernel patch.
+- **Trace evidence:** dashboard's Visualization tab + `[SCHED] event=PRED_UPDATE` shows EMA drift; LLM-hinted runs land closer to the oracle baseline on first dispatch.
+
+## 11.3 Running the End-to-End Demo (and without an API key)
+
+```bash
+# 1) Real LLM (Solar Pro 3) — set up once
+cp .env.example .env       # then edit: UPSTAGE_API_KEY=<your key>
+
+# 2a) Final demo path (xv6 + QEMU)
+python3 scripts/orchestrator.py --backend xv6       --seed 42 --workload interactive            --run-all
+
+# 2b) Dev/fallback path (no QEMU needed)
+python3 scripts/orchestrator.py --backend simulator --seed 42 --workload ambiguous_mixed        --run-all
+
+# 2c) No API key? Use the committed demo recommendation
+python3 scripts/orchestrator.py --backend simulator --seed 42 --workload bursty_long_tail        --run-all --offline-fixture
+
+# 3) Start the dashboard
+cd dashboard_live && npm install && npm run dev    # http://localhost:5174
+
+# 4) Optional — RUN button server (lets the dashboard trigger 2a/2b itself)
+python3 scripts/run_server.py                       # http://127.0.0.1:8765
+```
+
+When `scripts/run_server.py` is up, the dashboard's **LLM tab** shows a RUN
+control: pick backend + profile + seed, hit RUN, watch the badge flip
+RUNNING → PARSING → EVALUATING → DONE, and the views auto-reload. Without
+the server the RUN card hides and the dashboard is read-only over
+`live-data/`.
+
 ## 12. Repository Structure
+
+Actual top-level layout today (kept honest — paths that don't exist or are
+misnamed should be fixed in the README, not faked):
 
 ```text
 .
 ├── README.md
-├── docs/
+├── CLAUDE.md
+├── architecture_diagram.md
+├── requirements.txt
+├── .env.example
+├── .github/workflows/                  # lightweight CI (no QEMU)
+│
+├── docs/                               # PRIMARY — architecture + audits
 │   ├── architecture.md
 │   ├── trace_format.md
 │   ├── data_format.md
-│   └── evaluation_plan.md
-├── workloads/
-│   ├── convoy_effect.json
-│   ├── interactive_heavy.json
-│   ├── priority_starvation.json
-│   └── mixed_workload.json
-├── tools/
+│   ├── evaluation_plan.md
+│   ├── implementation_status.md
+│   ├── orchestrator_design.md
+│   ├── demo_runbook.md  · demo_checklist.md  · presenter_script.md
+│   ├── final_demo_acceptance.md  · final_release_candidate_report.md
+│   ├── repo_cleanup_plan.md            # NEW — labelling + post-demo queue
+│   ├── sjf_srtf_prediction_audit.md    # NEW — predictor verification
+│   ├── evaluation_criteria_audit.md    # NEW — judgment thresholds rationale
+│   ├── workload_coverage_matrix.md     # NEW — workload × algorithm matrix
+│   ├── dashboard_run_button_design.md  # NEW — Run-button API design (deferred)
+│   ├── mlfq_queue_visualization_review.md # NEW — MLFQ panel proposal
+│   └── …
+│
+├── workloads/                          # PRIMARY — curated workload JSONs
+│   ├── interactive_heavy.json  · short_jobs.json  · mixed_workload.json
+│   ├── long_cpu_bound_first.json  · priority_sensitive.json
+│   └── starvation_risk.json
+│
+├── tools/                              # PRIMARY — host pipeline modules
 │   ├── workload_analyzer.py
-│   ├── llm_advisor.py
-│   ├── algorithm_guard.py
-│   ├── trace_parser.py
-│   ├── metrics.py
+│   ├── llm_advisor.py      · solar_client.py
+│   ├── algorithm_guard.py  · schema_compat.py
+│   ├── scheduler_simulator.py          # FALLBACK (dev/test)
+│   ├── trace_parser.py     · metrics.py
 │   ├── event_detector.py
-│   ├── runtime_correction.py
+│   ├── correction_proposer.py          # PREVIEW ONLY
+│   ├── correction_guard.py             # PREVIEW ONLY
 │   ├── trace_explainer.py
-│   └── feedback_generator.py
-├── dashboard/
-│   └── dashboard.py          # Streamlit fallback dashboard (legacy)
-├── dashboard_test/           # UI lab — static fixture data, component inspection
-│   ├── src/data/fixtures.js  # Hardcoded demo payloads for UI testing
-│   └── README.md
-├── dashboard_live/           # Primary final demo dashboard — real generated data
-│   ├── src/                  # React app; loads from public/live-data/ at runtime
-│   ├── public/live-data/     # Generated by scripts/orchestrator.py
-│   └── README.md
-├── scripts/
-│   ├── orchestrator.py                  # host-side control plane (primary)
-│   └── run_live_dashboard_pipeline.py   # deprecated shim → use orchestrator.py
-└── xv6-riscv/
+│   └── validate_dashboard_contract.py
+│
+├── scripts/                            # PRIMARY — host control plane
+│   ├── orchestrator.py                 # main control plane
+│   ├── final_demo_check.py             # one-command demo prep
+│   ├── multi_profile_demo_check.py     # 4-profile sweep
+│   ├── export_profile_snapshots.py     # publish per-profile snapshots
+│   ├── analyze_algorithm_winners.py    # diversity audit (offline)
+│   ├── correction_preview_smoke.py     # offline preview smoke
+│   ├── check_xv6_scheduler.sh
+│   └── run_live_dashboard_pipeline.py  # DEPRECATED shim
+│
+├── xv6-riscv/                          # PRIMARY — final execution backend
+│   ├── kernel/proc.c                   # 6 schedulers + predictor + traces
+│   ├── kernel/sysproc.c · syscall.c    # setscheduler / getscheduler
+│   └── user/schedtest.c                # curated profiles fork driver
+│
+├── dashboard_live/                     # PRIMARY — final demo UI (React/Vite)
+│   ├── src/                            # 17 components + liveDataClient
+│   └── public/live-data/               # generated by orchestrator + snapshots
+│
+├── dashboard_test/                     # FALLBACK — UI prototype/sandbox
+│   └── src/                            # static fixtures only
+│
+├── dashboard/                          # LEGACY — Streamlit fallback
+│   └── dashboard.py
+│
+├── xv6-style-scheduler/                # DEV — standalone simulator study
+│   └── simulator/simulator.py
+│
+├── outputs/                            # BUILD-OUTPUT (mostly gitignored)
+│   └── demo/                           # FALLBACK fixtures (used with --offline-fixture)
+│
+└── traces/                             # LEGACY — pre-orchestrator samples
 ```
+
+See [`docs/repo_cleanup_plan.md`](docs/repo_cleanup_plan.md) for the full
+file-by-file labelling and the post-demo cleanup queue (no files are deleted
+before the demo).
 
 ## Dashboard roles
 
 | Dashboard        | Role                                        | Command                              |
 |------------------|---------------------------------------------|--------------------------------------|
-| `dashboard_live` | **Primary demo** — loads generated JSON/JSONL data; shows real scheduling results | `cd dashboard_live && npm run dev` |
-| `dashboard_test` | **UI lab** — static fixture data only; safe for component design/inspection | `cd dashboard_test && npm run dev` |
-| `dashboard/`     | Streamlit fallback (legacy, not primary)    | `streamlit run dashboard/dashboard.py` |
+| `dashboard_live` | **PRIMARY demo** — loads real generated JSON/JSONL (xv6 trace or simulator fallback); shows backend badge | `cd dashboard_live && npm run dev` |
+| `dashboard_test` | **FALLBACK (UI prototype/sandbox)** — static fixture data only; not real scheduling output by design | `cd dashboard_test && npm run dev` |
+| `dashboard/`     | **LEGACY** — Streamlit; superseded by `dashboard_live`. Kept for host-only fallback. See [`docs/repo_cleanup_plan.md`](docs/repo_cleanup_plan.md) §6.4 | `streamlit run dashboard/dashboard.py` |
 
 > `dashboard-react` has been removed. `dashboard_test` is its direct successor and fully supersedes it.
 
@@ -752,9 +916,14 @@ This project directly uses the following OS concepts:
 
 ### GUI
 
-- Streamlit
-- pandas
-- Plotly or matplotlib
+- **Primary:** React + Vite (`dashboard_live`) — loads generated JSON/JSONL
+  from `public/live-data/`. Polls `manifest.json` every 1 s in live mode.
+- **UI prototype/sandbox:** React + Vite (`dashboard_test`) — static fixtures
+  only; component iteration.
+- **Legacy fallback:** Streamlit + pandas + Plotly (`dashboard/dashboard.py`)
+  — kept for the host-only case where Node is unavailable. Marked deprecated;
+  see [`docs/repo_cleanup_plan.md`](docs/repo_cleanup_plan.md) §6.4 for the
+  archive plan.
 
 ### LLM Backend
 

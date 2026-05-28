@@ -102,10 +102,10 @@ regret_score = (best_metric - llm_metric) / best_metric
 A value of `0.0` means the LLM matched the best Scheduling Algorithm.  
 A value of `1.0` means the LLM result had zero performance relative to the best.
 
-Thresholds:
+Thresholds (single source of truth: `tools/metrics.py` `SUCCESS_REGRET`, `NEAR_SUCCESS_REGRET`):
 - `regret_score <= 0.10` → SUCCESS
-- `0.10 < regret_score <= 0.30` → NEAR-SUCCESS
-- `regret_score > 0.30` → FAIL
+- `0.10 < regret_score <= 0.25` → NEAR-SUCCESS
+- `regret_score > 0.25` → FAIL
 
 If starvation occurred, the judgment is immediately downgraded to FAIL regardless of regret score.
 
@@ -130,8 +130,8 @@ Burst prediction error is computed only after execution completes.
 | Judgment | Condition |
 |----------|-----------|
 | **SUCCESS** | `regret_score <= 0.10` AND `starvation_occurred = false` |
-| **NEAR-SUCCESS** | `0.10 < regret_score <= 0.30` AND `starvation_occurred = false` |
-| **FAIL** | `regret_score > 0.30` OR `starvation_occurred = true` |
+| **NEAR-SUCCESS** | `0.10 < regret_score <= 0.25` AND `starvation_occurred = false` |
+| **FAIL** | `regret_score > 0.25` OR `starvation_occurred = true` |
 
 The judgment is stored in `outputs/metrics.json` under the `"judgment"` field.
 
