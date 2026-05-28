@@ -16,9 +16,9 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI',
-    Roboto, Helvetica, Arial, sans-serif;
-  color: #1e293b;
+  /* Per overnight work plan §8: primary font Helvetica Neue, pure black text. */
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  color: #000;
 }
 
 ::-webkit-scrollbar { width: 3px; height: 3px; }

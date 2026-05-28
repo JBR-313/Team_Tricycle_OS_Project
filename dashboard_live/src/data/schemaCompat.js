@@ -114,8 +114,10 @@ export function computeAlgorithmJudgment(algoMetrics, allComparisonMetrics, targ
   }
   const denom = Math.max(Math.abs(best), JUDGMENT_ABS_FLOOR)
   const regret = higher ? (best - value) / denom : (value - best) / denom
+  // Thresholds mirror tools/metrics.py {SUCCESS_REGRET, NEAR_SUCCESS_REGRET}.
+  // Updated 2026-05-28: NEAR tightened 0.30 -> 0.25 per overnight work plan §5.
   if (regret <= 0.10) return 'SUCCESS'
-  if (regret <= 0.30) return 'NEAR-SUCCESS'
+  if (regret <= 0.25) return 'NEAR-SUCCESS'
   return 'FAIL'
 }
 

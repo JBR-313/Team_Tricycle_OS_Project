@@ -7,6 +7,19 @@ export default function EvaluationResult({ metrics, recommendation: rec }) {
   const jdg    = metrics.judgment || '—'
   const regret = metrics.regret_score
   const starv  = metrics.starvation_occurred
+
+  // Presentation-safe regret formatting. When `best_metric` is tiny, regret can
+  // exceed 1000% and the raw float ("regret 10.83" = 1083%) is misleading on a
+  // demo screen. We display percentages, capping the visible range at >999%.
+  // The internal `regret_score` is left untouched for downstream consumers.
+  function formatRegretLabel(r) {
+    if (r == null) return null
+    const pct = r * 100
+    if (pct >= 999.5) return '>999% (best≈0, see explanation)'
+    if (pct < 1) return `${pct.toFixed(2)}%`
+    return `${pct.toFixed(1)}%`
+  }
+  const regretLabel = formatRegretLabel(regret)
   const cmp    = metrics.comparison || {}
   const recAlgo = rec.recommended_scheduling_algorithm || rec.algorithm
   const tgt     = normalizeTargetMetric(rec.target_metric || 'avg_response_time')
@@ -29,8 +42,9 @@ export default function EvaluationResult({ metrics, recommendation: rec }) {
     <Card label="Evaluation Result" className="card-eval">
       <div style={{ flexShrink: 0, marginBottom: 4 }}>
         <span className="pill" style={{ background: jBg, color: jFg, fontSize: '0.72rem' }}>{jdg}</span>
-        {regret != null && (
-          <span className="pill" style={{ background: '#f1f5f9', color: '#64748b' }}>regret {regret.toFixed(2)}</span>
+        {regretLabel && (
+          <span className="pill" style={{ background: '#f1f5f9', color: '#64748b' }}
+                title={`raw regret_score = ${regret}`}>regret {regretLabel}</span>
         )}
         <span className="pill" style={{
           background: starv ? '#fee2e2' : '#d1fae5',
