@@ -5,13 +5,13 @@
 {"tick": null, "algo": "MLFQ", "event": "CHILD_START", "source": "xv6", "kind": "schedtest", "pid": 5, "priority": 10, "seed": 42, "profile": "interactive"}
 {"tick": null, "algo": "MLFQ", "event": "CHILD_EXIT", "source": "xv6", "kind": "schedtest", "pid": 5, "seed": 42, "profile": "interactive"}
 {"tick": null, "algo": "MLFQ", "event": "CHILD_EXIT", "source": "xv6", "kind": "schedtest", "pid": 4, "seed": 42, "profile": "interactive"}
-{"tick": null, "algo": "MLFQ", "event": "PROC_DEF", "source": "xv6", "kind": "schedtest", "pid": 6, "arrival": 5, "cpu_burst": 2, "priority": 10, "label": "interactive", "seed": 42, "profile": "interactive"}
+{"tick": null, "algo": "MLFQ", "event": "PROC_DEF", "source": "xv6", "kind": "schedtest", "pid": 6, "arrival": 4, "cpu_burst": 2, "priority": 10, "label": "interactive", "seed": 42, "profile": "interactive"}
 {"tick": null, "algo": "MLFQ", "event": "CHILD_START", "source": "xv6", "kind": "schedtest", "pid": 6, "priority": 10, "seed": 42, "profile": "interactive"}
 {"tick": null, "algo": "MLFQ", "event": "CHILD_EXIT", "source": "xv6", "kind": "schedtest", "pid": 6, "seed": 42, "profile": "interactive"}
-{"tick": null, "algo": "MLFQ", "event": "PROC_DEF", "source": "xv6", "kind": "schedtest", "pid": 7, "arrival": 10, "cpu_burst": 4, "priority": 10, "label": "cpu", "seed": 42, "profile": "interactive"}
+{"tick": null, "algo": "MLFQ", "event": "PROC_DEF", "source": "xv6", "kind": "schedtest", "pid": 7, "arrival": 9, "cpu_burst": 4, "priority": 10, "label": "cpu", "seed": 42, "profile": "interactive"}
 {"tick": null, "algo": "MLFQ", "event": "CHILD_START", "source": "xv6", "kind": "schedtest", "pid": 7, "priority": 10, "seed": 42, "profile": "interactive"}
 {"tick": null, "algo": "MLFQ", "event": "CHILD_EXIT", "source": "xv6", "kind": "schedtest", "pid": 7, "seed": 42, "profile": "interactive"}
-{"tick": null, "algo": "MLFQ", "event": "PROC_DEF", "source": "xv6", "kind": "schedtest", "pid": 8, "arrival": 15, "cpu_burst": 1, "priority": 10, "label": "interactive", "seed": 42, "profile": "interactive"}
+{"tick": null, "algo": "MLFQ", "event": "PROC_DEF", "source": "xv6", "kind": "schedtest", "pid": 8, "arrival": 14, "cpu_burst": 1, "priority": 10, "label": "interactive", "seed": 42, "profile": "interactive"}
 {"tick": null, "algo": "MLFQ", "event": "CHILD_START", "source": "xv6", "kind": "schedtest", "pid": 8, "priority": 10, "seed": 42, "profile": "interactive"}
 {"tick": null, "algo": "MLFQ", "event": "CHILD_EXIT", "source": "xv6", "kind": "schedtest", "pid": 8, "seed": 42, "profile": "interactive"}
 {"tick": null, "algo": "MLFQ", "event": "RUN_END", "source": "xv6", "kind": "schedtest", "seed": 42, "profile": "interactive"}

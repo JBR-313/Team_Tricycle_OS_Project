@@ -533,6 +533,33 @@ def parse_xv6_log(raw_path: Path, algo: str, seed: int, profile: str,
         e["algo"] = algo
         if isinstance(e.get("tick"), int):
             e["tick"] = e["tick"] - base
+
+    # PROC_DEF.arrival is schedtest's planned arrival (relative to its own
+    # t0 = uptime() before any fork), but DISPATCH ticks come from the
+    # kernel's uptime counter. After rebasing to the first DISPATCH tick,
+    # timer-granularity drift between schedtest's t0 and the kernel's
+    # first scheduling decision can leave PROC_DEF.arrival off by one
+    # tick — which surfaces downstream as response_time = first_run -
+    # arrival < 0 in metrics.py. The kernel's observation is authoritative:
+    # if a process was actually DISPATCHed at tick fd, it MUST have been
+    # RUNNABLE by tick fd, so its real arrival is <= fd. Snap arrival down
+    # to fd when the planned value contradicts the trace.
+    first_dispatch: dict[int, int] = {}
+    for e in evs:
+        if (e.get("event") == "DISPATCH"
+                and isinstance(e.get("pid"), int)
+                and isinstance(e.get("tick"), int)
+                and e["pid"] not in first_dispatch):
+            first_dispatch[e["pid"]] = e["tick"]
+    for e in evs:
+        if e.get("event") != "PROC_DEF":
+            continue
+        pid = e.get("pid")
+        arr = e.get("arrival")
+        fd = first_dispatch.get(pid) if isinstance(pid, int) else None
+        if fd is not None and isinstance(arr, int) and fd < arr:
+            e["arrival"] = fd
+
     trace_out.write_text("".join(json.dumps(e) + "\n" for e in evs))
     return True
 
