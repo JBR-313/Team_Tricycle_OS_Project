@@ -45,7 +45,7 @@ LIVE_DATA = ROOT / "dashboard_live" / "public" / "live-data"
 SNAPSHOTS_DIR = LIVE_DATA / "snapshots"
 
 # Files the dashboard reads. Anything not in this list is left behind in
-# the flat root by design (e.g. legacy outputs/demo files won't be copied
+# the flat root by design (e.g. outputs/_demo_fixtures files won't be copied
 # across).
 FLAT_FILES = [
     "manifest.json",

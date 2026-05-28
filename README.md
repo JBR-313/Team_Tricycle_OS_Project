@@ -18,7 +18,7 @@
 > | Is the **simulator** only a fallback? | Yes. `tools/scheduler_simulator.py` + `--backend simulator` is **dev/test only**. The dashboard shows a `SIMULATOR` badge when it is in use. |
 > | Does **SJF/SRTF** see future bursts? | **No**. The xv6 kernel uses an exponential-averaging (EMA) burst predictor; the simulator was refactored on 2026-05-28 to do the same (`predicted_burst` only — `actual_bursts` never leaks into the picker). LLM may **predict** bursts as hints via `recommendation.predicted_bursts[]`. See [`docs/sjf_srtf_prediction_audit.md`](docs/sjf_srtf_prediction_audit.md). |
 > | What's the **judgment rule**? | Normalized regret on the workload's `target_metric`. SUCCESS ≤ 10%, NEAR-SUCCESS ≤ 25%, else FAIL; starvation forces FAIL. Output includes `selected_metric_value`, `best_metric_value`, `explanation`. See [`docs/evaluation_criteria_audit.md`](docs/evaluation_criteria_audit.md). |
-> | What if I have **no API key**? | Run with `--offline-fixture` — orchestrator uses the committed `outputs/demo/` fixtures and the dashboard shows a `FALLBACK` badge. No silent guessing. |
+> | What if I have **no API key**? | The orchestrator uses the committed `outputs/_demo_fixtures/` set and the dashboard shows a `FALLBACK` badge. No silent guessing. |
 > | Which modules are **preview-only**? | The runtime-correction loop: `tools/event_detector.py`, `tools/correction_proposer.py`, `tools/correction_guard.py`, dashboard card `RuntimeCorrectionPreview`. Closed-loop xv6 apply is **Future Work**. |
 > | Where is the **slimming/hardening plan**? | [`docs/codebase_slimming_plan.md`](docs/codebase_slimming_plan.md) (labels & post-demo move queue) and [`docs/final_slimming_smoke_check.md`](docs/final_slimming_smoke_check.md) (verification commands). |
 
@@ -135,11 +135,11 @@ Workload (workloads/*.json or schedtest profile)
 | `xv6-riscv/` + `scripts/orchestrator.py --backend xv6` | **PRIMARY** | Real xv6 + QEMU execution via `schedtest`; the final demo path. | yes |
 | `dashboard_live/` | **PRIMARY** | Live React/Vite observability dashboard. | yes |
 | `tools/scheduler_simulator.py` + `--backend simulator` | **FALLBACK (dev/test)** | Host-side Python model. Not proof of real xv6 execution; used for UI iteration and when QEMU is unavailable. | yes, with badge `SIMULATOR FALLBACK` |
-| `outputs/demo/` + `--offline-fixture` | **FALLBACK (no API key / no QEMU)** | Committed fixture data so the dashboard still has something to show. Stamps `manifest.metadata_source = "demo_fallback"`. | yes, with badge `FALLBACK` |
+| `outputs/_demo_fixtures/` (offline demo fallback) | **FALLBACK (no API key / no QEMU)** | Committed fixture data so the dashboard still has something to show. Stamps `manifest.metadata_source = "demo_fallback"`. | yes, with badge `FALLBACK` |
 | `dashboard_test/` | **FALLBACK (UI prototype/sandbox)** | Static fixture data for component iteration. **Not real scheduling output by design.** | no (developer-only) |
 | `dashboard/` (Streamlit) | **LEGACY** | Superseded by `dashboard_live`. Kept for the host-only fallback case. Archive plan in [`docs/repo_cleanup_plan.md`](docs/repo_cleanup_plan.md). | no |
 | `xv6-style-scheduler/` | **DEV** | Standalone scheduler study sandbox; not on the demo path. | no |
-| `traces/` (root) | **LEGACY** | Pre-orchestrator trace samples. Canonical fixtures live in `outputs/demo/` and `dashboard_live/public/live-data/snapshots/`. | no |
+| `traces/` (root) | **LEGACY** | Pre-orchestrator trace samples. Canonical fixtures live in `outputs/_demo_fixtures/` and `dashboard_live/public/live-data/snapshots/`. | no |
 
 > The dashboard header shows a backend badge — **`XV6 TRACE`** on the
 > primary path, **`SIMULATOR FALLBACK`** on the dev path, **`FALLBACK`**
@@ -752,7 +752,7 @@ misnamed should be fixed in the README, not faked):
 │   └── simulator/simulator.py
 │
 ├── outputs/                            # BUILD-OUTPUT (mostly gitignored)
-│   └── demo/                           # FALLBACK fixtures (used with --offline-fixture)
+│   └── _demo_fixtures/                 # COMMITTED offline-demo fallback fixtures
 │
 └── traces/                             # LEGACY — pre-orchestrator samples
 ```

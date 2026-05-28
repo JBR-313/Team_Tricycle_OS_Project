@@ -269,6 +269,6 @@ Algorithm display form is `RR, FCFS, Priority, MLFQ, SJF, SRTF` (note mixed-case
 - `guard_decision.guard_result` may also be `"accepted_with_warning"` — the
   dashboard treats it the same as `"accepted"` (a `warnings` array may accompany it).
 - `manifest.metadata_source` (optional): set to `"demo_fallback"` when the
-  recommendation/guard metadata came from `outputs/demo/` because the live advisor
+  recommendation/guard metadata came from `outputs/_demo_fixtures/` because the live advisor
   or guard step failed. The dashboard should not present demo metadata as a fresh
   run.

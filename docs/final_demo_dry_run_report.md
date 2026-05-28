@@ -108,7 +108,7 @@ see `docs/final_demo_acceptance.md` §3.
   `CORRECTION_APPLIED` steps are intentional **Future Work**. Do not
   claim closed-loop runtime correction.
 - **Solar Pro 3 API fallback.** Without `.env`, the orchestrator falls
-  back to `outputs/demo/recommendation.json` and stamps
+  back to `outputs/_demo_fixtures/recommendation.json` and stamps
   `metadata_source=demo_fallback`. The dashboard then shows
   `Backend: FALLBACK`. This dry-run did not exhibit fallback; the LLM
   picked MLFQ on its own.

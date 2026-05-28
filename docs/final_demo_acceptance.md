@@ -139,7 +139,7 @@ are documented limitations, not regressions:
 - **Live streaming** — the dashboard polls `manifest.json`; there is no
   websocket push channel.
 - **Solar Pro 3 API key** — if `.env` is missing or the API call fails,
-  the orchestrator falls back to `outputs/demo/recommendation.json` and
+  the orchestrator falls back to `outputs/_demo_fixtures/recommendation.json` and
   stamps `metadata_source=demo_fallback`. The dashboard then shows
   `Backend: FALLBACK` instead of `XV6 TRACE`. This is intended honesty,
   not a bug; a real on-stage demo should not show `FALLBACK`.

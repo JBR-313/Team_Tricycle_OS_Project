@@ -150,7 +150,7 @@ workloads/*.json
 - **Input:** `outputs/workload_summary.json` + (optional) `outputs/feedback_rules.md`.
 - **Output:** `outputs/recommendation.json` (algorithm, params, reason, target_metric, confidence, `_meta`).
 - **Evidence from code:** `tools/solar_client.py:81-89` — `UPSTAGE_API_KEY` 없으면 명시적 에러. 키 자체는 `.env` 에만 위치하고 `.gitignore` 로 보호 (`.gitignore:1-3`).
-- **Limitations:** 키 없으면 호출 불가. orchestrator는 `--offline-fixture` 옵션으로만 `outputs/demo/recommendation.json` 으로 대체 (그 경우 manifest의 `metadata_source=demo_fallback` 로 표시되어 dashboard 가 `FALLBACK` 배지를 띄움).
+- **Limitations:** 키 없으면 호출 불가. orchestrator는 `--offline-fixture` 옵션으로만 `outputs/_demo_fixtures/recommendation.json` 으로 대체 (그 경우 manifest의 `metadata_source=demo_fallback` 로 표시되어 dashboard 가 `FALLBACK` 배지를 띄움).
 
 ### 4.4 Upstage Solar Pro 3 API Integration
 - **Status:** DONE (strict 모드는 최신 커밋 `2d67299 feat(runtime): strict Upstage Solar Pro 3 backend; opt-in demo fallback` 에서 도입).
@@ -363,7 +363,7 @@ throughput      = completed_process_count / total_execution_time
   - 음수는 0으로 clamp.
 - baseline이 없으면 PR `d546c20` 으로 합성 RR baseline 생성. xv6의 짧은 trace 에서는 PR #15 가 분모에 absolute floor 를 추가.
 
-### 6.4 데모 metrics 예시 (`outputs/demo/metrics.json` 발췌)
+### 6.4 데모 metrics 예시 (`outputs/_demo_fixtures/metrics.json` 발췌)
 
 | Algorithm | avg_response_time | avg_waiting_time | avg_turnaround | throughput | preemption | judgment |
 |---|---:|---:|---:|---:|---:|---|
@@ -488,7 +488,7 @@ LLM이 `target_metric=avg_response_time` 에서 MLFQ 추천 → 실제 최저 re
 
 1. **xv6 integration은 “실제 + optional”의 절충.** `scripts/orchestrator.py --backend xv6` 가 실제로 QEMU 부팅 + `schedtest` 실행 + 콘솔 capture까지 한다. 단, 발표 환경에서 QEMU가 막혀 있을 때를 대비해 simulator fallback과 4개 xv6 snapshot이 출판되어 있다.
 2. **xv6 traces are short (~30–80 events per algorithm).** `schedtest` 의 curated profile은 4-5개 child만 fork. metric 절댓값보다는 알고리즘간 비교에 적합.
-3. **LLM API 호출은 실제(real).** `tools/solar_client.py` 가 진짜 `https://api.upstage.ai/v1/chat/completions` 호출. 키가 없으면 orchestrator 가 `--offline-fixture` 일 때만 `outputs/demo/recommendation.json` 으로 대체.
+3. **LLM API 호출은 실제(real).** `tools/solar_client.py` 가 진짜 `https://api.upstage.ai/v1/chat/completions` 호출. 키가 없으면 orchestrator 가 `--offline-fixture` 일 때만 `outputs/_demo_fixtures/recommendation.json` 으로 대체.
 4. **Trace schema 안정성:** simulator(`time`/`algorithm`)와 xv6(`tick`/`algo`) 표기가 다르지만 `tools/schema_compat.py` 와 `tools/metrics.py:62-77` `normalize_event` 가 흡수. 새 이벤트 추가 시는 양쪽을 동시에 봐야 함.
 5. **Metrics 정확성:** trace로부터 재계산 + xv6의 EXIT 라인 직접 보고 둘 다 지원. 짧은 trace에서의 starvation/regret edge case는 PR #14/#15 로 보강.
 6. **Dashboard 연동 범위:** runtime correction 카드는 “preview” 라벨 명시. 데이터 없으면 자동 숨김. snapshot selector는 정적이므로 polling 안 함.

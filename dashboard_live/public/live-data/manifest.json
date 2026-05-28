@@ -1,5 +1,5 @@
 {
-  "backend": "xv6",
+  "backend": "simulator",
   "seed": 42,
   "workload_type": "interactive",
   "llm_selected_algorithm": "MLFQ",
@@ -11,11 +11,11 @@
     "SJF",
     "SRTF"
   ],
-  "generated_at": "2026-05-28T01:08:19Z",
+  "generated_at": "2026-05-28T10:17:28Z",
   "orchestrator_version": "1.0.0",
-  "mode": "xv6-log",
-  "updated_at": "2026-05-28T01:08:19Z",
-  "version": 24,
+  "mode": "simulator",
+  "updated_at": "2026-05-28T10:17:28Z",
+  "version": 28,
   "workload": "interactive_heavy",
   "algorithms": [
     "MLFQ",

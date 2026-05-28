@@ -60,8 +60,8 @@
 | `dashboard_test/` | KEEP-FALLBACK (UI sandbox label) | no (for the audience) | Reclassify in README to “UI prototype/sandbox.” |
 | `dashboard/` (Streamlit) | LEGACY | no | Mark deprecated in §6.4; archive plan below. |
 | `xv6-style-scheduler/` (simulator copy) | KEEP-DEV → MOVE | no | This is a *separate* simulator copy from `tools/scheduler_simulator.py`; should move to `xv6-style-scheduler/` → `dev/xv6-style-scheduler/` or be merged with the canonical one. See §5. |
-| `outputs/` | BUILD-OUTPUT | no | Already in `.gitignore`; checked-in `outputs/demo/` is the curated fixture set — keep but rename to `outputs/_demo_fixtures/` in a future PR to avoid “build vs fixture” confusion. |
-| `traces/` (root) | LEGACY | no | Pre-orchestrator-refactor trace samples (`mixed_rr.jsonl`, `starvation_sjf.jsonl`, …). Mark deprecated; the canonical traces now live in `outputs/demo/` and `dashboard_live/public/live-data/snapshots/`. |
+| `outputs/` | BUILD-OUTPUT | no | `outputs/*` is gitignored, with an explicit `!outputs/_demo_fixtures/` exception for the committed offline-fallback fixture set. |
+| `traces/` (root) | LEGACY | no | Pre-orchestrator-refactor trace samples (`mixed_rr.jsonl`, `starvation_sjf.jsonl`, …). Mark deprecated; the canonical traces now live in `outputs/_demo_fixtures/` and `dashboard_live/public/live-data/snapshots/`. |
 | `docs/` | KEEP-PRIMARY | yes | Already organized; this PR adds 5 new audits. |
 | `.venv/` | BUILD-OUTPUT | no | `.gitignore`d. |
 
@@ -152,7 +152,7 @@ is a smell.
 
 | Path | Label | Action |
 |---|---|---|
-| `outputs/demo/*.json,*.jsonl` | KEEP-PRIMARY | Fixture set used by `--offline-fixture`. |
+| `outputs/_demo_fixtures/*.json,*.jsonl` | KEEP-PRIMARY | Fixture set used by `--offline-fixture`. |
 | `outputs/live/*` | BUILD-OUTPUT | Generated; should be in `.gitignore` (currently `outputs/` is). |
 | `outputs/build_*.log`, `outputs/check_xv6_scheduler_*.log`, `outputs/xv6_raw_*_seed42.log` | BUILD-OUTPUT | gitignored; surviving copies are useful past evidence — leave them. |
 | `traces/` (root) | LEGACY | Mark deprecated in `docs/data_format.md`; do not delete pre-demo. |
@@ -172,7 +172,7 @@ table built from this plan:
 | `dashboard_test/` | **FALLBACK (UI prototype/sandbox)** | Static fixture data for UI iteration. |
 | `dashboard/` (Streamlit) | **LEGACY** | Superseded by `dashboard_live`; kept for safety. Archive plan in `docs/repo_cleanup_plan.md`. |
 | `xv6-style-scheduler/simulator/` | **DEV** | Standalone scheduler study; not on the demo path. |
-| `traces/` (root) | **LEGACY** | Pre-orchestrator trace samples. Use `outputs/demo/` for the canonical fixtures. |
+| `traces/` (root) | **LEGACY** | Pre-orchestrator trace samples. Use `outputs/_demo_fixtures/` for the canonical fixtures. |
 
 ---
 
@@ -183,10 +183,13 @@ table built from this plan:
 `git rm --cached` the existing tracked binaries; add a `.gitignore` clause
 in `xv6-riscv/`. Schedule for the **first PR after the demo**.
 
-### 6.2 Rename `outputs/demo/` → `outputs/_demo_fixtures/`
+### 6.2 Rename `outputs/_demo_fixtures/` → `outputs/_demo_fixtures/` — **DONE**
 
-“`outputs/demo/`” reads as “build output of `demo`”, but it is curated
-fixture data. Renaming + a one-line README update removes the ambiguity.
+“`outputs/_demo_fixtures/`” read as “build output of `demo`”, but it was curated
+fixture data. The directory is now `outputs/_demo_fixtures/`, committed
+to git via a `.gitignore` `!outputs/_demo_fixtures/` exception so the
+offline fallback works from a fresh checkout. README and orchestrator
+constants updated to match.
 
 ### 6.3 Pick one simulator
 
