@@ -3,23 +3,23 @@ import Card from './Card.jsx'
 /**
  * AlgorithmGuard — Page 1 §5 (compact pre-execution guard verdict).
  *
- * Layout (single row status, then small checklist):
+ * Layout (single row status, then 3-item checklist per acceptance):
  *   ┌──────────────────────────────────────────────────────────────┐
  *   │ [ACCEPTED] MLFQ is suitable for response_time                │
  *   ├──────────────────────────────────────────────────────────────┤
  *   │ ✓ Algorithm implemented                                       │
  *   │ ✓ Parameters in range                                         │
  *   │ ✓ No fallback used                                            │
- *   │ ✓ Prediction source valid                                     │
  *   └──────────────────────────────────────────────────────────────┘
  *
- * Per pre-execution revision §5:
+ * Rules:
  *   - Status box keeps the large word on the left, short reason inline on
- *     the right (§5.2).
+ *     the right.
  *   - `(compat=..., confidence=...)` parens are stripped from the reason
- *     text — those numbers are not shown on the dashboard (§5.1).
- *   - No `compact / confidence / compat / compatibility` text anywhere.
- *   - Card is visually compact (§5.4) — kept short so LLM RECOMMENDATION
+ *     text — those numbers are not shown on the dashboard.
+ *   - No `compact / confidence / compat / compatibility / 0.95` text
+ *     anywhere.
+ *   - Card is visually compact — kept short so LLM RECOMMENDATION
  *     and LLM EXPLANATION dominate Page 1.
  */
 const STATUS = {
@@ -65,7 +65,8 @@ export default function AlgorithmGuard({ guardDecision: g }) {
   const fallbackAlgo  = g.fallback_algorithm
   const predictionSrc = g.prediction_source  // 'llm' | 'ema' | null
 
-  // Checklist — at most four short lines (§5.3). No compat / confidence.
+  // Checklist — exactly three short lines per acceptance criteria.
+  // No compat / confidence / 0.95 text anywhere.
   const checklist = [
     [`Algorithm implemented${algo ? ` (${algo})` : ''}`, true],
     ['Parameters in range', true],
@@ -73,16 +74,9 @@ export default function AlgorithmGuard({ guardDecision: g }) {
       ? `Fallback used → ${fallbackAlgo || '—'}`
       : 'No fallback used', !fallbackUsed],
   ]
-  if (predictionSrc) {
-    checklist.push([
-      predictionSrc === 'llm'
-        ? 'Prediction source: LLM hints'
-        : 'Prediction source: EMA fallback',
-      true,
-    ])
-  } else if (algo && (algo === 'SJF' || algo === 'SRTF')) {
-    checklist.push(['Prediction source valid', true])
-  }
+  // Note: prediction_source remains in guard_decision.json for Page 2/3
+  // (post-execution) consumers; intentionally not surfaced on Page 1.
+  void predictionSrc
 
   return (
     <Card label="Algorithm Guard" className="card-guard page1-card page1-card-guard">

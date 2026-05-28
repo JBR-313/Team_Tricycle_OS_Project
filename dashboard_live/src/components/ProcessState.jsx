@@ -1,6 +1,38 @@
 import Card from './Card.jsx'
 import { PROC_COLORS } from './constants.js'
 
+/**
+ * ProcessState — Page 2 educational state-transition diagram.
+ *
+ * Layout (viewBox 0..100, preserveAspectRatio="none" — boxes are
+ * absolutely positioned over the SVG using the same percentage system):
+ *
+ *   ┌────────┐
+ *   │ READY  │──────────┐
+ *   └────┬───┘          │
+ *        │              │
+ *        ▼              ▼
+ *   ┌────────┐    ┌──────────┐
+ *   │RUNNING │◀───│ WAITING  │
+ *   └────┬───┘    └──────────┘
+ *        │
+ *        ▼
+ *   ┌────────────┐
+ *   │ TERMINATED │
+ *   └────────────┘
+ *
+ * Transitions:
+ *   DISPATCH  → READY → RUNNING       (dispatch)
+ *   PREEMPT   → RUNNING → READY        (preempt, same line, reversed)
+ *   SLEEP     → RUNNING → WAITING      (L-shape, right then up)
+ *   WAKEUP    → WAITING → READY        (L-shape, up then left)
+ *   EXIT      → RUNNING → TERMINATED   (vertical)
+ *
+ * The path matching the latest applicable event gets the `.active` class,
+ * which turns it indigo and runs a stroke-dashoffset animation so a series
+ * of dashes appears to flow along the path in the transition direction.
+ */
+
 function getStates(events) {
   const st = {}
   for (const ev of events) {
@@ -15,23 +47,32 @@ function getStates(events) {
 }
 
 const NODE_STYLE = {
-  Ready:      { fg: '#7c3aed', bg: 'rgba(237,233,254,0.90)', border: '#c4b5fd' },
-  Running:    { fg: '#1d4ed8', bg: 'rgba(219,234,254,0.90)', border: '#93c5fd' },
-  Waiting:    { fg: '#b45309', bg: 'rgba(254,243,199,0.90)', border: '#fcd34d' },
-  Terminated: { fg: '#64748b', bg: 'rgba(241,245,249,0.80)', border: '#cbd5e1' },
+  Ready:      { fg: '#7c3aed', bg: 'rgba(237,233,254,0.95)', border: '#c4b5fd' },
+  Running:    { fg: '#1d4ed8', bg: 'rgba(219,234,254,0.95)', border: '#93c5fd' },
+  Waiting:    { fg: '#b45309', bg: 'rgba(254,243,199,0.95)', border: '#fcd34d' },
+  Terminated: { fg: '#475569', bg: 'rgba(241,245,249,0.95)', border: '#cbd5e1' },
 }
 
-const PIPE_CLASS = {
-  DISPATCH: 'pipe-dispatch', PREEMPT: 'pipe-preempt', QUEUE_CHANGE: 'pipe-preempt',
-  EXIT: 'pipe-exit', SLEEP: 'pipe-sleep', WAKEUP: 'pipe-wakeup',
+// Trace event → transition path identifier.
+const EVENT_TO_PATH = {
+  DISPATCH: 'dispatch',  // READY → RUNNING
+  PREEMPT:  'preempt',   // RUNNING → READY
+  SLEEP:    'sleep',     // RUNNING → WAITING
+  WAKEUP:   'wakeup',    // WAITING → READY
+  EXIT:     'exit',      // RUNNING → TERMINATED
 }
 
 function Tokens({ pids }) {
-  if (!pids.length) return <div className="flow-empty">—</div>
+  if (!pids.length) return <div className="pstate-tokens-empty">—</div>
   return (
-    <div className="flow-token-row">
+    <div className="pstate-tokens">
       {pids.map(pid => (
-        <div key={pid} className="flow-token" style={{ background: PROC_COLORS[pid] || '#94a3b8' }} title={`P${pid}`}>
+        <div
+          key={pid}
+          className="pstate-token"
+          style={{ background: PROC_COLORS[pid] || '#94a3b8' }}
+          title={`P${pid}`}
+        >
           P{pid}
         </div>
       ))}
@@ -39,12 +80,14 @@ function Tokens({ pids }) {
   )
 }
 
-function Node({ name, pids, gridCol, gridRow }) {
-  const { fg, bg, border } = NODE_STYLE[name]
-  const extra = name === 'Running' ? ' flow-node-running' : ''
+function Box({ name, pids, posClass }) {
+  const style = NODE_STYLE[name]
   return (
-    <div className={`flow-node${extra}`} style={{ background: bg, borderColor: border, gridColumn: gridCol, gridRow }}>
-      <div className="flow-node-name" style={{ color: fg }}>{name}</div>
+    <div
+      className={`pstate-box ${posClass}`}
+      style={{ background: style.bg, borderColor: style.border }}
+    >
+      <div className="pstate-box-name" style={{ color: style.fg }}>{name}</div>
       <Tokens pids={pids} />
     </div>
   )
@@ -59,43 +102,105 @@ export default function ProcessState({ events, currentTick }) {
   }
   Object.values(groups).forEach(g => g.sort((a, b) => a - b))
 
-  const latestEvent = [...visible]
-    .sort((a, b) => b.tick - a.tick || b.pid - a.pid)
-    .find(ev => ev.event in PIPE_CLASS)?.event ?? null
-  const pc = PIPE_CLASS[latestEvent] || ''
+  // Latest transition event drives the active animation.
+  let activePath = null
+  for (let i = visible.length - 1; i >= 0; i--) {
+    if (visible[i].event in EVENT_TO_PATH) {
+      activePath = EVENT_TO_PATH[visible[i].event]
+      break
+    }
+  }
 
-  const isRRPipe    = pc === 'pipe-dispatch' || pc === 'pipe-preempt'
-  const isExitPipe  = pc === 'pipe-exit'
-  const isSleepArc  = pc === 'pipe-sleep'
-  const isWakeupArc = pc === 'pipe-wakeup'
+  const cls = (id) => `pstate-path${activePath === id ? ' active' : ''}`
+  const labelCls = (id) => `pstate-label${activePath === id ? ' active' : ''}`
 
   return (
     <Card label="Process State" className="card-pstate">
-      <div className="flow-diagram">
-        <Node name="Ready"      pids={groups.Ready}      gridCol={1} gridRow={1} />
-        <div className={`flow-pipe-h${isRRPipe ? ` ${pc}` : ''}`} style={{ gridColumn: 2, gridRow: 1 }}>
-          <span className="flow-pipe-label">dispatch ▶</span>
-          <div className="flow-pipe-bar" />
-          <span className="flow-pipe-label">◀ preempt</span>
-        </div>
-        <Node name="Running"    pids={groups.Running}    gridCol={3} gridRow={1} />
-        <div className={`flow-pipe-h flow-pipe-exit${isExitPipe ? ' pipe-exit' : ''}`} style={{ gridColumn: 4, gridRow: 1 }}>
-          <span className="flow-pipe-label">exit ▶</span>
-          <div className="flow-pipe-bar" />
-        </div>
-        <Node name="Terminated" pids={groups.Terminated} gridCol={5} gridRow={1} />
-        <div className={`flow-vert-connector${isSleepArc ? ' pipe-sleep-vert' : ''}`} style={{ gridColumn: 3, gridRow: 2 }}>
-          <div className="flow-vert-bar" />
-        </div>
-        <div className={`flow-arc flow-arc-left${isWakeupArc ? ' pipe-wakeup' : ''}`} style={{ gridColumn: '1 / 3', gridRow: 3 }}>
-          <span className="flow-arc-label">wakeup ▶</span>
-          <div className="flow-arc-line" />
-        </div>
-        <Node name="Waiting"    pids={groups.Waiting}    gridCol={3} gridRow={3} />
-        <div className={`flow-arc flow-arc-right${isSleepArc ? ' pipe-sleep' : ''}`} style={{ gridColumn: '4 / 6', gridRow: 3 }}>
-          <div className="flow-arc-line" />
-          <span className="flow-arc-label">◀ sleep</span>
-        </div>
+      <div className="pstate-diagram">
+        <svg
+          className="pstate-svg"
+          viewBox="0 0 100 100"
+          preserveAspectRatio="none"
+          aria-hidden="true"
+        >
+          <defs>
+            <marker id="pstate-arrow" viewBox="0 0 10 10" refX="9" refY="5"
+                    markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#9aa6b9" />
+            </marker>
+            <marker id="pstate-arrow-active" viewBox="0 0 10 10" refX="9" refY="5"
+                    markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#0a3069" />
+            </marker>
+          </defs>
+
+          {/* READY → RUNNING : vertical, downward arrow (dispatch).
+              Active when DISPATCH is the latest event. */}
+          <line
+            x1="25" y1="20" x2="25" y2="51"
+            className={cls('dispatch')}
+            vectorEffect="non-scaling-stroke"
+            markerEnd={activePath === 'dispatch'
+              ? 'url(#pstate-arrow-active)'
+              : 'url(#pstate-arrow)'}
+          />
+
+          {/* RUNNING → READY : same column, upward arrow (preempt).
+              Drawn slightly offset so it doesn't overlap the dispatch line. */}
+          <line
+            x1="32" y1="51" x2="32" y2="21"
+            className={cls('preempt')}
+            vectorEffect="non-scaling-stroke"
+            markerEnd={activePath === 'preempt'
+              ? 'url(#pstate-arrow-active)'
+              : 'url(#pstate-arrow)'}
+          />
+
+          {/* RUNNING → TERMINATED : vertical, downward (exit). */}
+          <line
+            x1="28" y1="68" x2="28" y2="79"
+            className={cls('exit')}
+            vectorEffect="non-scaling-stroke"
+            markerEnd={activePath === 'exit'
+              ? 'url(#pstate-arrow-active)'
+              : 'url(#pstate-arrow)'}
+          />
+
+          {/* RUNNING → WAITING : L-shape — right then up (sleep). */}
+          <polyline
+            points="43,57 75,57 75,44"
+            fill="none"
+            className={cls('sleep')}
+            vectorEffect="non-scaling-stroke"
+            markerEnd={activePath === 'sleep'
+              ? 'url(#pstate-arrow-active)'
+              : 'url(#pstate-arrow)'}
+          />
+
+          {/* WAITING → READY : L-shape — up then left (wakeup). */}
+          <polyline
+            points="75,28 75,12 44,12"
+            fill="none"
+            className={cls('wakeup')}
+            vectorEffect="non-scaling-stroke"
+            markerEnd={activePath === 'wakeup'
+              ? 'url(#pstate-arrow-active)'
+              : 'url(#pstate-arrow)'}
+          />
+        </svg>
+
+        {/* State boxes — absolute over the SVG, percentages match viewBox. */}
+        <Box name="Ready"      pids={groups.Ready}      posClass="pstate-ready" />
+        <Box name="Waiting"    pids={groups.Waiting}    posClass="pstate-waiting" />
+        <Box name="Running"    pids={groups.Running}    posClass="pstate-running" />
+        <Box name="Terminated" pids={groups.Terminated} posClass="pstate-terminated" />
+
+        {/* Transition labels — small, attached to each connector. */}
+        <span className={`${labelCls('dispatch')} pstate-label-dispatch`}>dispatch</span>
+        <span className={`${labelCls('preempt')} pstate-label-preempt`}>preempt</span>
+        <span className={`${labelCls('sleep')} pstate-label-sleep`}>sleep</span>
+        <span className={`${labelCls('wakeup')} pstate-label-wakeup`}>wakeup</span>
+        <span className={`${labelCls('exit')} pstate-label-exit`}>exit</span>
       </div>
     </Card>
   )

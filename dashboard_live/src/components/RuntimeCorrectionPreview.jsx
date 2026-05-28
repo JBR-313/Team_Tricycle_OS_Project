@@ -63,29 +63,19 @@ export default function RuntimeCorrectionPreview({
   // is preserved.
   if (!events.length && !proposal) {
     return (
-      <Card label="Runtime correction (preview)" className="card-cor-preview">
-        <div style={{
-          fontSize: '0.55rem', color: '#b45309', background: '#fef3c7',
-          border: '1px solid #fde68a', borderRadius: 4, padding: '3px 6px',
-          marginBottom: 4, flexShrink: 0, fontWeight: 600,
-        }}>
+      <Card label="Runtime Correction" className="card-cor-preview">
+        <div className="cor-preview-banner">
           Preview only — not applied to xv6.
         </div>
-        <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0 }}>
-          <span style={{
-            display: 'inline-block', width: 8, height: 8, borderRadius: '50%',
-            background: '#059669',
-          }} />
-          <span style={{ fontSize: '0.62rem', color: '#334155', fontWeight: 600 }}>
-            Runtime monitor: no correction needed
+        <div className="cor-status-row">
+          <span className="cor-status-dot cor-status-ok" />
+          <span className="cor-status-text">
+            Runtime correction: <strong>Not needed</strong>
           </span>
         </div>
-        <div style={{
-          fontSize: '0.52rem', color: '#94a3b8', marginTop: 3, flexShrink: 0,
-        }}>
-          The event detector ran on this trace and found no scheduling
-          problems above its thresholds, so no proposal was generated.
-        </div>
+        <p className="cor-status-detail">
+          No scheduling issue exceeded the correction threshold for this run.
+        </p>
       </Card>
     )
   }
@@ -93,12 +83,8 @@ export default function RuntimeCorrectionPreview({
   const accepted = decision?.guard_result === 'accepted'
 
   return (
-    <Card label="Runtime correction (preview)" className="card-cor-preview">
-      <div style={{
-        fontSize: '0.55rem', color: '#b45309', background: '#fef3c7',
-        border: '1px solid #fde68a', borderRadius: 4, padding: '3px 6px',
-        marginBottom: 4, flexShrink: 0, fontWeight: 600,
-      }}>
+    <Card label="Runtime Correction" className="card-cor-preview">
+      <div className="cor-preview-banner">
         Preview only — not applied to xv6.
       </div>
 

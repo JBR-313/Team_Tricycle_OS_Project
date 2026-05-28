@@ -11,9 +11,29 @@ import { PROC_COLORS } from './constants.js'
  *   C. Per-queue dispatch share (3 bars)
  */
 export default function MLFQQueuePanel({ events, currentTick, algo }) {
-  if (algo !== 'MLFQ') return null
+  if (algo !== 'MLFQ') {
+    return (
+      <Card label="Multilevel Queue" className="card-mlfq-queue card-mlfq-inactive">
+        <div className="mlfq-inactive-msg">
+          MLFQ queue view appears when <strong>MLFQ</strong> is selected.
+        </div>
+      </Card>
+    )
+  }
 
   const visible = events.filter(e => (e.tick ?? 0) <= currentTick)
+  const hasQueueData = visible.some(e =>
+    e.event === 'QUEUE_CHANGE' ||
+    (e.event === 'ARRIVE'   && e.queue   != null) ||
+    (e.event === 'DISPATCH' && e.queue   != null)
+  )
+  if (!hasQueueData) {
+    return (
+      <Card label="Multilevel Queue" className="card-mlfq-queue card-mlfq-inactive">
+        <div className="mlfq-inactive-msg">MLFQ queue data unavailable.</div>
+      </Card>
+    )
+  }
 
   // ─── A. Current queue snapshot ────────────────────────────────────────────
   // For each pid with at least one event, take the most-recent known queue.

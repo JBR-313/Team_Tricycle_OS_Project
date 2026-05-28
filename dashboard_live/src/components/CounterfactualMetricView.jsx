@@ -50,8 +50,8 @@ export default function CounterfactualMetricView({ metrics, recommendation }) {
   const comparison = metrics?.comparison
   if (!comparison || typeof comparison !== 'object' || !Object.keys(comparison).length) {
     return (
-      <Card label="Metric trade-off" className="card-cf">
-        <div className="loading">Metric trade-off — not available for this snapshot.</div>
+      <Card label="Best Algorithm by Metric" className="card-cf">
+        <div className="loading">Best-by-metric view — not available for this snapshot.</div>
       </Card>
     )
   }
@@ -66,18 +66,18 @@ export default function CounterfactualMetricView({ metrics, recommendation }) {
   const llmWins = visibleRows.filter(r => best[r.key]?.algo === llmAlgo).length
 
   return (
-    <Card label="Metric trade-off" className="card-cf">
-      <div style={{ fontSize: '0.55rem', color: '#94a3b8', marginBottom: 4, flexShrink: 0 }}>
-        If the goal metric changed, who would win on this workload?
+    <Card label="Best Algorithm by Metric" className="card-cf">
+      <div className="cf-helper">
+        Shows which algorithm would be best if the target metric changed.
       </div>
-      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
-        <table style={{ width: '100%', fontSize: '0.58rem', borderCollapse: 'collapse' }}>
+      <div className="cf-scroll" style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+        <table className="cf-table">
           <thead>
-            <tr style={{ color: '#94a3b8', textAlign: 'left' }}>
-              <th style={{ padding: '2px 4px', fontWeight: 600 }}>Metric</th>
-              <th style={{ padding: '2px 4px', fontWeight: 600 }}>Best</th>
-              <th style={{ padding: '2px 4px', fontWeight: 600, textAlign: 'right' }}>Value</th>
-              <th style={{ padding: '2px 4px', fontWeight: 600, textAlign: 'right' }}>vs LLM</th>
+            <tr>
+              <th>Metric</th>
+              <th>Best</th>
+              <th style={{ textAlign: 'right' }}>Value</th>
+              <th style={{ textAlign: 'right' }}>vs LLM</th>
             </tr>
           </thead>
           <tbody>
@@ -135,12 +135,9 @@ export default function CounterfactualMetricView({ metrics, recommendation }) {
           </tbody>
         </table>
       </div>
-      <div style={{
-        fontSize: '0.55rem', color: '#64748b', marginTop: 4, flexShrink: 0,
-        borderTop: '1px solid #e2e8f0', paddingTop: 4,
-      }}>
-        LLM-selected <strong style={{ color: '#7c3aed' }}>{llmAlgo || '—'}</strong> wins{' '}
-        <strong style={{ color: llmWins === visibleRows.length ? '#059669' : '#334155' }}>
+      <div className="cf-footer">
+        LLM-selected <strong className="cf-llm-name">{llmAlgo || '—'}</strong> wins{' '}
+        <strong className={llmWins === visibleRows.length ? 'cf-wins-all' : 'cf-wins-some'}>
           {llmWins}/{visibleRows.length}
         </strong>{' '}
         metric goals on this workload.
