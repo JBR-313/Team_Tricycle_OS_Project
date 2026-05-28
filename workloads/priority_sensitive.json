@@ -1,66 +1,94 @@
-[
+{
+  "id": "priority_critical_tasks",
+  "description": "5 processes with wide priority spread (1..5); Priority+Aging should respect importance.",
+  "target_metric": "avg_response_time",
+  "expected_best_algorithm": "PRIORITY",
+  "expected_behavior": "Priority+Aging wins on response time for high-priority jobs without starving low-priority ones (because waits are short).",
+  "schema_version": 2,
+  "processes": [
     {
-        "pid": 1,
-        "arrival_time": 0,
-        "cpu_bursts": [
-            10,
-            10
-        ],
-        "io_bursts": [
-            2
-        ],
-        "priority": 5,
-        "label": "cpu_bound"
+      "pid": 1,
+      "arrival_time": 0,
+      "cpu_bursts": [
+        10,
+        10
+      ],
+      "io_bursts": [
+        2
+      ],
+      "priority": 5,
+      "label": "cpu_bound",
+      "actual_bursts": [
+        10,
+        10
+      ]
     },
     {
-        "pid": 2,
-        "arrival_time": 1,
-        "cpu_bursts": [
-            4,
-            4
-        ],
-        "io_bursts": [
-            1
-        ],
-        "priority": 1,
-        "label": "interactive"
+      "pid": 2,
+      "arrival_time": 1,
+      "cpu_bursts": [
+        4,
+        4
+      ],
+      "io_bursts": [
+        1
+      ],
+      "priority": 1,
+      "label": "interactive",
+      "actual_bursts": [
+        4,
+        4
+      ]
     },
     {
-        "pid": 3,
-        "arrival_time": 2,
-        "cpu_bursts": [
-            2,
-            3
-        ],
-        "io_bursts": [
-            1
-        ],
-        "priority": 2,
-        "label": "interactive"
+      "pid": 3,
+      "arrival_time": 2,
+      "cpu_bursts": [
+        2,
+        3
+      ],
+      "io_bursts": [
+        1
+      ],
+      "priority": 2,
+      "label": "interactive",
+      "actual_bursts": [
+        2,
+        3
+      ]
     },
     {
-        "pid": 4,
-        "arrival_time": 3,
-        "cpu_bursts": [
-            3,
-            3,
-            4
-        ],
-        "io_bursts": [
-            4,
-            4
-        ],
-        "priority": 3,
-        "label": "interactive"
+      "pid": 4,
+      "arrival_time": 3,
+      "cpu_bursts": [
+        3,
+        3,
+        4
+      ],
+      "io_bursts": [
+        4,
+        4
+      ],
+      "priority": 3,
+      "label": "interactive",
+      "actual_bursts": [
+        3,
+        3,
+        4
+      ]
     },
     {
-        "pid": 5,
-        "arrival_time": 4,
-        "cpu_bursts": [
-            3
-        ],
-        "io_bursts": [],
-        "priority": 1,
-        "label": "interactive"
+      "pid": 5,
+      "arrival_time": 4,
+      "cpu_bursts": [
+        3
+      ],
+      "io_bursts": [],
+      "priority": 1,
+      "label": "interactive",
+      "actual_bursts": [
+        3
+      ]
     }
-]
+  ]
+}

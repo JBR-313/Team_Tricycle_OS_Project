@@ -5,9 +5,36 @@ import {
   ALGOS,
   loadManifest, loadRecommendation, loadGuardDecision,
   loadWorkloadSummary, loadMetrics, loadAllTraces,
-  loadSnapshotsManifest, setLiveDataBase, getLiveDataBase, DEFAULT_BASE,
+  getLiveDataBase,
   loadRuntimeEvents, loadCorrectionProposal, loadCorrectionGuardDecision,
 } from './data/liveDataClient.js'
+
+// Tiny inline toolbar for the Visualization tab — algorithm + tick scrubber.
+// Lives here (not Header) so the controls only appear when they're useful.
+function VizToolbar({ algo, onAlgoChange, currentTick, maxTick, onTickChange }) {
+  return (
+    <div className="viz-toolbar">
+      <label className="viz-toolbar-label">Algorithm</label>
+      <select
+        className="viz-toolbar-select"
+        value={algo}
+        onChange={e => onAlgoChange(e.target.value)}
+      >
+        {ALGOS.map(a => <option key={a} value={a}>{a}</option>)}
+      </select>
+      <label className="viz-toolbar-label">Tick</label>
+      <span className="viz-toolbar-tick">{currentTick}<span className="viz-toolbar-tickmax">/ {maxTick}</span></span>
+      <input
+        type="range"
+        className="viz-toolbar-slider"
+        min={0}
+        max={maxTick}
+        value={currentTick}
+        onChange={e => onTickChange(Number(e.target.value))}
+      />
+    </div>
+  )
+}
 import {
   fallbackManifest, fallbackRecommendation, fallbackGuardDecision,
   fallbackWorkloadSummary, fallbackMetrics, fallbackTraces,
@@ -25,26 +52,29 @@ import ProcessLanes        from './components/ProcessLanes.jsx'
 import WorkloadSummary     from './components/WorkloadSummary.jsx'
 import AlgorithmComparison from './components/AlgorithmComparison.jsx'
 import MetricVisualization from './components/MetricVisualization.jsx'
-import RecommendationEvidence from './components/RecommendationEvidence.jsx'
+// NOTE: RecommendationEvidence (WHY THIS ALGORITHM?) removed per
+// dashboard_page1_pre_execution_revision_goal.md §1/§3 — its content merged
+// into LLMRecommendation's description area.
 import CounterfactualMetricView from './components/CounterfactualMetricView.jsx'
-import DemoGuide from './components/DemoGuide.jsx'
 import RuntimeCorrectionPreview from './components/RuntimeCorrectionPreview.jsx'
+import MLFQQueuePanel from './components/MLFQQueuePanel.jsx'
+// NOTE: RunControls / WorkloadSummary intentionally NOT rendered on Page 1
+// per dashboard_page1_second_revision_goal.md §2 & §4. RUN moved into
+// Header; WorkloadSummary still available for Page 2/3 use later but is
+// imported by reference only.
 
-const POLL_INTERVAL_MS = 1000
+const POLL_INTERVAL_MS = 1500
 
 function formatUpdatedAt(iso) {
   if (!iso || iso === '1970-01-01T00:00:00Z') return null
-  try {
-    return new Date(iso).toLocaleTimeString()
-  } catch {
-    return iso
-  }
+  try { return new Date(iso).toLocaleTimeString() } catch { return iso }
 }
 
 export default function App() {
-  const [algo, setAlgo]         = useState('MLFQ')
-  const [tick, setTick]         = useState(0)
-  const [liveMode, setLiveMode] = useState(false)
+  // ── Tab state (LLM | Visualization | Evaluation) ─────────────────────────
+  const [tab, setTab]   = useState('LLM')
+  const [algo, setAlgo] = useState('MLFQ')
+  const [tick, setTick] = useState(0)
   const [selectedMetric, setSelectedMetric] = useState('avg_response_time')
 
   const [traces,          setTraces]          = useState(fallbackTraces)
@@ -57,17 +87,13 @@ export default function App() {
   const [dataMode,        setDataMode]        = useState('loading')
   const [updatedAt,       setUpdatedAt]       = useState(null)
   const [loadError,       setLoadError]       = useState(null)
-  const [traceErrors,     setTraceErrors]     = useState({})
   const [manifestVersion, setManifestVersion] = useState(null)
-  const [snapshotsManifest, setSnapshotsManifest] = useState(null)
-  const [selectedSnapshot, setSelectedSnapshotState] = useState(null) // null = default flat live-data
-  const [runtimeEvents, setRuntimeEvents] = useState(null)
-  const [correctionProposal, setCorrectionProposal] = useState(null)
+  const [runtimeEvents,           setRuntimeEvents]           = useState(null)
+  const [correctionProposal,      setCorrectionProposal]      = useState(null)
   const [correctionGuardDecision, setCorrectionGuardDecision] = useState(null)
 
   const manifestVersionRef = useRef(null)
 
-  // ── Initial load ──────────────────────────────────────────────────────────
   const loadAll = useCallback(async () => {
     try {
       const [mf, rec, gd, wl, mt, trResult] = await Promise.all([
@@ -78,7 +104,6 @@ export default function App() {
         loadMetrics().catch(() => null),
         loadAllTraces(),
       ])
-
       const usedFallback = !mf
       setManifest(mf || fallbackManifest)
       setRecommendation(rec || fallbackRecommendation)
@@ -86,25 +111,17 @@ export default function App() {
       setWorkloadSummary(wl || fallbackWorkloadSummary)
       setMetrics(mt || fallbackMetrics)
       setTraces(trResult.traces)
-      setTraceErrors(trResult.traceErrors)
       setDataMode(usedFallback ? 'fallback' : (mf?.mode || 'simulator'))
       setUpdatedAt(mf?.updated_at ? formatUpdatedAt(mf.updated_at) : null)
       setManifestVersion(mf?.version ?? null)
       setLoadError(null)
-
       if (mf) manifestVersionRef.current = `${mf.version}:${mf.updated_at}`
 
-      // Restore explanation from trace_explanation.json if available.
-      // Fetch from the currently-active base so snapshot-mode picks up
-      // the snapshot's own explanation instead of the flat root's.
       try {
         const exRes = await fetch(`${getLiveDataBase()}/trace_explanation.json`)
         if (exRes.ok) setTraceExplanation(await exRes.json())
-      } catch { /* optional file */ }
+      } catch {/* optional */}
 
-      // Optional preview-only runtime-correction artifacts. Each loader
-      // silently returns null when its file is absent (the common path
-      // on a healthy run), so the RuntimeCorrectionPreview card hides.
       const [re, cp, cd] = await Promise.all([
         loadRuntimeEvents(),
         loadCorrectionProposal(),
@@ -113,7 +130,6 @@ export default function App() {
       setRuntimeEvents(re)
       setCorrectionProposal(cp)
       setCorrectionGuardDecision(cd)
-
     } catch (err) {
       setLoadError(err.message)
       setDataMode('fallback')
@@ -122,28 +138,8 @@ export default function App() {
 
   useEffect(() => { loadAll() }, [loadAll])
 
-  // ── Snapshot index (read from /live-data root; absent ⇒ feature hidden)
+  // Lightweight always-on poll (no Live toggle anymore — RUN button drives changes).
   useEffect(() => {
-    loadSnapshotsManifest()
-      .then(setSnapshotsManifest)
-      .catch(() => setSnapshotsManifest(null))
-  }, [])
-
-  // ── Snapshot selector: swap loader base + reload everything ──────────────
-  const setSelectedSnapshot = useCallback((entry) => {
-    const base = entry?.path ? `${DEFAULT_BASE}/${entry.path}` : DEFAULT_BASE
-    setLiveDataBase(base)
-    setSelectedSnapshotState(entry || null)
-    manifestVersionRef.current = null
-    setTick(0)
-    loadAll()
-  }, [loadAll])
-
-  // ── Live polling ──────────────────────────────────────────────────────────
-  useEffect(() => {
-    // Snapshots are static — never poll them. The "Live" toggle should
-    // only watch the flat live-data root.
-    if (!liveMode || selectedSnapshot) return
     const id = setInterval(async () => {
       try {
         const mf = await loadManifest()
@@ -152,10 +148,10 @@ export default function App() {
           manifestVersionRef.current = key
           await loadAll()
         }
-      } catch { /* polling errors are silent */ }
+      } catch { /* silent */ }
     }, POLL_INTERVAL_MS)
     return () => clearInterval(id)
-  }, [liveMode, loadAll, selectedSnapshot])
+  }, [loadAll])
 
   // ── Derive per-algo events ────────────────────────────────────────────────
   const algoKey  = ALGOS.includes(algo) ? algo : 'MLFQ'
@@ -163,12 +159,9 @@ export default function App() {
   const events   = traces[traceKey] || []
   const maxTick  = useMemo(() => Math.max(...events.map(e => e.tick), 1), [events])
 
-  // In live mode, follow the latest tick
-  useEffect(() => {
-    if (liveMode) setTick(maxTick)
-  }, [liveMode, maxTick])
+  // Default the visualization tick to a mid-trace position when the algo changes.
+  useEffect(() => { setTick(Math.round(maxTick * 0.55)) }, [maxTick, algoKey])
 
-  // Total trace event count across all loaded algorithms (for header info)
   const totalTraceEvents = useMemo(
     () => Object.values(traces).reduce((sum, evs) => sum + (evs?.length || 0), 0),
     [traces],
@@ -178,53 +171,70 @@ export default function App() {
     setAlgo(newAlgo)
     const newEvents = traces[Object.keys(traces).find(k => k.toLowerCase() === newAlgo.toLowerCase())] || []
     const newMax = Math.max(...newEvents.map(e => e.tick), 1)
-    setTick(liveMode ? newMax : Math.round(newMax * 0.55))
-  }
-
-  function handleLiveModeToggle(isLive) {
-    setLiveMode(isLive)
-    if (!isLive) setTick(Math.round(maxTick * 0.55))
-    else setTick(maxTick)
+    setTick(Math.round(newMax * 0.55))
   }
 
   const dataStatus = {
-    mode:            dataMode,
-    updatedAt:       updatedAt,
-    manifestVersion: manifestVersion,
-    error:           loadError,
-    traceErrors:     traceErrors,
+    mode: dataMode, updatedAt, manifestVersion,
+    error: loadError,
   }
 
-  return (
-    <div className="dashboard-shell">
-      <Header
-        algo={algo}
-        onAlgoChange={handleAlgoChange}
-        currentTick={tick}
-        maxTick={maxTick}
-        onTickChange={setTick}
-        liveMode={liveMode}
-        onLiveModeToggle={handleLiveModeToggle}
-        dataStatus={dataStatus}
-        manifest={manifest}
-        totalTraceEvents={totalTraceEvents}
-        snapshotsManifest={snapshotsManifest}
-        selectedSnapshot={selectedSnapshot}
-        onSelectedSnapshotChange={setSelectedSnapshot}
-      />
+  // ── Tab content rendering ─────────────────────────────────────────────────
+  // Page 1 = LLM **pre-execution** decision page.
+  // EXACTLY three cards per dashboard_page1_pre_execution_revision_goal.md §1:
+  //   - LLM RECOMMENDATION (full-width top, primary focus)
+  //   - ALGORITHM GUARD   (compact, bottom-left)
+  //   - LLM EXPLANATION   (large readable, bottom-right) — pre-exec only,
+  //                        derived from recommendation + workloadSummary;
+  //                        traceExplanation is INTENTIONALLY NOT passed here
+  //                        because it is post-execution content (Page 2/3).
+  function renderLLMTab() {
+    return (
+      <div className="page1-grid">
+        <LLMRecommendation recommendation={recommendation} />
+        <AlgorithmGuard    guardDecision={guardDecision} />
+        <LLMExplanation
+          recommendation={recommendation}
+          workloadSummary={workloadSummary}
+        />
+      </div>
+    )
+  }
 
-      <div className="dashboard-main">
-        {/* ── LEFT COLUMN ── */}
-        <div className="dashboard-col">
-          <DemoGuide />
-          <LLMRecommendation  recommendation={recommendation} />
-          <AlgorithmGuard     guardDecision={guardDecision} />
-          <RecommendationEvidence
-            recommendation={recommendation}
-            guardDecision={guardDecision}
-            workloadSummary={workloadSummary}
-            metrics={metrics}
-            manifest={manifest}
+  function renderVisualizationTab() {
+    return (
+      <div className="viz-page">
+        <VizToolbar
+          algo={algo} onAlgoChange={handleAlgoChange}
+          currentTick={tick} maxTick={maxTick} onTickChange={setTick}
+        />
+        <div className="tab-grid viz-grid">
+          <div className="tab-col">
+            <MainGantt    events={events} currentTick={tick} maxTick={maxTick} algo={algo} />
+            <ProcessLanes events={events} currentTick={tick} maxTick={maxTick} algo={algo} />
+          </div>
+          <div className="tab-col">
+            <ProcessState   events={events} currentTick={tick} />
+            <MLFQQueuePanel events={events} currentTick={tick} algo={algo} />
+            <TraceStack     events={events} currentTick={tick} />
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  function renderEvaluationTab() {
+    return (
+      <div className="tab-grid eval-grid">
+        <div className="tab-col">
+          <EvaluationResult     metrics={metrics} recommendation={recommendation} />
+          <AlgorithmComparison  metrics={metrics} recommendation={recommendation} selectedMetric={selectedMetric} />
+        </div>
+        <div className="tab-col">
+          <MetricVisualization
+            metrics={metrics} recommendation={recommendation}
+            selectedMetric={selectedMetric}
+            onSelectedMetricChange={setSelectedMetric}
           />
           <CounterfactualMetricView metrics={metrics} recommendation={recommendation} />
           <RuntimeCorrectionPreview
@@ -232,24 +242,21 @@ export default function App() {
             correctionProposal={correctionProposal}
             correctionGuardDecision={correctionGuardDecision}
           />
-          <EvaluationResult   metrics={metrics} recommendation={recommendation} />
-          <LLMExplanation     traceExplanation={traceExplanation} />
         </div>
+      </div>
+    )
+  }
 
-        {/* ── CENTER COLUMN ── */}
-        <div className="dashboard-col">
-          <MainGantt    events={events} currentTick={tick} maxTick={maxTick} algo={algo} />
-          <ProcessState events={events} currentTick={tick} />
-          <TraceStack   events={events} currentTick={tick} />
-        </div>
-
-        {/* ── RIGHT COLUMN ── */}
-        <div className="dashboard-col">
-          <ProcessLanes        events={events} currentTick={tick} maxTick={maxTick} algo={algo} />
-          <WorkloadSummary     workloadSummary={workloadSummary} />
-          <AlgorithmComparison metrics={metrics} recommendation={recommendation} selectedMetric={selectedMetric} />
-          <MetricVisualization metrics={metrics} recommendation={recommendation} selectedMetric={selectedMetric} onSelectedMetricChange={setSelectedMetric} />
-        </div>
+  return (
+    <div className="dashboard-shell">
+      <Header
+        tab={tab} onTabChange={setTab}
+        onRunComplete={loadAll}
+      />
+      <div className="dashboard-main tab-main">
+        {tab === 'LLM' && renderLLMTab()}
+        {tab === 'Visualization' && renderVisualizationTab()}
+        {tab === 'Evaluation' && renderEvaluationTab()}
       </div>
     </div>
   )

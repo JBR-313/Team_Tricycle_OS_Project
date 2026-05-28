@@ -1,81 +1,114 @@
-[
+{
+  "id": "interactive_mixed",
+  "description": "6 processes mixing interactive (short bursts) and cpu_bound (long bursts); response-time benchmark for MLFQ.",
+  "target_metric": "avg_response_time",
+  "expected_best_algorithm": "MLFQ",
+  "expected_behavior": "MLFQ favors short interactive jobs while allowing CPU-bound jobs progress via demotion + aging.",
+  "schema_version": 2,
+  "processes": [
     {
-        "pid": 1,
-        "arrival_time": 0,
-        "cpu_bursts": [
-            2,
-            3
-        ],
-        "io_bursts": [
-            4
-        ],
-        "priority": 2,
-        "label": "interactive"
+      "pid": 1,
+      "arrival_time": 0,
+      "cpu_bursts": [
+        2,
+        3
+      ],
+      "io_bursts": [
+        4
+      ],
+      "priority": 2,
+      "label": "interactive",
+      "actual_bursts": [
+        2,
+        3
+      ]
     },
     {
-        "pid": 2,
-        "arrival_time": 1,
-        "cpu_bursts": [
-            8,
-            8,
-            9
-        ],
-        "io_bursts": [
-            3,
-            3
-        ],
-        "priority": 3,
-        "label": "cpu_bound"
+      "pid": 2,
+      "arrival_time": 1,
+      "cpu_bursts": [
+        8,
+        8,
+        9
+      ],
+      "io_bursts": [
+        3,
+        3
+      ],
+      "priority": 3,
+      "label": "cpu_bound",
+      "actual_bursts": [
+        8,
+        8,
+        9
+      ]
     },
     {
-        "pid": 3,
-        "arrival_time": 2,
-        "cpu_bursts": [
-            1
-        ],
-        "io_bursts": [],
-        "priority": 1,
-        "label": "interactive"
+      "pid": 3,
+      "arrival_time": 2,
+      "cpu_bursts": [
+        1
+      ],
+      "io_bursts": [],
+      "priority": 1,
+      "label": "interactive",
+      "actual_bursts": [
+        1
+      ]
     },
     {
-        "pid": 4,
-        "arrival_time": 4,
-        "cpu_bursts": [
-            10,
-            10,
-            10
-        ],
-        "io_bursts": [
-            3,
-            3
-        ],
-        "priority": 2,
-        "label": "cpu_bound"
+      "pid": 4,
+      "arrival_time": 4,
+      "cpu_bursts": [
+        10,
+        10,
+        10
+      ],
+      "io_bursts": [
+        3,
+        3
+      ],
+      "priority": 2,
+      "label": "cpu_bound",
+      "actual_bursts": [
+        10,
+        10,
+        10
+      ]
     },
     {
-        "pid": 5,
-        "arrival_time": 5,
-        "cpu_bursts": [
-            2,
-            2
-        ],
-        "io_bursts": [
-            4
-        ],
-        "priority": 1,
-        "label": "interactive"
+      "pid": 5,
+      "arrival_time": 5,
+      "cpu_bursts": [
+        2,
+        2
+      ],
+      "io_bursts": [
+        4
+      ],
+      "priority": 1,
+      "label": "interactive",
+      "actual_bursts": [
+        2,
+        2
+      ]
     },
     {
-        "pid": 6,
-        "arrival_time": 6,
-        "cpu_bursts": [
-            7,
-            8
-        ],
-        "io_bursts": [
-            2
-        ],
-        "priority": 3,
-        "label": "cpu_bound"
+      "pid": 6,
+      "arrival_time": 6,
+      "cpu_bursts": [
+        7,
+        8
+      ],
+      "io_bursts": [
+        2
+      ],
+      "priority": 3,
+      "label": "cpu_bound",
+      "actual_bursts": [
+        7,
+        8
+      ]
     }
-]
+  ]
+}

@@ -1,4 +1,10 @@
 {
+    "id": "interactive_heavy",
+    "description": "25 short interactive jobs arriving 1 tick apart; pure response-time benchmark.",
+    "target_metric": "avg_response_time",
+    "expected_best_algorithm": "MLFQ",
+    "expected_behavior": "RR and MLFQ should minimize avg response time. FCFS suffers convoy effect; SJF/SRTF are flat (all bursts ~1).",
+    "schema_version": 2,
     "process_count": 25,
     "avg_arrival_gap": 1,
     "cpu_bound_ratio": 0.0,
@@ -12,5 +18,207 @@
         "avg": 1.52
     },
     "total_cpu_work": 38,
-    "workload_file": "workloads/interactive_heavy.json"
+    "workload_file": "workloads/interactive_heavy.json",
+    "visible_processes": [
+        {
+            "pid": 1,
+            "arrival_time": 0,
+            "priority": 1,
+            "label": "interactive",
+            "burst_count": 1,
+            "io_count": 0
+        },
+        {
+            "pid": 2,
+            "arrival_time": 1,
+            "priority": 1,
+            "label": "interactive",
+            "burst_count": 2,
+            "io_count": 1
+        },
+        {
+            "pid": 3,
+            "arrival_time": 2,
+            "priority": 1,
+            "label": "interactive",
+            "burst_count": 1,
+            "io_count": 0
+        },
+        {
+            "pid": 4,
+            "arrival_time": 3,
+            "priority": 1,
+            "label": "interactive",
+            "burst_count": 2,
+            "io_count": 1
+        },
+        {
+            "pid": 5,
+            "arrival_time": 4,
+            "priority": 1,
+            "label": "interactive",
+            "burst_count": 1,
+            "io_count": 0
+        },
+        {
+            "pid": 6,
+            "arrival_time": 5,
+            "priority": 1,
+            "label": "interactive",
+            "burst_count": 2,
+            "io_count": 1
+        },
+        {
+            "pid": 7,
+            "arrival_time": 6,
+            "priority": 1,
+            "label": "interactive",
+            "burst_count": 1,
+            "io_count": 0
+        },
+        {
+            "pid": 8,
+            "arrival_time": 7,
+            "priority": 1,
+            "label": "interactive",
+            "burst_count": 2,
+            "io_count": 1
+        },
+        {
+            "pid": 9,
+            "arrival_time": 8,
+            "priority": 1,
+            "label": "interactive",
+            "burst_count": 1,
+            "io_count": 0
+        },
+        {
+            "pid": 10,
+            "arrival_time": 9,
+            "priority": 1,
+            "label": "interactive",
+            "burst_count": 1,
+            "io_count": 0
+        },
+        {
+            "pid": 11,
+            "arrival_time": 10,
+            "priority": 1,
+            "label": "interactive",
+            "burst_count": 2,
+            "io_count": 1
+        },
+        {
+            "pid": 12,
+            "arrival_time": 11,
+            "priority": 1,
+            "label": "interactive",
+            "burst_count": 2,
+            "io_count": 1
+        },
+        {
+            "pid": 13,
+            "arrival_time": 12,
+            "priority": 1,
+            "label": "interactive",
+            "burst_count": 2,
+            "io_count": 1
+        },
+        {
+            "pid": 14,
+            "arrival_time": 13,
+            "priority": 1,
+            "label": "interactive",
+            "burst_count": 1,
+            "io_count": 0
+        },
+        {
+            "pid": 15,
+            "arrival_time": 14,
+            "priority": 1,
+            "label": "interactive",
+            "burst_count": 2,
+            "io_count": 1
+        },
+        {
+            "pid": 16,
+            "arrival_time": 15,
+            "priority": 1,
+            "label": "interactive",
+            "burst_count": 1,
+            "io_count": 0
+        },
+        {
+            "pid": 17,
+            "arrival_time": 16,
+            "priority": 1,
+            "label": "interactive",
+            "burst_count": 2,
+            "io_count": 1
+        },
+        {
+            "pid": 18,
+            "arrival_time": 17,
+            "priority": 1,
+            "label": "interactive",
+            "burst_count": 1,
+            "io_count": 0
+        },
+        {
+            "pid": 19,
+            "arrival_time": 18,
+            "priority": 1,
+            "label": "interactive",
+            "burst_count": 2,
+            "io_count": 1
+        },
+        {
+            "pid": 20,
+            "arrival_time": 19,
+            "priority": 1,
+            "label": "interactive",
+            "burst_count": 1,
+            "io_count": 0
+        },
+        {
+            "pid": 21,
+            "arrival_time": 20,
+            "priority": 1,
+            "label": "interactive",
+            "burst_count": 2,
+            "io_count": 1
+        },
+        {
+            "pid": 22,
+            "arrival_time": 21,
+            "priority": 1,
+            "label": "interactive",
+            "burst_count": 2,
+            "io_count": 1
+        },
+        {
+            "pid": 23,
+            "arrival_time": 22,
+            "priority": 1,
+            "label": "interactive",
+            "burst_count": 1,
+            "io_count": 0
+        },
+        {
+            "pid": 24,
+            "arrival_time": 23,
+            "priority": 1,
+            "label": "interactive",
+            "burst_count": 2,
+            "io_count": 1
+        },
+        {
+            "pid": 25,
+            "arrival_time": 24,
+            "priority": 1,
+            "label": "interactive",
+            "burst_count": 1,
+            "io_count": 0
+        }
+    ]
 }

@@ -1,5 +1,17 @@
-"""
-Event Detector — watches trace JSONL for scheduling problems and emits
+"""Event Detector — feeds the PREVIEW-ONLY runtime correction loop.
+
+Role classification (see docs/codebase_slimming_plan.md §2.2):
+  FUTURE-WORK (used in preview path). The closed-loop runtime correction
+  (detect -> propose -> guard -> APPLY back to xv6 -> CORRECTION_APPLIED
+  event) is NOT implemented. Only the first three stages exist today:
+    tools/event_detector.py       (this file)
+    tools/correction_proposer.py  (preview only)
+    tools/correction_guard.py     (preview only)
+  No code path applies a correction to a running xv6 kernel. Anything that
+  looks like “runtime correction” in the dashboard is the
+  RuntimeCorrectionPreview card — labelled preview-only.
+
+This module watches a trace JSONL for scheduling problems and emits
 runtime_events.json.
 
 Detected problems:

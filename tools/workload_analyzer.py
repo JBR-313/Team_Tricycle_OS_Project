@@ -22,14 +22,27 @@ def load_workload(path):
 # Per-process helpers
 # ---------------------------------------------------------
 
+def _bursts(process):
+    """Return the (hidden) actual CPU burst list for a process.
+
+    The new v2 schema names the field `actual_bursts` to make explicit that
+    these are the ground-truth values used only by execution and evaluation —
+    NEVER fed to the LLM or to SJF/SRTF scheduler decisions.
+
+    For backward compatibility, fall back to the legacy `cpu_bursts` key when
+    `actual_bursts` is absent.
+    """
+    return process.get("actual_bursts") or process["cpu_bursts"]
+
+
 def total_cpu_burst_time(process):
     """Sum of all CPU burst durations for one process."""
-    return sum(process["cpu_bursts"])
+    return sum(_bursts(process))
 
 
 def burst_count(process):
     """Number of CPU bursts (= scheduling phases)."""
-    return len(process["cpu_bursts"])
+    return len(_bursts(process))
 
 
 # ---------------------------------------------------------
@@ -129,9 +142,40 @@ def analyze_workload(workload, input_path: Path):
         workload_file = str(input_path.resolve())
 
     # -------------------------------------------------
+    # Optional v2 metadata (id / description / target_metric /
+    # expected_best_algorithm / expected_behavior). Visible features only —
+    # never includes per-process actual_bursts.
+    # -------------------------------------------------
+    meta_keys = (
+        "id", "description", "target_metric",
+        "expected_best_algorithm", "expected_behavior",
+        "schema_version",
+    )
+    meta = {k: workload[k] for k in meta_keys if k in workload}
+
+    # -------------------------------------------------
+    # Per-process VISIBLE features (for LLM burst prediction).
+    # HARD RULE: actual_bursts / cpu_bursts MUST NOT appear here. The LLM
+    # uses these features (arrival_time, priority, label, burst_count) to
+    # PREDICT burst values; it must never see the ground truth.
+    # -------------------------------------------------
+    visible_processes = [
+        {
+            "pid":           p.get("pid"),
+            "arrival_time":  p.get("arrival_time"),
+            "priority":      p.get("priority"),
+            "label":         p.get("label", p.get("type", "unknown")),
+            "burst_count":   len(_bursts(p)),
+            "io_count":      len(p.get("io_bursts", []) or []),
+        }
+        for p in processes
+    ]
+
+    # -------------------------------------------------
     # Final summary
     # -------------------------------------------------
     summary = {
+        **meta,
         "process_count":             n,
         "avg_arrival_gap":           avg_arrival_gap,
         "cpu_bound_ratio":           cpu_bound_ratio,
@@ -142,6 +186,7 @@ def analyze_workload(workload, input_path: Path):
         "burst_count_distribution":  burst_count_distribution,
         "total_cpu_work":            total_cpu_work,
         "workload_file":             workload_file,
+        "visible_processes":         visible_processes,
     }
 
     return summary

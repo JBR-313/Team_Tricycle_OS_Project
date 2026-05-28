@@ -115,7 +115,7 @@ Reads `outputs/metrics.json` (produced by Role A's `metrics.py`). The `judgment`
 - `SUCCESS` / `NEAR-SUCCESS` → no action (rules file untouched)
 - `FAIL` → query the LLM and overwrite `outputs/feedback_rules.md`
 
-`FAIL` is set by Role A when `regret_score > 0.30` or `starvation_occurred = true` — see [`docs/evaluation_plan.md`](../docs/evaluation_plan.md) for the full criteria.
+`FAIL` is set by Role A when `regret_score > 0.25` or `starvation_occurred = true` — see [`docs/evaluation_plan.md`](../docs/evaluation_plan.md) for the full criteria.
 
 **`metrics.json` fields consumed**:
 - `scheduling_algorithm`, `judgment`, `regret_score`, `starvation_occurred`
@@ -304,7 +304,7 @@ reject 시에는 `params`도 fallback 알고리즘의 기본값으로 교체되�
 - `SUCCESS` / `NEAR-SUCCESS` → 아무 동작 안 함 (규칙 파일 그대로)
 - `FAIL` → LLM에게 규칙 작성 요청 → `outputs/feedback_rules.md` 덮어쓰기
 
-`FAIL` 조건은 `regret_score > 0.30` 또는 `starvation_occurred = true` (전체 기준은 [`docs/evaluation_plan.md`](../docs/evaluation_plan.md) 참고).
+`FAIL` 조건은 `regret_score > 0.25` 또는 `starvation_occurred = true` (전체 기준은 [`docs/evaluation_plan.md`](../docs/evaluation_plan.md) 참고).
 
 **`metrics.json`에서 읽는 필드**:
 - `scheduling_algorithm`, `judgment`, `regret_score`, `starvation_occurred`
