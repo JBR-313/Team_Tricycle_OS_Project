@@ -156,7 +156,7 @@ for module interfaces, and `docs/trace_format.md` for the trace formats.
   wired (Future Work).
 - Solar Pro 3 API key in `.env` is required for a real LLM recommendation;
   without it, the orchestrator falls back to a baked
-  `outputs/demo/recommendation.json`, stamps `metadata_source=demo_fallback`
+  `outputs/_demo_fixtures/recommendation.json`, stamps `metadata_source=demo_fallback`
   in `manifest.json`, and the dashboard downgrades the badge to `FALLBACK`.
 - xv6 traces are short and sparse (5 children per curated profile, typically
   30–80 events per algorithm). The simulator typically produces richer traces.
@@ -231,7 +231,7 @@ In the header bar, point to (left → right):
   - `Backend: XV6 TRACE` — real xv6 console log was loaded.
   - `Backend: SIMULATOR FALLBACK` — host-side simulator output.
   - `Backend: FALLBACK` — even the recommendation/guard came from
-    `outputs/demo/`. Should NOT appear in a real demo.
+    `outputs/_demo_fixtures/`. Should NOT appear in a real demo.
 - **Manifest meta**: workload, llm-selected algo, executed count, seed, total
   trace events.
 - **Algorithm selector** — switch between the algorithms (LLM-selected first).
@@ -267,7 +267,7 @@ audience can see that the data is from the host model, not real xv6.
   but the proposer → LLM call → guard re-check → apply step → trace
   `CORRECTION_APPLIED` event are not wired. Don't claim closed-loop.
 - **Solar Pro 3 API key.** Without `.env`, the orchestrator falls back to
-  `outputs/demo/recommendation.json` and stamps
+  `outputs/_demo_fixtures/recommendation.json` and stamps
   `metadata_source=demo_fallback`; the dashboard then shows
   `Backend: FALLBACK`. Should not occur in a real demo.
 - **xv6 traces are short educational traces.** 5 children per curated

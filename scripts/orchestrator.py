@@ -41,7 +41,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).parent.parent.resolve()
 TOOLS_DIR = ROOT / "tools"
-DEMO_DIR = ROOT / "outputs" / "demo"
+DEMO_DIR = ROOT / "outputs" / "_demo_fixtures"
 OUTPUTS = ROOT / "outputs" / "live"
 LIVE_DATA = ROOT / "dashboard_live" / "public" / "live-data"
 XV6_DIR = ROOT / "xv6-riscv"
@@ -757,7 +757,7 @@ def run_xv6_backend(out_dir: Path, seed: int, profile: str, run_order: list[str]
 # ── metadata + export (after running) ──────────────────────────────────────────
 
 def ensure_metadata_files(out_dir: Path, dry_run: bool):
-    """Safety net: copy any missing metadata file from outputs/demo."""
+    """Safety net: copy any missing metadata file from outputs/_demo_fixtures."""
     for fname in META_FILES:
         target = out_dir / fname
         if not target.exists():

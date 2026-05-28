@@ -9,7 +9,7 @@
     "aging_threshold": 500,
     "boost_interval": 100
   },
-  "reason": "This workload consists of 25 short interactive jobs with arrival gaps of 1 tick. MLFQ with 2 queues (high quantum for CPU-bound, low quantum for interactive) and aging will minimize average response time by giving interactive jobs quick service while preventing starvation. The burst count distribution (avg 1.52) suggests most jobs are very short, fitting MLFQ's design for interactive workloads.",
+  "reason": "This workload consists of 25 short interactive jobs with arrival gaps of 1 tick. MLFQ with 2 queues (high quantum for CPU-bound, low quantum for interactive) and aging ensures low average response time by prioritizing short jobs while preventing starvation. The small quantum in the second queue gives good response time for interactive jobs.",
   "target_metric": "avg_response_time",
   "confidence": 0.95,
   "predicted_bursts": [],
@@ -17,7 +17,7 @@
   "_meta": {
     "source": "tools/llm_advisor.py",
     "model": "solar-pro3",
-    "generated_at": "2026-05-28T10:17:28.561684+00:00",
+    "generated_at": "2026-05-28T10:12:21.406396+00:00",
     "workload_summary": "/home/seonguk/projects/Team_Tricycle_OS_Project/outputs/live/workload_summary.json"
   }
 }

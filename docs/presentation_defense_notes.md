@@ -177,7 +177,7 @@ Source: `tools/event_detector.py`; `docs/implementation_status.md`.
   both apply an absolute tick floor so sub-tick noise on these short
   traces does not falsely flag starvation or FAIL — see PR #14 and #15.
 - **Solar Pro 3 API fallback.** Without a key in `.env`, the
-  orchestrator falls back to `outputs/demo/recommendation.json` and
+  orchestrator falls back to `outputs/_demo_fixtures/recommendation.json` and
   stamps `metadata_source=demo_fallback`. The dashboard then shows
   `Backend: FALLBACK` instead of `XV6 TRACE`. If this happens during
   the demo, announce it.
@@ -202,7 +202,7 @@ Source: `tools/event_detector.py`; `docs/implementation_status.md`.
 | "Did this actually go through the LLM, or is it canned?" | Evidence card → provenance pill. `LLM: solar-pro3` ⇒ real call. `demo fallback (no LLM call)` (warning-tinted) ⇒ canned. |
 | "Can the LLM change strategy mid-run?" | Runtime correction is **preview-only** today. The dashboard's RuntimeCorrectionPreview card shows the proposer + guard verdict; on the healthy demo it reads "Runtime monitor: no correction needed". The actual mid-run apply (kernel mid-run setter + `CORRECTION_APPLIED` trace event) is intentional Future Work — see §5. To demonstrate the rule table off-stage, run `python3 scripts/correction_preview_smoke.py`. |
 | "Is this real-time?" | No — `manifest.json` polling; final result is replayable per tick |
-| "What if the API is down?" | Demo fallback (`Backend: FALLBACK`); recommendation/guard come from `outputs/demo/`. Evidence card surfaces this explicitly too. |
+| "What if the API is down?" | Demo fallback (`Backend: FALLBACK`); recommendation/guard come from `outputs/_demo_fixtures/`. Evidence card surfaces this explicitly too. |
 
 ---
 

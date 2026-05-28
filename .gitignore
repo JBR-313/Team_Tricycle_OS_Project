@@ -10,8 +10,14 @@ __pycache__/
 .venv/
 venv/
 
-# Build outputs (xv6 raw logs, build logs, demo scratch)
-outputs/
+# Build outputs (xv6 raw logs, build logs, demo scratch).
+# Use `outputs/*` (not `outputs/`) so the directory itself stays visible to
+# git — otherwise the `!` exception below cannot re-include anything inside.
+outputs/*
+# …but the curated offline-demo fixture set is committed. The leading
+# underscore + "_fixtures" suffix is intentional: it reads as "committed
+# data", not "build output of demo". See docs/repo_cleanup_plan.md §6.2.
+!outputs/_demo_fixtures/
 
 # Defensive: catch stray logs outside outputs/. Tracked files (e.g.
 # logs/foo.log if someone deliberately git-added one) are unaffected.
