@@ -30,16 +30,26 @@ from pathlib import Path
 from typing import Any, Optional
 
 # Backward-compatible output normalizers (DISPLAY algo name + canonical metric).
+# CANONICAL_ALGOS is the single source of truth for the supported algorithm set
+# — keep this in lockstep with tools/llm_advisor.py via the same import.
 try:
-    from tools.schema_compat import normalize_algorithm_name, normalize_target_metric
+    from tools.schema_compat import (
+        CANONICAL_ALGOS,
+        normalize_algorithm_name,
+        normalize_target_metric,
+    )
 except ImportError:  # when run as `python3 tools/algorithm_guard.py`
-    from schema_compat import normalize_algorithm_name, normalize_target_metric
+    from schema_compat import (  # type: ignore[no-redef]
+        CANONICAL_ALGOS,
+        normalize_algorithm_name,
+        normalize_target_metric,
+    )
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 # RR/FCFS/PRIORITY/MLFQ implemented in xv6; SJF/SRTF are prediction-based
 # (exponential averaging) — see docs/work_status_sjf_srtf.md.
-SUPPORTED_ALGORITHMS = ["FCFS", "RR", "PRIORITY", "MLFQ", "SJF", "SRTF"]
+SUPPORTED_ALGORITHMS = list(CANONICAL_ALGOS)
 SUPPORTED_METRICS = [
     "response_time",
     "turnaround_time",
@@ -605,14 +615,17 @@ def guard(rec: dict) -> dict:
             if result == "accepted":
                 result = "accepted_with_warning"
 
-        # Build output
+        # Build output. `confidence_score` always carries a usable number
+        # (assumed 0.5 when the LLM omitted it) so reason strings and the
+        # downstream dashboard never see a literal "None".
+        effective_confidence = confidence if confidence is not None else 0.5
         guard_decision: dict[str, Any] = {
             "guard_result": result,
             "algorithm": algo,
             "params": params,
             "target_metric": metric,
             "compatibility_score": compat_score,
-            "confidence_score": confidence if confidence is not None else 0.5,
+            "confidence_score": effective_confidence,
             "predicted_bursts": pb_clean,
             "prediction_source": prediction_source,
         }
@@ -620,12 +633,12 @@ def guard(rec: dict) -> dict:
         if result == "accepted":
             guard_decision["reason"] = (
                 f"Accepted: {algo} is suitable for {metric} "
-                f"(compat={compat_score:.2f}, confidence={confidence})."
+                f"(compat={compat_score:.2f}, confidence={effective_confidence:.2f})."
             )
         elif result == "accepted_with_warning":
             guard_decision["reason"] = (
                 f"Accepted with warnings: {algo} for {metric} "
-                f"(compat={compat_score:.2f}, confidence={confidence})."
+                f"(compat={compat_score:.2f}, confidence={effective_confidence:.2f})."
             )
             guard_decision["warnings"] = messages
         else:  # rejected

@@ -10,8 +10,9 @@ What it does:
   1. Read `workload_summary.json` (produced by Role A's workload_analyzer.py).
   2. If `prompt_feedback_rules.md` exists, append it to the system prompt.
   3. Ask Upstage Solar Pro 3 to recommend ONE of:
-         FCFS, RR, Priority, MLFQ
-     and explain why, as strict JSON.
+         FCFS, RR, PRIORITY, MLFQ, SJF, SRTF
+     and explain why, as strict JSON. SJF/SRTF use prediction-based burst
+     estimation; the LLM tunes the exponential-averaging predictor only.
   4. Write the result to `recommendation.json`.
 
 The LLM only advises. It does not control the scheduler — this script just
@@ -38,12 +39,22 @@ except ImportError:  # when run as `python3 tools/llm_advisor.py`
     from solar_client import SolarClient, SolarError
 
 # Backward-compatible output normalizers (DISPLAY algo name + canonical metric).
+# CANONICAL_ALGOS is the single source of truth — keep this set in sync with
+# tools/algorithm_guard.py via the same import.
 try:
-    from tools.schema_compat import normalize_algorithm_name, normalize_target_metric
+    from tools.schema_compat import (
+        CANONICAL_ALGOS,
+        normalize_algorithm_name,
+        normalize_target_metric,
+    )
 except ImportError:  # when run as `python3 tools/llm_advisor.py`
-    from schema_compat import normalize_algorithm_name, normalize_target_metric
+    from schema_compat import (  # type: ignore[no-redef]
+        CANONICAL_ALGOS,
+        normalize_algorithm_name,
+        normalize_target_metric,
+    )
 
-ALGORITHMS = ["FCFS", "RR", "PRIORITY", "MLFQ", "SJF", "SRTF"]
+ALGORITHMS = list(CANONICAL_ALGOS)
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
@@ -131,6 +142,11 @@ def read_workload_summary(path: Path) -> dict:
         data = json.loads(path.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
         raise SystemExit(f"[llm_advisor] {path} is not valid JSON: {exc}")
+    if not isinstance(data, dict):
+        raise SystemExit(
+            f"[llm_advisor] expected {path} to be a JSON object, got "
+            f"{type(data).__name__}"
+        )
     return data
 
 

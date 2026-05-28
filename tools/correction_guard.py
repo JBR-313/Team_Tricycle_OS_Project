@@ -163,7 +163,7 @@ def main() -> int:
         return 0
     proposal = _read_json(p)
     decision = validate(proposal)
-    Path(args.out).write_text(json.dumps(decision, indent=2), encoding="utf-8")
+    Path(args.out).write_text(json.dumps(decision, indent=2) + "\n", encoding="utf-8")
     print(f"[correction_guard] wrote {args.out}: {decision['guard_result']}")
     return 0
 
