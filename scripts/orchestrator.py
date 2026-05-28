@@ -77,12 +77,25 @@ QEMU_RUN_TIMEOUT = 60.0   # max seconds to wait for RUN_END before giving up
 
 # Profile name -> workload file (the user chose: map to existing JSON, do NOT synthesize).
 PROFILE_MAP = {
+    # Legacy xv6 profile aliases (kept for backward compat with schedtest).
     "interactive":        ROOT / "workloads" / "interactive_heavy.json",
     "cpu_bound":          ROOT / "workloads" / "long_cpu_bound_first.json",
     "mixed":              ROOT / "workloads" / "mixed_workload.json",
     "priority_sensitive": ROOT / "workloads" / "priority_sensitive.json",
     "short_jobs":         ROOT / "workloads" / "short_jobs.json",
     "starvation_risk":    ROOT / "workloads" / "starvation_risk.json",
+    # v2 workload IDs (matches the `id` field in each workload JSON;
+    # see docs/workload_coverage_matrix.md). Simulator backend only — xv6
+    # schedtest still uses the legacy 4 curated profiles.
+    "interactive_heavy":      ROOT / "workloads" / "interactive_heavy.json",
+    "short_jobs_clustered":   ROOT / "workloads" / "short_jobs.json",
+    "long_job_first_convoy":  ROOT / "workloads" / "long_cpu_bound_first.json",
+    "interactive_mixed":      ROOT / "workloads" / "mixed_workload.json",
+    "priority_critical_tasks":ROOT / "workloads" / "priority_sensitive.json",
+    "cpu_bound_vs_io_bound":  ROOT / "workloads" / "cpu_bound_vs_io_bound.json",
+    "ambiguous_mixed":        ROOT / "workloads" / "ambiguous_mixed.json",
+    "pure_batch":             ROOT / "workloads" / "pure_batch.json",
+    "bursty_long_tail":       ROOT / "workloads" / "bursty_long_tail.json",
 }
 
 # Trace files written by the simulator (lowercase canonical names).
@@ -598,9 +611,11 @@ def build_xv6_metrics(out_dir: Path, selected: str, run_order: list[str],
             return "SUCCESS", 0.0
         denom = max(abs(best), JUDGMENT_ABS_FLOOR)
         delta = round((best - v) / denom if not lower_better else (v - best) / denom, 3)
-        if delta <= 0.10:
+        # Single source of truth: tools/metrics.py constants.
+        from metrics import SUCCESS_REGRET, NEAR_SUCCESS_REGRET
+        if delta <= SUCCESS_REGRET:
             return "SUCCESS", delta
-        if delta <= 0.30:
+        if delta <= NEAR_SUCCESS_REGRET:
             return "NEAR-SUCCESS", delta
         return "FAIL", delta
 
@@ -616,6 +631,53 @@ def build_xv6_metrics(out_dir: Path, selected: str, run_order: list[str],
     top["comparison"] = comparison
     top["judgment"], top["regret_score"] = _judge(comparison[selected])
     top.setdefault("starvation_pids", [])
+
+    # Populate the v2 evaluation fields the dashboard's Evaluation tab needs.
+    # These are intentionally derived in the orchestrator (not tools/metrics.evaluate_run)
+    # because the orchestrator owns the cross-algorithm comparison object.
+    mkey = (
+        "throughput" if "through" in (target_metric or "").lower()
+        else (target_metric or "avg_response_time")
+    )
+    # Find the algorithm with the best value on the target metric.
+    candidates = [
+        (algo, c.get(mkey))
+        for algo, c in comparison.items()
+        if isinstance(c.get(mkey), (int, float))
+    ]
+    best_algo = None
+    best_val = None
+    if candidates:
+        chooser = max if "through" in mkey.lower() else min
+        best_algo, best_val = chooser(candidates, key=lambda x: x[1])
+    sel_val = comparison.get(selected, {}).get(mkey)
+
+    top["target_metric"] = mkey
+    top["selected_metric_value"] = sel_val
+    top["best_algorithm"] = best_algo
+    top["best_metric_value"] = best_val
+    # One-line explanation matching tools/metrics._explain_judgment.
+    if top.get("starvation_occurred"):
+        top["explanation"] = (
+            f"FAIL: {selected} caused starvation"
+            + (f" on pid(s) {top.get('starvation_pids')}" if top.get('starvation_pids') else "")
+            + " — starvation forces FAIL regardless of regret."
+        )
+    elif top["regret_score"] is None or sel_val is None or best_val is None or best_algo is None:
+        top["explanation"] = f"UNKNOWN: insufficient comparison data for {selected} on {mkey}."
+    else:
+        raw_pct = top["regret_score"] * 100
+        if raw_pct >= 999.5:
+            pct_str, tail = ">999%", " (regret huge because best≈0)"
+        else:
+            pct_str, tail = f"{round(raw_pct, 1)}%", ""
+        verdict = top["judgment"]
+        bound = ("(<= 10%)" if verdict == "SUCCESS"
+                 else "(10-25%)" if verdict == "NEAR-SUCCESS" else "(> 25%)")
+        top["explanation"] = (
+            f"{verdict}: {selected} on {mkey} = {sel_val} vs "
+            f"best ({best_algo}) = {best_val}; regret = {pct_str} {bound}.{tail}"
+        )
 
     (out_dir / "metrics.json").write_text(json.dumps(top, indent=2))
     print(f"  metrics.json: selected={selected} judgment={top['judgment']} "
