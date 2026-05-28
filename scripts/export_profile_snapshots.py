@@ -84,12 +84,20 @@ def _iso_now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
 
 
-def run_orchestrator(profile: str, backend: str, seed: int) -> int:
-    return _run([
+def run_orchestrator(profile: str, backend: str, seed: int,
+                     allow_fallback: bool = False) -> int:
+    cmd = [
         sys.executable, str(SCRIPTS_DIR / "orchestrator.py"),
         "--backend", backend, "--seed", str(seed),
         "--workload", profile, "--run-all",
-    ])
+    ]
+    # The orchestrator is strict-by-default about LLM failures. Forward
+    # --allow-fallback as --offline-fixture so the snapshot run can still
+    # produce demo-fallback artifacts when the caller explicitly asked for
+    # them; the metadata_source check below stays the source of truth.
+    if allow_fallback:
+        cmd.append("--offline-fixture")
+    return _run(cmd)
 
 
 def run_validator_strict(dir_path: Path) -> int:
@@ -125,7 +133,7 @@ def snapshot_one(profile: str, backend: str, seed: int,
                  allow_fallback: bool) -> dict | None:
     """Run + validate + copy one profile. Returns the manifest entry or None on failure."""
     print(f"\n=== snapshot: {profile} ===")
-    rc = run_orchestrator(profile, backend, seed)
+    rc = run_orchestrator(profile, backend, seed, allow_fallback=allow_fallback)
     if rc != 0:
         print(f"[FAIL] orchestrator exited {rc} for {profile}")
         return None

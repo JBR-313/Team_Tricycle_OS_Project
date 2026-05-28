@@ -183,9 +183,9 @@ table built from this plan:
 `git rm --cached` the existing tracked binaries; add a `.gitignore` clause
 in `xv6-riscv/`. Schedule for the **first PR after the demo**.
 
-### 6.2 Rename `outputs/_demo_fixtures/` → `outputs/_demo_fixtures/` — **DONE**
+### 6.2 Rename `outputs/demo/` → `outputs/_demo_fixtures/` — **DONE**
 
-“`outputs/_demo_fixtures/`” read as “build output of `demo`”, but it was curated
+“`outputs/demo/`” read as “build output of `demo`”, but it was curated
 fixture data. The directory is now `outputs/_demo_fixtures/`, committed
 to git via a `.gitignore` `!outputs/_demo_fixtures/` exception so the
 offline fallback works from a fresh checkout. README and orchestrator

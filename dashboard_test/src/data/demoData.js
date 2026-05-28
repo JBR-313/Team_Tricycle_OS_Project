@@ -1,4 +1,4 @@
-// Auto-generated from outputs/demo/* — do not edit manually
+// Auto-generated from outputs/_demo_fixtures/* — do not edit manually
 
 export const recommendation = {
   "recommended_scheduling_algorithm": "MLFQ",

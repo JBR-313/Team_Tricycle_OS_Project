@@ -60,14 +60,18 @@ def stage_py_compile() -> int:
     return _run([sys.executable, "-m", "py_compile", *files])
 
 
-def stage_orchestrator(backend: str, seed: int, workload: str) -> int:
-    return _run([
+def stage_orchestrator(backend: str, seed: int, workload: str,
+                       offline_fixture: bool = False) -> int:
+    cmd = [
         sys.executable, str(SCRIPTS_DIR / "orchestrator.py"),
         "--backend", backend,
         "--seed", str(seed),
         "--workload", workload,
         "--run-all",
-    ])
+    ]
+    if offline_fixture:
+        cmd.append("--offline-fixture")
+    return _run(cmd)
 
 
 def stage_validate(strict: bool) -> int:
@@ -90,6 +94,10 @@ def main() -> int:
                     help="only compile + validate the existing live-data")
     ap.add_argument("--no-strict-validator", action="store_true",
                     help="run the contract validator without --strict")
+    ap.add_argument("--offline-fixture", action="store_true",
+                    help=("forward --offline-fixture to the orchestrator so the "
+                          "committed outputs/_demo_fixtures/ fixtures are used when "
+                          "UPSTAGE_API_KEY is missing. Default is STRICT."))
     args = ap.parse_args()
 
     stages: list[tuple[str, callable]] = []  # type: ignore[type-arg]
@@ -98,7 +106,8 @@ def main() -> int:
         stages.append((
             f"Run Orchestrator (backend={args.backend} seed={args.seed} "
             f"workload={args.workload})",
-            lambda: stage_orchestrator(args.backend, args.seed, args.workload),
+            lambda: stage_orchestrator(args.backend, args.seed, args.workload,
+                                       offline_fixture=args.offline_fixture),
         ))
     stages.append((
         "Strict-validate dashboard contract"
