@@ -1,96 +1,118 @@
 import Card from './Card.jsx'
 import { isHigherBetterMetric, normalizeTargetMetric } from '../data/schemaCompat.js'
 
+/**
+ * EvaluationResult — Page 3 hero card.
+ *
+ * Shows, in this order, with the verdict dominant:
+ *   1. Verdict (SUCCESS / NEAR-SUCCESS / FAIL)
+ *   2. One-sentence summary: "LLM selected X, and X was also the best …"
+ *   3. Target metric  |  LLM selected  |  Best algorithm
+ *   4. Regret %       |  Starvation
+ *
+ * No tiny chip rail across the top, no abbreviation jargon. Same
+ * readability standard as Page 1 / Page 2.
+ */
+
+const VERDICT_STYLE = {
+  SUCCESS:        { bg: '#d1fae5', fg: '#047857', border: '#34d399' },
+  'NEAR-SUCCESS': { bg: '#dbeafe', fg: '#1e40af', border: '#60a5fa' },
+  FAIL:           { bg: '#fee2e2', fg: '#b91c1c', border: '#f87171' },
+  UNKNOWN:        { bg: '#f1f5f9', fg: '#475569', border: '#cbd5e1' },
+}
+
+function formatRegret(r) {
+  if (r == null) return null
+  const pct = r * 100
+  if (pct >= 999.5) return '>999% (best ≈ 0)'
+  if (pct < 1) return `${pct.toFixed(2)}%`
+  return `${pct.toFixed(1)}%`
+}
+
+function prettyMetric(key) {
+  return (key || 'avg_response_time')
+    .replace(/_/g, ' ')
+    .replace(/^avg /, 'Avg ')
+    .replace(/\b\w/g, c => c.toUpperCase())
+}
+
 export default function EvaluationResult({ metrics, recommendation: rec }) {
-  if (!metrics || !rec) return <Card label="Evaluation Result" className="card-eval"><div className="loading">Loading…</div></Card>
-
-  const jdg    = metrics.judgment || '—'
-  const regret = metrics.regret_score
-  const starv  = metrics.starvation_occurred
-  const cmp    = metrics.comparison || {}
-  const recAlgo = rec.recommended_scheduling_algorithm || rec.algorithm
-  const tgt     = normalizeTargetMetric(rec.target_metric || 'avg_response_time')
-  const higher  = isHigherBetterMetric(tgt)
-
-  // Direction-aware best: max for throughput, min for the lower-is-better metrics.
-  let bestAlgo = '—', bestVal = higher ? -Infinity : Infinity
-  for (const [a, v] of Object.entries(cmp)) {
-    const val = v[tgt]
-    if (typeof val === 'number' && (higher ? val > bestVal : val < bestVal)) {
-      bestVal = val; bestAlgo = a
-    }
+  if (!metrics || !rec) {
+    return (
+      <Card label="Evaluation Result" className="card-eval">
+        <div className="loading">Loading…</div>
+      </Card>
+    )
   }
 
-  const jBg = { SUCCESS: '#d1fae5', 'NEAR-SUCCESS': '#dbeafe', FAIL: '#fee2e2' }[jdg] || '#f1f5f9'
-  const jFg = { SUCCESS: '#059669', 'NEAR-SUCCESS': '#1d4ed8', FAIL: '#dc2626' }[jdg] || '#64748b'
-  const recVal = cmp[recAlgo]?.[tgt]
+  const verdict = metrics.judgment || 'UNKNOWN'
+  const vStyle  = VERDICT_STYLE[verdict] || VERDICT_STYLE.UNKNOWN
+  const regret  = formatRegret(metrics.regret_score)
+  const starv   = metrics.starvation_occurred
+  const cmp     = metrics.comparison || {}
+  const recAlgo = rec.recommended_scheduling_algorithm || rec.algorithm || '—'
+  const tgtKey  = normalizeTargetMetric(rec.target_metric || 'avg_response_time')
+  const tgtPretty = prettyMetric(tgtKey)
+  const higher  = isHigherBetterMetric(tgtKey)
+
+  let bestAlgo = '—', bestVal = higher ? -Infinity : Infinity
+  for (const [a, v] of Object.entries(cmp)) {
+    const val = v?.[tgtKey]
+    if (typeof val === 'number' && (higher ? val > bestVal : val < bestVal)) {
+      bestVal = val
+      bestAlgo = a
+    }
+  }
+  if (!Number.isFinite(bestVal)) { bestAlgo = '—'; bestVal = null }
+
+  // Summary sentence — direct, complete-sentence.
+  const sameAsBest = bestAlgo !== '—' && bestAlgo === recAlgo
+  let summary
+  if (sameAsBest) {
+    summary = `LLM selected ${recAlgo}, and ${recAlgo} was also the best algorithm for ${tgtPretty.toLowerCase()}.`
+  } else if (bestAlgo !== '—') {
+    summary = `LLM selected ${recAlgo}; the best algorithm for ${tgtPretty.toLowerCase()} was ${bestAlgo}.`
+  } else {
+    summary = `LLM selected ${recAlgo}. Best algorithm could not be determined from the current comparison.`
+  }
 
   return (
-    <Card label="Evaluation Result" className="card-eval">
-      <div style={{ flexShrink: 0, marginBottom: 4 }}>
-        <span className="pill" style={{ background: jBg, color: jFg, fontSize: '0.72rem' }}>{jdg}</span>
+    <Card label="Evaluation Result" className="card-eval eval-card">
+      <div
+        className="eval-verdict-box"
+        style={{ background: vStyle.bg, borderColor: vStyle.border, color: vStyle.fg }}
+      >
+        <span className="eval-verdict-word">{verdict}</span>
         {regret != null && (
-          <span className="pill" style={{ background: '#f1f5f9', color: '#64748b' }}>regret {regret.toFixed(2)}</span>
+          <span className="eval-verdict-regret">Regret {regret}</span>
         )}
-        <span className="pill" style={{
-          background: starv ? '#fee2e2' : '#d1fae5',
-          color: starv ? '#dc2626' : '#059669',
-        }}>
-          {starv ? 'Starvation!' : 'No Starvation'}
-        </span>
       </div>
-      <hr className="divider" />
-      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3px 10px', fontSize: '0.60rem' }}>
-          {(() => {
-            const lowerBetter = !higher
-            let delta = null, deltaColor = '#64748b', deltaArrow = ''
-            if (recVal != null && Number.isFinite(bestVal)) {
-              delta = recVal - bestVal
-              const worse = lowerBetter ? delta > 0 : delta < 0
-              deltaColor = worse ? '#dc2626' : '#059669'
-              deltaArrow = worse ? '▲' : (Math.abs(delta) < 0.001 ? '=' : '▼')
-            }
-            const rows = [
-              ['Target',       tgt.replace(/_/g, ' '), '#334155'],
-              ['Best Algo',    bestAlgo,                '#059669'],
-              ['LLM Selected', recAlgo,                 '#7c3aed'],
-              ['Δ vs Best',    delta != null
-                ? <span style={{ color: deltaColor, fontWeight: 700 }}>{deltaArrow} {Math.abs(delta).toFixed(2)}</span>
-                : '—', '#334155'],
-            ]
-            return rows
-          })().map(([k, v, c]) => (
-            <div key={k}>
-              <div style={{ fontSize: '0.50rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{k}</div>
-              <div style={{ fontWeight: 700, color: c, marginTop: 1 }}>{v}</div>
-            </div>
-          ))}
+
+      <p className="eval-summary">{summary}</p>
+
+      <div className="eval-target-box">
+        <span className="eval-target-label">Target Metric</span>
+        <span className="eval-target-value">{tgtPretty}</span>
+      </div>
+
+      <dl className="eval-fact-grid eval-fact-grid-3">
+        <div>
+          <dt>LLM Selected</dt>
+          <dd className="eval-fact-llm">{recAlgo}</dd>
         </div>
-        {cmp[recAlgo] && (
-          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', paddingTop: 6 }}>
-            {[
-              { k: 'avg_response_time',   label: 'RT' },
-              { k: 'avg_waiting_time',    label: 'WT' },
-              { k: 'avg_turnaround_time', label: 'TAT' },
-              { k: 'throughput',          label: 'THRU' },
-            ].map(({ k, label }) => {
-              const v = cmp[recAlgo][k]
-              return typeof v === 'number' ? (
-                <span key={k} style={{
-                  fontSize: '0.52rem', color: '#64748b',
-                  background: 'rgba(237,233,254,0.55)',
-                  borderRadius: 5, padding: '2px 6px',
-                }}>
-                  {label} <strong style={{ color: '#7c3aed' }}>
-                    {k === 'throughput' ? v.toFixed(3) : v.toFixed(2)}
-                  </strong>
-                </span>
-              ) : null
-            })}
-          </div>
-        )}
-      </div>
+        <div>
+          <dt>Best Algorithm</dt>
+          <dd className={sameAsBest ? 'eval-fact-best-match' : 'eval-fact-best'}>
+            {bestAlgo}
+          </dd>
+        </div>
+        <div>
+          <dt>Starvation</dt>
+          <dd className={starv ? 'eval-fact-starv' : 'eval-fact-ok'}>
+            {starv ? 'Yes — process(es) never ran' : 'None'}
+          </dd>
+        </div>
+      </dl>
     </Card>
   )
 }

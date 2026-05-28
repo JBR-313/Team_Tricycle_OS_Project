@@ -1,18 +1,17 @@
 import Card from './Card.jsx'
-import { ALGO_COLORS } from './constants.js'
 import {
   computeAlgorithmJudgment, normalizeAlgo,
   normalizeTargetMetric, getRecommendedAlgorithm,
 } from '../data/schemaCompat.js'
 
 const COLS = [
-  { key: 'avg_response_time',   label: 'Avg RT',  lowerBetter: true  },
-  { key: 'avg_waiting_time',    label: 'Avg WT',  lowerBetter: true  },
-  { key: 'avg_turnaround_time', label: 'Avg TAT', lowerBetter: true  },
-  { key: 'throughput',          label: 'Thru',    lowerBetter: false },
-  { key: 'preemption_count',    label: 'Pre',     lowerBetter: true  },
-  { key: 'starvation_occurred', label: 'Starv',   lowerBetter: null  },
-  { key: 'judgment',            label: 'Judge',   lowerBetter: null  },
+  { key: 'avg_response_time',   label: 'Avg Response',   short: 'avg_response_time',   lowerBetter: true  },
+  { key: 'avg_waiting_time',    label: 'Avg Waiting',    short: 'avg_waiting_time',    lowerBetter: true  },
+  { key: 'avg_turnaround_time', label: 'Avg Turnaround', short: 'avg_turnaround_time', lowerBetter: true  },
+  { key: 'throughput',          label: 'Throughput',     short: 'throughput',          lowerBetter: false },
+  { key: 'preemption_count',    label: 'Preemptions',    short: 'preemption_count',    lowerBetter: true  },
+  { key: 'starvation_occurred', label: 'Starvation',     short: 'starvation',          lowerBetter: null  },
+  { key: 'judgment',            label: 'Verdict',        short: 'verdict',             lowerBetter: null  },
 ]
 
 function fmt(v, key) {
@@ -49,9 +48,15 @@ export default function AlgorithmComparison({ metrics, recommendation: rec, sele
         <table className="cmp-table">
           <thead>
             <tr>
-              <th>Algo</th>
+              <th>Algorithm</th>
               {COLS.map(c => (
-                <th key={c.key} className={c.label === tgtCol ? 'col-highlight' : ''}>{c.label}</th>
+                <th
+                  key={c.key}
+                  className={c.label === tgtCol ? 'col-highlight' : ''}
+                  title={c.short}
+                >
+                  {c.label}
+                </th>
               ))}
             </tr>
           </thead>
@@ -61,31 +66,26 @@ export default function AlgorithmComparison({ metrics, recommendation: rec, sele
               const isRec = a === recAlgo
               return (
                 <tr key={algo} className={isRec ? 'recommended' : ''}>
-                  <td style={{ fontWeight: isRec ? 700 : 400, color: isRec ? '#7c3aed' : '#334155' }}>
-                    <span style={{
-                      display: 'inline-block', width: 6, height: 6, borderRadius: '50%',
-                      background: ALGO_COLORS[a] || '#94a3b8', marginRight: 4, verticalAlign: 'middle',
-                    }} />
+                  <td className={isRec ? 'cmp-algo-name cmp-algo-rec' : 'cmp-algo-name'}>
                     {a}
                   </td>
                   {COLS.map(c => {
                     const raw = vals[c.key]
                     let v   = fmt(raw, c.key)
                     let style = {}
+                    let cellClass = c.label === tgtCol ? 'col-highlight' : ''
                     if (c.key === 'judgment') {
-                      // Metric-aware: recompute for the selected metric (starvation => FAIL),
-                      // never trust the stale stored comparison[algo].judgment.
                       v = computeAlgorithmJudgment(vals, allComparisonMetrics, tgt)
-                      style = { color: { SUCCESS: '#059669', 'NEAR-SUCCESS': '#1d4ed8', FAIL: '#dc2626', UNKNOWN: '#64748b' }[v] || '#334155', fontWeight: 700 }
+                      cellClass += ` cmp-verdict cmp-verdict-${v.toLowerCase().replace('-', '')}`
                     } else if (c.key === 'starvation_occurred') {
-                      style = { color: v === 'Yes' ? '#dc2626' : '#059669' }
+                      cellClass += ` cmp-starv-${v.toLowerCase()}`
                     } else if (colStats[c.key] && typeof raw === 'number') {
                       const { best, worst } = colStats[c.key]
-                      if (raw === best)       style = { background: 'rgba(16,185,129,0.13)', color: '#059669', fontWeight: 700 }
-                      else if (raw === worst) style = { background: 'rgba(244,63,94,0.10)', color: '#dc2626' }
+                      if (raw === best)       cellClass += ' cmp-cell-best'
+                      else if (raw === worst) cellClass += ' cmp-cell-worst'
                     }
                     return (
-                      <td key={c.key} className={c.label === tgtCol ? 'col-highlight' : ''} style={style}>{v}</td>
+                      <td key={c.key} className={cellClass.trim()} style={style}>{v}</td>
                     )
                   })}
                 </tr>

@@ -22,12 +22,11 @@ const STATE_BADGE = {
 export default function TraceStack({ events, currentTick }) {
   const visible = events.filter(e => e.tick <= currentTick)
   const sorted  = [...visible].sort((a, b) => b.tick - a.tick || b.pid - a.pid)
-  const recent  = sorted.slice(0, 5)
   const totalCount = sorted.length
 
-  if (recent.length === 0) {
+  if (totalCount === 0) {
     return (
-      <Card label="Trace Events · Latest 5" className="card-trace">
+      <Card label="Trace Log" className="card-trace">
         <div className="trace-empty">
           <span className="trace-empty-icon">◎</span>
           <span>No events yet — move the slider</span>
@@ -37,40 +36,34 @@ export default function TraceStack({ events, currentTick }) {
   }
 
   return (
-    <Card label="Trace Events · Latest 5" className="card-trace">
-      <div className="trace-stack-wrap">
-        <div className="trace-stack">
-          {recent.map((ev, i) => {
-            const pid    = ev.pid
-            const et     = ev.event
-            const pidStr = pid > 0 ? `P${pid}` : 'SYS'
-            const clr    = PROC_COLORS[pid] || '#64748b'
-            const badge  = STATE_BADGE[et]
-            const detail = [ev.state, ev.reason].filter(Boolean).join(' · ')
-            return (
-              <div key={`${ev.tick}-${pid}-${et}-${i}`} className={`notif-card depth-${i} ${ET_CLS[et] || ''}`}>
-                <div className="notif-header">
-                  <div className="notif-left">
-                    <span className="notif-pid-dot" style={{ background: clr }} />
-                    <span className="notif-title" style={{ color: clr }}>{pidStr} — {et}</span>
-                  </div>
-                  <div className="notif-right">
-                    {badge && i === 0 && (
-                      <span className="notif-badge" style={{ color: badge.color, background: badge.bg }}>{badge.text}</span>
-                    )}
-                    <span className="notif-tick">tick {ev.tick}</span>
-                  </div>
+    <Card label={`Trace Log · ${totalCount} event${totalCount === 1 ? '' : 's'}`} className="card-trace">
+      <div className="trace-stack">
+        {sorted.map((ev, i) => {
+          const pid    = ev.pid
+          const et     = ev.event
+          const pidStr = pid > 0 ? `P${pid}` : 'SYS'
+          const clr    = PROC_COLORS[pid] || '#64748b'
+          const badge  = STATE_BADGE[et]
+          const detail = [ev.state, ev.reason].filter(Boolean).join(' · ')
+          return (
+            <div key={`${ev.tick}-${pid}-${et}-${i}`} className={`notif-card ${ET_CLS[et] || ''}`}>
+              <div className="notif-header">
+                <div className="notif-left">
+                  <span className="notif-pid-dot" style={{ background: clr }} />
+                  <span className="notif-title" style={{ color: clr }}>{pidStr} — {et}</span>
                 </div>
-                {i < 2 && detail && <div className="notif-body">{detail}</div>}
+                <div className="notif-right">
+                  {badge && (
+                    <span className="notif-badge" style={{ color: badge.color, background: badge.bg }}>{badge.text}</span>
+                  )}
+                  <span className="notif-tick">tick {ev.tick}</span>
+                </div>
               </div>
-            )
-          })}
-        </div>
-        {totalCount > 5 && <div className="trace-fade-out" />}
+              {detail && <div className="notif-body">{detail}</div>}
+            </div>
+          )
+        })}
       </div>
-      {totalCount > 5 && (
-        <div className="trace-older-hint">+{totalCount - 5} earlier events at tick ≤ {currentTick}</div>
-      )}
     </Card>
   )
 }

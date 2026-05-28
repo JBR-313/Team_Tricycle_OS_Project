@@ -3,11 +3,11 @@
   "params": {
     "queues": 2,
     "quantum": [
-      10,
-      50
+      2,
+      null
     ],
-    "aging_threshold": 500,
-    "boost_interval": 100
+    "aging_threshold": null,
+    "boost_interval": null
   },
   "process_count": 5,
   "completed_count": 4,
@@ -69,20 +69,9 @@
   ],
   "judgment": "SUCCESS",
   "regret_score": 0.0,
-  "best_algorithm": null,
+  "best_algorithm": "MLFQ",
   "workload_file": null,
   "comparison": {
-    "MLFQ": {
-      "avg_waiting_time": 5.75,
-      "avg_response_time": 1.5,
-      "avg_turnaround_time": 8.5,
-      "throughput": 0.364,
-      "max_waiting_time": 6,
-      "preemption_count": 4,
-      "starvation_occurred": false,
-      "burst_prediction_error": null,
-      "judgment": "SUCCESS"
-    },
     "RR": {
       "avg_waiting_time": 5.75,
       "avg_response_time": 1.75,
@@ -92,7 +81,7 @@
       "preemption_count": 13,
       "starvation_occurred": false,
       "burst_prediction_error": null,
-      "judgment": "SUCCESS"
+      "judgment": "NEAR-SUCCESS"
     },
     "FCFS": {
       "avg_waiting_time": 10.0,
@@ -115,6 +104,17 @@
       "starvation_occurred": false,
       "burst_prediction_error": null,
       "judgment": "FAIL"
+    },
+    "MLFQ": {
+      "avg_waiting_time": 5.75,
+      "avg_response_time": 1.5,
+      "avg_turnaround_time": 8.5,
+      "throughput": 0.364,
+      "max_waiting_time": 6,
+      "preemption_count": 4,
+      "starvation_occurred": false,
+      "burst_prediction_error": null,
+      "judgment": "SUCCESS"
     },
     "SJF": {
       "avg_waiting_time": 10.0,

@@ -1,6 +1,10 @@
-"""
-LLM Sched Copilot — GUI Observability Dashboard
-Run: streamlit run dashboard/dashboard.py
+"""LEGACY — Streamlit observability dashboard.
+
+The final-demo UI is `dashboard_live/` (React/Vite). This Streamlit dashboard
+is retained only for the host-only fallback case (no Node available) and the
+audit trail. See `docs/repo_cleanup_plan.md` §6.4 for the archive plan.
+
+Run (legacy):  streamlit run dashboard/dashboard.py
 """
 
 import json

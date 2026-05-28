@@ -55,8 +55,11 @@ import MetricVisualization from './components/MetricVisualization.jsx'
 // NOTE: RecommendationEvidence (WHY THIS ALGORITHM?) removed per
 // dashboard_page1_pre_execution_revision_goal.md §1/§3 — its content merged
 // into LLMRecommendation's description area.
-import CounterfactualMetricView from './components/CounterfactualMetricView.jsx'
-import RuntimeCorrectionPreview from './components/RuntimeCorrectionPreview.jsx'
+// NOTE: CounterfactualMetricView ("Best Algorithm by Metric") and
+// RuntimeCorrectionPreview were removed from Page 3 per the final-cleanup
+// goal — runtime correction is not a working dashboard feature, only a
+// talking point. The component files remain on disk for future use but
+// are no longer rendered.
 import MLFQQueuePanel from './components/MLFQQueuePanel.jsx'
 // NOTE: RunControls / WorkloadSummary intentionally NOT rendered on Page 1
 // per dashboard_page1_second_revision_goal.md §2 & §4. RUN moved into
@@ -181,22 +184,23 @@ export default function App() {
 
   // ── Tab content rendering ─────────────────────────────────────────────────
   // Page 1 = LLM **pre-execution** decision page.
-  // EXACTLY three cards per dashboard_page1_pre_execution_revision_goal.md §1:
-  //   - LLM RECOMMENDATION (full-width top, primary focus)
-  //   - ALGORITHM GUARD   (compact, bottom-left)
-  //   - LLM EXPLANATION   (large readable, bottom-right) — pre-exec only,
-  //                        derived from recommendation + workloadSummary;
-  //                        traceExplanation is INTENTIONALLY NOT passed here
-  //                        because it is post-execution content (Page 2/3).
+  // Two-column layout: left column stacks LLM RECOMMENDATION (top) +
+  // ALGORITHM GUARD (bottom); right column holds LLM EXPLANATION at full
+  // card height. traceExplanation is INTENTIONALLY NOT passed here because
+  // it is post-execution content (Page 2/3).
   function renderLLMTab() {
     return (
-      <div className="page1-grid">
-        <LLMRecommendation recommendation={recommendation} />
-        <AlgorithmGuard    guardDecision={guardDecision} />
-        <LLMExplanation
-          recommendation={recommendation}
-          workloadSummary={workloadSummary}
-        />
+      <div className="page1-layout">
+        <div className="page1-left">
+          <LLMRecommendation recommendation={recommendation} />
+          <AlgorithmGuard    guardDecision={guardDecision} />
+        </div>
+        <div className="page1-right">
+          <LLMExplanation
+            recommendation={recommendation}
+            workloadSummary={workloadSummary}
+          />
+        </div>
       </div>
     )
   }
@@ -209,12 +213,12 @@ export default function App() {
           currentTick={tick} maxTick={maxTick} onTickChange={setTick}
         />
         <div className="tab-grid viz-grid">
-          <div className="tab-col">
+          <div className="tab-col viz-col-left">
             <MainGantt    events={events} currentTick={tick} maxTick={maxTick} algo={algo} />
-            <ProcessLanes events={events} currentTick={tick} maxTick={maxTick} algo={algo} />
+            <ProcessState events={events} currentTick={tick} />
           </div>
-          <div className="tab-col">
-            <ProcessState   events={events} currentTick={tick} />
+          <div className="tab-col viz-col-right">
+            <ProcessLanes   events={events} currentTick={tick} maxTick={maxTick} algo={algo} />
             <MLFQQueuePanel events={events} currentTick={tick} algo={algo} />
             <TraceStack     events={events} currentTick={tick} />
           </div>
@@ -227,20 +231,14 @@ export default function App() {
     return (
       <div className="tab-grid eval-grid">
         <div className="tab-col">
-          <EvaluationResult     metrics={metrics} recommendation={recommendation} />
-          <AlgorithmComparison  metrics={metrics} recommendation={recommendation} selectedMetric={selectedMetric} />
+          <EvaluationResult    metrics={metrics} recommendation={recommendation} />
+          <AlgorithmComparison metrics={metrics} recommendation={recommendation} selectedMetric={selectedMetric} />
         </div>
         <div className="tab-col">
           <MetricVisualization
             metrics={metrics} recommendation={recommendation}
             selectedMetric={selectedMetric}
             onSelectedMetricChange={setSelectedMetric}
-          />
-          <CounterfactualMetricView metrics={metrics} recommendation={recommendation} />
-          <RuntimeCorrectionPreview
-            runtimeEvents={runtimeEvents}
-            correctionProposal={correctionProposal}
-            correctionGuardDecision={correctionGuardDecision}
           />
         </div>
       </div>

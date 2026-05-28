@@ -127,18 +127,375 @@
 }
 
 .header-title {
-  font-size: 0.95rem;
+  /* Bumped ~20% per overnight work plan §8 header cleanup. */
+  font-size: 1.15rem;
   font-weight: 800;
-  color: #1e293b;
+  color: #000;
   letter-spacing: -0.3px;
   white-space: nowrap;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
 
-.header-subtitle {
-  font-size: 0.52rem;
-  color: #94a3b8;
-  white-space: nowrap;
+.header-subtitle { display: none; }
+
+/* ─── Tabs (LLM | Visualization | Evaluation) ──────────────────────────── */
+.header-tabs { display: flex; gap: 4px; margin-left: 14px; }
+.tab-btn {
+  padding: 6px 14px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  color: #475569;
+  background: transparent;
+  border: 1px solid transparent;
+  border-bottom: 2px solid transparent;
+  border-radius: 4px 4px 0 0;
+  cursor: pointer;
 }
+.tab-btn:hover { color: #000; background: rgba(255,255,255,0.4); }
+.tab-btn.active {
+  color: #000;
+  background: rgba(255,255,255,0.85);
+  border-color: rgba(0,0,0,0.12);
+  border-bottom-color: #000;
+}
+
+/* ─── Tab content layout (each tab fills the full 16:9 main area) ───────
+   CRITICAL: override the legacy 3-column `.dashboard-main` grid so the tab
+   content can use the full row width. Without `grid-template-columns: 1fr`
+   the .tab-grid would render inside just one of three legacy columns. */
+.tab-main {
+  grid-template-columns: 1fr !important;
+  padding: 4px 4px 0 4px;
+  gap: 0;
+  min-height: 0;
+}
+.tab-grid {
+  display: grid;
+  gap: 14px;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+/* Default tab grid is two equal columns. Per-tab grids may override. */
+.llm-grid  { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); }
+/* Page 2 (Visualization) — strict 1:1 split per revision goal §2. */
+.viz-grid  {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 24px;
+}
+.eval-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+
+/* ─── Page 1 (LLM, pre-execution) — 2-column layout ────────────────────
+   Left column stacks LLM RECOMMENDATION (top) + ALGORITHM GUARD (bottom).
+   Right column holds LLM EXPLANATION at full card height. */
+.page1-layout {
+  display: grid;
+  grid-template-columns: minmax(320px, 0.8fr) minmax(0, 1.2fr);
+  gap: 24px;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  padding: 4px;
+  align-items: stretch;
+}
+
+.page1-left {
+  display: grid;
+  grid-template-rows: 1.35fr 0.85fr;
+  gap: 24px;
+  min-height: 0;
+  min-width: 0;
+}
+
+.page1-right {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+
+.page1-right .page1-card { height: 100%; }
+
+/* Marker classes (kept for backwards compatibility / styling hooks). */
+.page1-card-rec,
+.page1-card-guard,
+.page1-card-expl { min-height: 0; }
+
+.page1-card {
+  padding: 24px 26px !important;
+  min-height: 0;
+  font-size: 17px;
+  line-height: 1.55;
+  color: #0f172a;
+  overflow: auto;
+}
+.page1-card .card-label {
+  font-size: 20px;
+  font-weight: 800;
+  color: #0a3069;
+  letter-spacing: 0.04em;
+  margin-bottom: 14px;
+  text-transform: uppercase;
+}
+
+/* — LLM Recommendation header: name (left) + params (right) — */
+.page1-rec-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+.page1-algo {
+  font-size: 60px;
+  font-weight: 900;
+  line-height: 1.0;
+  letter-spacing: -1.5px;
+  color: #000;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+}
+/* Parameters chip on the right side of the header (§2.2). */
+.page1-params {
+  font-family: 'SFMono-Regular', Consolas, monospace;
+  font-size: 13px;
+  color: #475569;
+  background: #f8fafc;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  max-width: 60%;
+  text-align: right;
+  word-break: break-word;
+  flex-shrink: 1;
+}
+.page1-reason {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 4px;
+}
+.page1-reason-line {
+  font-size: 17px;
+  line-height: 1.55;
+  color: #1e293b;
+  margin: 0;
+}
+.page1-body {
+  font-size: 17px;
+  line-height: 1.55;
+  color: #1e293b;
+  margin: 6px 0;
+}
+.page1-muted { color: #475569; }
+
+/* — Why this algorithm? — */
+.page1-bullets {
+  margin: 4px 0 12px;
+  padding-left: 22px;
+}
+.page1-bullets li {
+  font-size: 16px;
+  line-height: 1.55;
+  color: #1e293b;
+  margin-bottom: 6px;
+}
+.page1-context {
+  font-size: 14px;
+  color: #475569;
+  margin-top: 8px;
+  padding-top: 10px;
+  border-top: 1px solid #e2e8f0;
+}
+.page1-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+.page1-chip {
+  display: inline-flex;
+  align-items: center;
+  font-size: 13px;
+  color: #475569;
+  background: #f1f5f9;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid #e2e8f0;
+}
+.page1-chip strong { color: #0a3069; margin-left: 4px; }
+
+/* — Algorithm Guard — compact (§5.4). Status box keeps large word on
+   left and short reason inline on right (§5.2). */
+.page1-guard-status-box {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  padding: 8px 16px;
+  border-radius: 10px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.page1-guard-status-word {
+  font-size: 32px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  line-height: 1.0;
+}
+.page1-guard-status-reason {
+  font-size: 14px;
+  font-weight: 600;
+  opacity: 0.85;
+  line-height: 1.3;
+  /* Keep the reason on the same line up to overflow, then wrap. */
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.page1-checklist {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+}
+.page1-checklist li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: #1e293b;
+  padding: 2px 0;
+}
+.page1-checklist .check-mark {
+  display: inline-block;
+  width: 18px;
+  font-weight: 800;
+}
+.page1-checklist .check-ok    .check-mark { color: #059669; }
+.page1-checklist .check-warn  .check-mark { color: #b45309; }
+.page1-checklist .check-warn  { color: #92400e; }
+
+/* — LLM Explanation — */
+.page1-section { margin-top: 20px; }
+.page1-section:first-of-type { margin-top: 4px; }
+.page1-section-title {
+  font-size: 20px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #6d28d9;
+  margin: 0 0 8px;
+  line-height: 1.2;
+}
+.page1-section-caution .page1-section-title { color: #b45309; }
+.page1-section-caution .page1-body {
+  background: #fffbeb;
+  border-left: 3px solid #f59e0b;
+  padding: 12px 14px;
+  border-radius: 0 8px 8px 0;
+}
+
+/* Responsive: single column on narrow screens */
+@media (max-width: 1000px) {
+  .page1-layout {
+    grid-template-columns: 1fr;
+    grid-auto-rows: auto;
+    height: auto;
+  }
+  .page1-left   { grid-template-rows: auto auto; }
+  .page1-right  { display: block; height: auto; }
+  .page1-right .page1-card { height: auto; }
+  .page1-card   { overflow: visible; }
+  .page1-algo   { font-size: 48px; }
+}
+
+.tab-col {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  min-width: 0;
+  overflow: auto;
+}
+
+/* ── Visualization tab page: small toolbar + grid below ──────────────── */
+.viz-page {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  height: 100%;
+  min-height: 0;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  color: #000;
+  line-height: 1.5;
+}
+.viz-page * {
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+}
+
+/* Page 2 readability — bigger card titles, body labels black, no tiny gray
+   info. Scoped to .viz-page so Page 1 / Page 3 are not affected. */
+.viz-page .card-label {
+  font-size: 20px;
+  font-weight: 800;
+  color: #000;
+  letter-spacing: 0.04em;
+  margin-bottom: 12px;
+  text-transform: uppercase;
+}
+.viz-page .pstate-box-name { font-size: 16px; }
+.viz-page .pstate-token    { font-size: 13px; }
+.viz-page .pstate-label    { font-size: 13px; color: #1e293b; }
+.viz-page .notif-title     { font-size: 16px; font-weight: 700; color: #000; }
+.viz-page .notif-body      { font-size: 14px; color: #1e293b; }
+.viz-page .notif-tick      { font-size: 13px; color: #475569; }
+.viz-page .notif-badge     { font-size: 11px; }
+.viz-page .mlfq-lane-name  { font-size: 16px; font-weight: 700; color: #000; }
+.viz-page .mlfq-lane-meta  { font-size: 13px; color: #475569; }
+.viz-page .mlfq-share-label{ font-size: 13px; color: #000; font-weight: 700; }
+.viz-page .mlfq-empty      { font-size: 14px; color: #94a3b8; }
+.viz-page .mlfq-inactive-msg {
+  font-size: 16px;
+  color: #1e293b;
+  text-align: center;
+  padding: 28px 16px;
+  line-height: 1.55;
+}
+.viz-page .viz-toolbar-label { font-size: 13px; }
+.viz-page .viz-toolbar-tick  { font-size: 14px; }
+.viz-page .gantt-legend-item { font-size: 13px; color: #1e293b; }
+.viz-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px;
+  background: rgba(255,255,255,0.80);
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.62);
+  box-shadow: 0 4px 14px rgba(80,90,120,0.08);
+  flex-shrink: 0;
+}
+.viz-toolbar-label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.viz-toolbar-select {
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #000;
+  padding: 3px 22px 3px 8px;
+  border: 1px solid rgba(0,0,0,0.18);
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+}
+.viz-toolbar-tick    { font-size: 0.85rem; font-weight: 700; color: #000; min-width: 50px; }
+.viz-toolbar-tickmax { font-size: 0.70rem; color: #94a3b8; margin-left: 4px; }
+.viz-toolbar-slider  { flex: 1; accent-color: #0a3069; }
 
 .header-spacer { flex: 1; }
 
@@ -219,19 +576,83 @@
 /* Left column */
 .card-rec     { flex: 1 0 0; }
 .card-guard   { flex: 1 0 0; }
-.card-eval    { flex: 1.5 0 0; }
+/* Page 3: EVALUATION RESULT stays a compact summary card so ALGORITHM
+   COMPARISON below can grow tall enough to show every algorithm row
+   without clipping. Page-3-specific overrides live under .eval-grid. */
+.card-eval    { flex: 3 0 0; }
 .card-expl    { flex: 4 0 0; }
 
-/* Center column — pstate is the hero, trace is compact footer */
-.card-gantt   { flex: 2 0 0; }
-.card-pstate  { flex: 5 0 0; }
-.card-trace   { flex: 2 0 0; }
+/* Page 3 left column — compact verdict on top, expanded comparison
+   table below. ~40 / 60 split. */
+.eval-grid .tab-col > .card-eval { flex: 1 0 0; min-height: 0; }
+.eval-grid .tab-col > .card-cmp  { flex: 1.6 0 0; min-height: 0; }
+
+/* Visualization tab — 1:1 split.
+   Left:  compact Gantt strip, Process State Transition (large hero).
+   Right: Process Lanes (top), MLFQ queue (middle, MLFQ only), Trace Log
+          (bottom, 5 rows visible). */
+.card-gantt   { flex: 1 0 0; max-height: 30%; }
+.card-pstate  { flex: 3 0 0; }
 
 /* Right column */
-.card-lanes   { flex: 1 0 0; }
-.card-wl      { flex: 1 0 0; }
-.card-cmp     { flex: 3 0 0; }
-.card-metric  { flex: 5 0 0; }
+.card-lanes      { flex: 2.3 0 0; }
+.card-mlfq-queue { flex: 1.2 0 0; min-height: 170px; }
+.card-trace      { flex: 2.0 0 0; min-height: 320px; }
+.card-wl         { flex: 1 0 0; }
+.card-cmp        { flex: 1.6 0 0; }
+.card-metric     { flex: 1 0 0; }
+.card-run        { flex: 0 0 auto; }
+
+/* ─────────────────────────────────────────────────────────────
+   RunControls (RUN button)
+───────────────────────────────────────────────────────────── */
+.run-row         { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.run-badge       { padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; font-weight: 700; color: #fff; }
+.run-badge-idle  { background: #94a3b8; }
+.run-badge-run   { background: #b45309; }
+.run-badge-ok    { background: #15803d; }
+.run-badge-err   { background: #b91c1c; }
+.run-stage       { font-size: 0.7rem; color: #475569; font-style: italic; }
+.run-controls    { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; }
+.run-controls label { display: flex; flex-direction: column; font-size: 0.65rem; color: #475569; gap: 2px; }
+.run-controls select, .run-controls input { font-size: 0.75rem; padding: 2px 4px; }
+.run-checkbox    { flex-direction: row !important; align-items: center; gap: 4px !important; }
+.run-button      { background: #0a3069; color: #fff; border: none; padding: 6px 14px; border-radius: 4px;
+                   font-weight: 700; cursor: pointer; }
+.run-button:disabled { background: #94a3b8; cursor: not-allowed; }
+.run-hint        { font-size: 0.7rem; color: #94a3b8; font-family: monospace; }
+.run-error       { color: #b91c1c; font-size: 0.75rem; margin-top: 6px; }
+.run-log         { margin-top: 6px; font-size: 0.7rem; }
+.run-log pre     { background: #f6f8fa; padding: 6px; border-radius: 4px; max-height: 120px; overflow: auto; margin: 0; }
+
+/* ─────────────────────────────────────────────────────────────
+   MLFQ Queue Panel
+───────────────────────────────────────────────────────────── */
+.mlfq-lanes      { display: flex; flex-direction: column; gap: 6px; }
+.mlfq-lane       { background: rgba(241,245,249,0.6); border-radius: 6px; padding: 6px 8px; }
+.mlfq-lane-head  { display: flex; justify-content: space-between; font-size: 0.7rem; color: #475569; margin-bottom: 4px; }
+.mlfq-lane-name  { font-weight: 700; color: #0a3069; }
+.mlfq-lane-meta  { font-style: italic; }
+.mlfq-lane-chips { display: flex; flex-wrap: wrap; gap: 4px; min-height: 22px; }
+.mlfq-empty      { color: #94a3b8; font-size: 0.7rem; font-style: italic; }
+.mlfq-chip       { padding: 2px 7px; border-radius: 10px; color: #fff; font-size: 0.7rem; font-weight: 700; }
+.mlfq-chip.running { outline: 2px solid #0a3069; outline-offset: 1px; }
+
+.mlfq-share       { margin-top: 8px; }
+.mlfq-share-label { font-size: 0.7rem; color: #475569; margin-bottom: 4px; font-weight: 600; }
+.mlfq-share-row   { display: flex; align-items: center; gap: 6px; font-size: 0.7rem; margin: 2px 0; }
+.mlfq-share-q     { width: 18px; color: #0a3069; font-weight: 700; }
+.mlfq-share-bar   { flex: 1; height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden; }
+.mlfq-share-fill  { height: 100%; background: #0a3069; }
+.mlfq-share-pct   { width: 32px; text-align: right; color: #475569; }
+
+.mlfq-changes     { margin-top: 8px; }
+.mlfq-change-list { list-style: none; margin: 0; padding: 0; font-size: 0.7rem; }
+.mlfq-change-list li { display: flex; gap: 6px; padding: 2px 0; }
+.mlfq-change-tick { color: #94a3b8; width: 36px; }
+.mlfq-change-pid  { color: #0a3069; font-weight: 700; width: 28px; }
+.mlfq-change-arrow{ color: #1e293b; width: 78px; }
+.mlfq-change-reason { color: #b45309; font-style: italic; }
 
 /* ─────────────────────────────────────────────────────────────
    GANTT CHART
@@ -329,6 +750,124 @@
 /* ─────────────────────────────────────────────────────────────
    PROCESS STATE FLOW DIAGRAM
 ───────────────────────────────────────────────────────────── */
+/* ─────────────────────────────────────────────────────────────
+   PROCESS STATE TRANSITION (Page 2)
+   SVG L-shaped pipes with absolutely positioned state boxes.
+   Coordinate system: percentage of card area (matches SVG viewBox 0..100).
+───────────────────────────────────────────────────────────── */
+.pstate-diagram {
+  position: relative;
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+}
+
+.pstate-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.pstate-path {
+  stroke: rgba(148, 163, 184, 0.65);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: miter;
+  fill: none;
+  transition: stroke 0.25s, stroke-width 0.25s;
+}
+.pstate-path.active {
+  stroke: #0a3069;
+  stroke-width: 2.2;
+  stroke-dasharray: 5 3;
+  animation: pstate-dash 0.9s linear infinite;
+  filter: drop-shadow(0 0 3px rgba(10, 48, 105, 0.30));
+}
+@keyframes pstate-dash {
+  to { stroke-dashoffset: -8; }
+}
+
+.pstate-box {
+  position: absolute;
+  border-radius: 12px;
+  border: 2px solid;
+  padding: 8px 6px 10px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  overflow: hidden;
+  box-shadow: 0 2px 10px rgba(80, 90, 120, 0.08);
+}
+.pstate-box-name {
+  font-size: 0.74rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.pstate-tokens {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px;
+}
+.pstate-token {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.50rem;
+  font-weight: 700;
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+  flex-shrink: 0;
+}
+.pstate-tokens-empty {
+  font-size: 0.56rem;
+  color: #cbd5e1;
+  line-height: 1.6;
+}
+
+/* Box positions — must mirror the SVG viewBox coordinates so the
+   pipes meet the box edges. */
+.pstate-ready      { left: 7%;  top: 4%;  right: 57%; height: 16%; }
+.pstate-running    { left: 7%;  top: 52%; right: 57%; height: 16%; }
+.pstate-terminated { left: 7%;  top: 79%; right: 41%; height: 17%; }
+.pstate-waiting    { left: 57%; top: 28%; right: 7%;  height: 16%; }
+
+/* Transition labels — small, near the matching connector. */
+.pstate-label {
+  position: absolute;
+  font-size: 0.50rem;
+  color: #94a3b8;
+  background: rgba(255, 255, 255, 0.86);
+  padding: 1px 5px;
+  border-radius: 4px;
+  pointer-events: none;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-weight: 700;
+  transition: color 0.2s;
+  white-space: nowrap;
+}
+.pstate-label.active {
+  color: #0a3069;
+}
+.pstate-label-dispatch { left: 11%; top: 31%; }
+.pstate-label-preempt  { left: 34%; top: 31%; }
+.pstate-label-sleep    { left: 49%; top: 51%; }
+.pstate-label-wakeup   { left: 49%; top: 6%;  }
+.pstate-label-exit     { left: 33%; top: 71%; }
+
+/* Legacy grid kept around but unused (defensive — old .flow-* CSS
+   below relies on it only when the old component is rendered). */
 .flow-diagram {
   display: grid;
   grid-template-columns: 1fr 58px 1fr 40px 1fr;
@@ -451,6 +990,17 @@
 .flow-arc-left { align-items: flex-end; padding-right: 3px; }
 .flow-arc-right { align-items: flex-start; padding-left: 3px; }
 
+/* Vertical leg of the Ready ↔ Waiting 90° L connector (col 1, row 2).
+   Right-aligned so it meets the top-right corner of the wakeup arc below. */
+.flow-vert-connector.flow-vert-left {
+  justify-content: flex-end;
+  padding-right: 3px;
+}
+.pipe-wakeup-vert .flow-vert-bar {
+  background: rgba(14,165,233,0.48);
+  box-shadow: 0 0 8px rgba(14,165,233,0.22);
+}
+
 .flow-arc-line {
   height: 2.5px;
   width: 100%;
@@ -484,78 +1034,51 @@
 .pipe-wakeup .flow-arc-label               { color: #0284c7; font-weight: 700; }
 
 /* ─────────────────────────────────────────────────────────────
-   TRACE STACK (iPhone notification style)
+   TRACE LOG (stacked list — newest on top, older below)
 ───────────────────────────────────────────────────────────── */
-/* wrapper for stack + fade */
-.trace-stack-wrap {
-  position: relative;
-  flex-shrink: 0;
-}
-
 .trace-stack {
-  position: relative;
-  padding-bottom: 6px;
-}
-
-/* fade-out overlay when older events exist */
-.trace-fade-out {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 32px;
-  background: linear-gradient(to bottom, transparent, rgba(255,255,255,0.88));
-  pointer-events: none;
-  border-radius: 0 0 10px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+  min-height: 0;
+  /* Box is sized via .card-trace flex/min-height; with row min-height 40px,
+     5 rows + gaps fit. More than 5 rows scrolls. */
+  overflow-y: auto;
+  padding-right: 4px;  /* avoid scrollbar overlapping content */
 }
 
 .notif-card {
   background: rgba(255,255,255,0.97);
-  border-radius: 13px;
-  padding: 7px 11px 6px 11px;
+  border-radius: 12px;
+  padding: 6px 10px;
   border-left: 3px solid #6366f1;
-  position: relative;
-  box-shadow: 0 2px 10px rgba(80,100,160,0.10);
+  box-shadow: 0 2px 8px rgba(80,100,160,0.10);
+  /* Equal-height rows, no overlap, no shrinking. */
+  min-height: 44px;
+  flex-shrink: 0;
+  /* Reset the iPhone-notification stack effect explicitly so any
+     lingering `depth-N` markers cannot overlap rows again. */
+  margin: 0;
+  opacity: 1;
+  transform: none;
+  z-index: auto;
 }
 
-.notif-card.depth-0 {
-  z-index: 10;
-  margin-bottom: 4px;
-  box-shadow: 0 5px 18px rgba(80,100,160,0.18);
-  padding: 10px 14px 9px 13px;
-  background: rgba(255,255,255,1.00);
-}
-
-.notif-card.depth-1 {
-  z-index: 9;
-  margin-top: -18px;
-  opacity: 0.86;
-  transform: scale(0.965) translateY(2px);
-  transform-origin: top center;
-}
-
-.notif-card.depth-2 {
-  z-index: 8;
-  margin-top: -15px;
-  opacity: 0.65;
-  transform: scale(0.93) translateY(4px);
-  transform-origin: top center;
-}
-
-.notif-card.depth-3 {
-  z-index: 7;
-  margin-top: -13px;
-  opacity: 0.44;
-  transform: scale(0.895) translateY(6px);
-  transform-origin: top center;
-}
-
+/* Defensive overrides: if any caller still emits depth-N classes, they
+   render as plain rows, never as overlapping cards. */
+.notif-card.depth-0,
+.notif-card.depth-1,
+.notif-card.depth-2,
+.notif-card.depth-3,
 .notif-card.depth-4 {
-  z-index: 6;
-  margin-top: -12px;
-  opacity: 0.24;
-  transform: scale(0.86) translateY(8px);
-  transform-origin: top center;
+  margin: 0;
+  opacity: 1;
+  transform: none;
+  z-index: auto;
+  padding: 8px 12px;
+  background: rgba(255,255,255,0.97);
+  box-shadow: 0 2px 10px rgba(80,100,160,0.10);
 }
 
 .notif-card.ev-preempt    { border-left-color: #f43f5e; }
@@ -847,19 +1370,22 @@
   min-height: 0;
   display: flex;
   align-items: stretch;
-  gap: 5px;
-  overflow: hidden;
+  justify-content: space-around;
+  gap: 24px;
+  overflow: visible;
   position: relative;
   z-index: 2;
+  padding: 0 12px;
 }
 
 .metric-bar-col {
-  flex: 1;
+  flex: 1 1 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   min-width: 0;
-  overflow: hidden;
+  max-width: 90px;
+  overflow: visible;  /* let the LED drop-shadow extend beyond the column */
 }
 
 /* inner track so bar sits at bottom of its space */
@@ -874,13 +1400,46 @@
 
 .metric-bar-fill {
   width: 100%;
-  border-radius: 4px 4px 0 0;
-  transition: height 0.35s ease;
+  border-radius: 8px 8px 0 0;
+  transition: height 0.35s ease, opacity 0.18s ease, filter 0.18s ease;
   min-height: 2px;
 }
 
 .metric-bar-fill.recommended {
   box-shadow: 0 0 0 2px rgba(124,58,237,0.55), 0 0 12px rgba(124,58,237,0.30);
+}
+
+/* LED winner — best algorithm for the currently selected metric.
+   The glow uses the bar's own color (passed in via --bar-glow-color)
+   so the bar body itself appears LED-lit instead of just its border. */
+.metric-bar-fill.metric-bar-winner {
+  filter:
+    brightness(1.12)
+    saturate(1.18)
+    drop-shadow(0 0 10px var(--bar-glow-color, #22c55e))
+    drop-shadow(0 0 22px var(--bar-glow-color, #22c55e));
+  animation: metric-led-pulse 1.5s ease-in-out infinite;
+}
+
+.metric-bar-fill.metric-bar-dimmed {
+  opacity: 0.55;
+}
+
+@keyframes metric-led-pulse {
+  0%, 100% {
+    filter:
+      brightness(1.06)
+      saturate(1.10)
+      drop-shadow(0 0 6px var(--bar-glow-color, #22c55e))
+      drop-shadow(0 0 14px var(--bar-glow-color, #22c55e));
+  }
+  50% {
+    filter:
+      brightness(1.20)
+      saturate(1.25)
+      drop-shadow(0 0 14px var(--bar-glow-color, #22c55e))
+      drop-shadow(0 0 28px var(--bar-glow-color, #22c55e));
+  }
 }
 
 .metric-bar-val {
@@ -1031,15 +1590,18 @@
    BACKEND SOURCE BADGE (xv6 trace vs simulator fallback)
 ───────────────────────────────────────────────────────────── */
 .backend-badge {
-  display: flex;
-  flex-direction: column;
+  /* Slim chip — single line, sits inline in the header. */
+  display: inline-flex;
+  align-items: center;
   justify-content: center;
-  gap: 1px;
+  font-size: 0.62rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
   flex-shrink: 0;
-  border-radius: 8px;
+  border-radius: 999px;
   padding: 3px 10px;
   border: 1px solid transparent;
-  max-width: 220px;
 }
 
 .backend-badge-text {
@@ -1077,6 +1639,44 @@
 }
 .backend-fallback .backend-badge-text { color: #b91c1c; }
 .backend-fallback .backend-badge-note { color: #991b1b; }
+
+/* ─── Header RUN button + status pill (Page 1 second revision §3 + §9) */
+.header-run-button {
+  display: inline-flex;
+  align-items: center;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  padding: 7px 18px;
+  background: #0a3069;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 120ms ease;
+}
+.header-run-button:hover:not(:disabled) { background: #0c4080; }
+.header-run-button:disabled {
+  background: #94a3b8;
+  cursor: not-allowed;
+  opacity: 0.85;
+}
+
+.run-pill {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 999px;
+  margin-right: 4px;
+}
+.run-pill-idle { background: #e2e8f0; color: #475569; }
+.run-pill-run  { background: #fef3c7; color: #b45309; }
+.run-pill-ok   { background: #d1fae5; color: #047857; }
+.run-pill-err  { background: #fee2e2; color: #b91c1c; }
 
 /* Extra manifest metadata strip */
 .header-manifest-meta {
@@ -1129,4 +1729,287 @@
     background: rgba(255, 255, 255, 0.96);
     border: 1px solid rgba(120, 140, 170, 0.22);
   }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   PAGE 3 — EVALUATION (typography + new components)
+   Scoped to .eval-grid so Page 1 / Page 2 are unaffected.
+───────────────────────────────────────────────────────────── */
+.eval-grid,
+.eval-grid * {
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+}
+.eval-grid {
+  color: #000;
+  line-height: 1.5;
+}
+.eval-grid .card-label {
+  font-size: 19px;
+  font-weight: 800;
+  color: #000;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+.eval-grid .eval-card .card-label { margin-bottom: 8px; }
+
+/* — Evaluation Result hero card — compact summary so the left column
+   gives more vertical room to Algorithm Comparison below. */
+.eval-card .eval-verdict-box {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 9px 14px;
+  border-radius: 10px;
+  border: 2px solid;
+  margin-bottom: 9px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+.eval-verdict-word {
+  font-size: 24px;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  line-height: 1.0;
+}
+.eval-verdict-regret {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  opacity: 0.85;
+}
+.eval-summary {
+  font-size: 14px;
+  color: #000;
+  margin: 0 0 9px;
+  line-height: 1.45;
+  flex-shrink: 0;
+}
+.eval-fact-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 16px;
+  margin: 0;
+  flex-shrink: 0;
+}
+.eval-fact-grid > div { margin: 0; }
+.eval-fact-grid dt {
+  font-size: 12px;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0 0 2px;
+}
+.eval-fact-grid dd {
+  font-size: 15px;
+  font-weight: 700;
+  color: #000;
+  margin: 0;
+}
+.eval-fact-llm        { color: #6d28d9 !important; }
+.eval-fact-best       { color: #1d4ed8 !important; }
+.eval-fact-best-match { color: #047857 !important; }
+.eval-fact-starv      { color: #b91c1c !important; }
+.eval-fact-ok         { color: #047857 !important; }
+
+/* Target metric — visually prominent so it answers the "what metric?"
+   question at a glance, but compact enough not to dominate the card. */
+.eval-target-box {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin: 0 0 9px;
+  padding: 7px 12px;
+  background: rgba(124, 58, 237, 0.08);
+  border: 1.5px solid #c4b5fd;
+  border-left: 5px solid #6d28d9;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+.eval-target-label {
+  font-size: 12px;
+  font-weight: 800;
+  color: #6d28d9;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+.eval-target-value {
+  font-size: 17px;
+  font-weight: 800;
+  color: #000;
+  letter-spacing: -0.01em;
+}
+/* 3-column fact row (LLM Selected / Best Algorithm / Starvation). */
+.eval-fact-grid-3 {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
+/* — Algorithm Comparison table readability — */
+.eval-grid .cmp-table       { font-size: 15px; }
+.eval-grid .cmp-table th {
+  font-size: 12px;
+  color: #000;
+  background: rgba(0,0,0,0.05);
+  padding: 8px 8px;
+  letter-spacing: 0.04em;
+}
+.eval-grid .cmp-table td    { padding: 8px 8px; color: #1e293b; }
+.eval-grid .cmp-table tr.recommended { background: rgba(124,58,237,0.05); box-shadow: inset 3px 0 0 #7c3aed; }
+.cmp-algo-name              { font-weight: 600; color: #1e293b; }
+.cmp-algo-rec               { color: #6d28d9; font-weight: 800; }
+.cmp-algo-dot {
+  display: inline-block;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+.cmp-cell-best  { background: rgba(16,185,129,0.10); color: #047857; font-weight: 700; }
+.cmp-cell-worst { background: rgba(244,63,94,0.08);  color: #b91c1c; }
+.cmp-verdict-success { color: #047857; font-weight: 800; }
+.cmp-verdict-nearsuccess { color: #1d4ed8; font-weight: 800; }
+.cmp-verdict-fail    { color: #b91c1c; font-weight: 800; }
+.cmp-verdict-unknown { color: #64748b; font-weight: 700; }
+.cmp-starv-yes { color: #b91c1c; font-weight: 700; }
+.cmp-starv-no  { color: #047857; }
+.cmp-footnote {
+  font-size: 13px;
+  color: #475569;
+  line-height: 1.5;
+  margin: 12px 0 0;
+  padding-top: 10px;
+  border-top: 1px solid #e2e8f0;
+}
+
+/* — Metric Visualization controls + chart labels — */
+.metric-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 12px;
+  flex-shrink: 0;
+}
+.metric-select-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.eval-grid .metric-select {
+  font-size: 18px;
+  font-weight: 700;
+  color: #000;
+  padding: 6px 30px 6px 12px;
+}
+.metric-selected-summary {
+  font-size: 13px;
+  color: #475569;
+}
+.metric-selected-summary strong { color: #000; font-size: 14px; }
+.eval-grid .metric-star      { font-size: 22px; color: #6d28d9; }
+.eval-grid .metric-bar-val   { font-size: 17px; color: #000; font-weight: 800; min-height: 22px; }
+.eval-grid .metric-bar-label { font-size: 16px; color: #000;    font-weight: 700; margin-top: 4px; }
+
+/* "Best for selected metric: MLFQ" — short, prominent label, updates when
+   the dropdown changes. */
+.metric-best-label {
+  font-size: 15px;
+  color: #1e293b;
+  margin-left: 4px;
+}
+.metric-best-label strong { color: #000; }
+.metric-best-name { color: #047857 !important; font-weight: 800; }
+
+.metric-negative-note {
+  font-size: 13px;
+  color: #b45309;
+  background: #fef3c7;
+  border: 1px solid #fde68a;
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin: 12px 0 0;
+  line-height: 1.5;
+}
+
+/* — Best Algorithm by Metric (counterfactual) — */
+.cf-helper {
+  font-size: 13px;
+  color: #475569;
+  margin-bottom: 10px;
+  line-height: 1.5;
+  flex-shrink: 0;
+}
+.cf-table {
+  width: 100%;
+  font-size: 14px;
+  border-collapse: collapse;
+}
+.cf-table th {
+  text-align: left;
+  font-size: 12px;
+  color: #475569;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 6px 6px;
+  border-bottom: 1px solid #e2e8f0;
+}
+.cf-table td {
+  padding: 6px 6px;
+  color: #1e293b;
+}
+.cf-footer {
+  font-size: 13px;
+  color: #1e293b;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #e2e8f0;
+  flex-shrink: 0;
+}
+.cf-llm-name { color: #6d28d9; }
+.cf-wins-all  { color: #047857; }
+.cf-wins-some { color: #1e293b; }
+
+/* — Runtime Correction simplified — */
+.cor-preview-banner {
+  font-size: 13px;
+  color: #b45309;
+  background: #fef3c7;
+  border: 1px solid #fde68a;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-weight: 700;
+  margin-bottom: 10px;
+  flex-shrink: 0;
+}
+.cor-status-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.cor-status-dot {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+.cor-status-ok { background: #059669; }
+.cor-status-text {
+  font-size: 16px;
+  color: #000;
+  font-weight: 600;
+}
+.cor-status-text strong { font-weight: 800; color: #047857; }
+.cor-status-detail {
+  font-size: 14px;
+  color: #475569;
+  line-height: 1.5;
+  margin: 6px 0 0;
+  flex-shrink: 0;
 }
