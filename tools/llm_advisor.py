@@ -295,22 +295,37 @@ def validate(rec: dict, summary: dict | None = None) -> dict:
 FEEDBACK_SYSTEM_PROMPT = """You are the Feedback Rule Generator for an \
 LLM-based CPU scheduling advisor.
 
-You receive ONE failed evaluation: the advisor recommended an algorithm whose \
-measured performance fell into the FAIL bucket (regret_score > 0.25, OR \
-starvation occurred). Your job is to write a prompt-engineering rule that \
-prevents the same mistake in future recommendations.
+You receive one or more failed evaluations: the advisor recommended an \
+algorithm whose measured performance fell into the FAIL bucket \
+(regret_score > 0.25, OR starvation occurred). Your job is to write \
+prompt-engineering rules that prevent the same mistakes in future \
+recommendations.
 
-Each rule should:
+When EXISTING RULES are shown, you must:
+  - NOT repeat or paraphrase any existing rule
+  - Only emit rules that capture a pattern the existing rules miss
+  - If existing rules already cover every failure pattern shown, emit an
+    empty bullet list (just the line "- none")
+
+Each NEW rule should:
   - begin with a condition tied to workload or metric characteristics
   - end with a directive ("prefer X over Y", "avoid X when ...", etc.)
   - be specific (cite the metric and the algorithm by name)
   - avoid restating textbook algorithm definitions
+  - generalize across the failures shown when multiple runs are summarized
 
-Write the output as a flat Markdown bullet list (one or more bullets). No \
-preamble, no closing remarks, no code fences.
+Write the output as a flat Markdown bullet list. No preamble, no closing \
+remarks, no code fences.
 """
 
 FAIL_VERDICTS = {"fail", "failed"}
+MAX_RULES = 20  # FIFO cap; oldest rules drop first when over the limit
+MIN_RULE_LEN = 12  # bullets shorter than this are treated as noise
+
+# Marker for the bullet section so we can replace just the rules and keep
+# the file's header comment block.
+RULES_SECTION_MARKER = "<!-- RULES_BEGIN -->"
+RULES_SECTION_END = "<!-- RULES_END -->"
 
 
 def load_metrics(metrics_path: Path) -> dict:
@@ -343,49 +358,167 @@ def load_recommendation_context(rec_path: Path) -> dict | None:
     return rec if isinstance(rec, dict) else None
 
 
-def build_feedback_user_prompt(metrics: dict, rec: dict | None) -> str:
-    algo = metrics.get("scheduling_algorithm", "?")
-    target_metric = (rec or {}).get("target_metric", "?")
-    # metrics.py fills best_algorithm only when several algorithms were compared
-    # (evaluate_run); a single run leaves it null. Use it when present so the
-    # rule can name the algorithm that actually won.
-    best_algo = metrics.get("best_algorithm")
+def resolve_metrics_paths(spec: str) -> list[Path]:
+    """Resolve a --metrics argument into a sorted list of file paths.
 
+    Accepts: a single file, a directory (scans for *.json), or a glob pattern.
+    """
+    p = Path(spec)
+    if p.is_file():
+        return [p]
+    if p.is_dir():
+        return sorted(p.glob("*.json"))
+    # Fallback: treat as glob relative to cwd.
+    import glob as _glob
+    matches = sorted(Path(m) for m in _glob.glob(spec) if Path(m).is_file())
+    return matches
+
+
+def parse_rules_from_markdown(text: str) -> list[str]:
+    """Extract bullet items from a markdown body. Returns trimmed rule texts
+    (without the leading bullet marker). Filters out empties and the literal
+    sentinel "none"."""
+    rules: list[str] = []
+    for raw in text.splitlines():
+        line = raw.rstrip()
+        stripped = line.lstrip()
+        for marker in ("- ", "* "):
+            if stripped.startswith(marker):
+                rule = stripped[len(marker):].strip()
+                if rule and rule.lower() not in {"none", "n/a", "(none)"}:
+                    if len(rule) >= MIN_RULE_LEN:
+                        rules.append(rule)
+                break
+    return rules
+
+
+def load_existing_rules(rules_path: Path) -> list[str]:
+    """Read prior rules from a feedback_rules.md file. Returns [] if absent."""
+    if not rules_path.is_file():
+        return []
+    return parse_rules_from_markdown(rules_path.read_text(encoding="utf-8"))
+
+
+def _dedupe_keep_order(rules: list[str]) -> list[str]:
+    """Case-insensitive de-dupe while preserving insertion order."""
+    seen: set[str] = set()
+    out: list[str] = []
+    for r in rules:
+        key = r.casefold()
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(r)
+    return out
+
+
+def fail_summary_block(metrics: dict, rec: dict | None, source: str) -> str:
+    """One indented block describing a single FAILed run."""
+    algo = metrics.get("scheduling_algorithm", "?")
+    best_algo = metrics.get("best_algorithm")
+    target_metric = (rec or {}).get("target_metric", "?")
     lines = [
-        "Failed evaluation to learn from:\n",
-        f"- recommended algorithm : {algo}",
-        f"- best algorithm        : {best_algo or 'unknown (no cross-algorithm comparison)'}",
-        f"- target metric         : {target_metric}",
-        f"- judgment              : {metrics.get('judgment', '?')}",
-        f"- regret_score          : {metrics.get('regret_score', '?')}",
-        f"- starvation_occurred   : {metrics.get('starvation_occurred', '?')}",
-        f"- avg_response_time     : {metrics.get('avg_response_time', '?')}",
-        f"- avg_waiting_time      : {metrics.get('avg_waiting_time', '?')}",
-        f"- avg_turnaround_time   : {metrics.get('avg_turnaround_time', '?')}",
-        f"- throughput            : {metrics.get('throughput', '?')}",
-        f"- max_waiting_time      : {metrics.get('max_waiting_time', '?')}",
-        f"- preemption_count      : {metrics.get('preemption_count', '?')}",
+        f"FAILED RUN ({source}):",
+        f"  - recommended algorithm : {algo}",
+        f"  - best algorithm        : "
+        f"{best_algo or 'unknown (no cross-algorithm comparison)'}",
+        f"  - target metric         : {target_metric}",
+        f"  - judgment              : {metrics.get('judgment', '?')}",
+        f"  - regret_score          : {metrics.get('regret_score', '?')}",
+        f"  - starvation_occurred   : {metrics.get('starvation_occurred', '?')}",
+        f"  - avg_response_time     : {metrics.get('avg_response_time', '?')}",
+        f"  - avg_waiting_time      : {metrics.get('avg_waiting_time', '?')}",
+        f"  - avg_turnaround_time   : {metrics.get('avg_turnaround_time', '?')}",
+        f"  - throughput            : {metrics.get('throughput', '?')}",
+        f"  - max_waiting_time      : {metrics.get('max_waiting_time', '?')}",
+        f"  - preemption_count      : {metrics.get('preemption_count', '?')}",
     ]
     if rec and rec.get("reason"):
-        lines.append(f"- advisor reasoning     : {rec['reason']}")
+        lines.append(f"  - advisor reasoning     : {rec['reason']}")
     if rec and rec.get("params"):
-        lines.append(f"- advisor params        : {json.dumps(rec['params'])}")
-
-    lines.append(
-        "\nWrite the Markdown rule(s) now. Focus on what conditions in the "
-        "workload should have steered the advisor away from this algorithm."
-    )
+        lines.append(f"  - advisor params        : {json.dumps(rec['params'])}")
     return "\n".join(lines)
 
 
-def run_feedback(metrics_path: Path, rules_out: Path, rec_path: Path) -> int:
-    metrics = load_metrics(metrics_path)
-    judgment = str(metrics.get("judgment", "")).strip().lower()
+def build_feedback_user_prompt(
+    fail_blocks: list[str], existing_rules: list[str]
+) -> str:
+    """Build the user prompt: existing rules first (to dedupe against), then
+    every failed-run summary, then the directive."""
+    parts: list[str] = []
+    if existing_rules:
+        parts.append("EXISTING RULES (do NOT repeat or paraphrase):")
+        parts.extend(f"- {r}" for r in existing_rules)
+        parts.append("")
+    parts.append(
+        f"FAILED EVALUATIONS TO LEARN FROM "
+        f"({len(fail_blocks)} run{'s' if len(fail_blocks) != 1 else ''}):"
+    )
+    parts.append("")
+    parts.extend(fail_blocks)
+    parts.append("")
+    if len(fail_blocks) > 1:
+        parts.append(
+            "Generalize across all the runs above. Prefer one or two broad "
+            "rules over many narrow ones."
+        )
+    else:
+        parts.append(
+            "Focus on what conditions in the workload should have steered the "
+            "advisor away from this algorithm."
+        )
+    parts.append(
+        "Write only the new rule bullets (one per line, starting with '- '). "
+        "If existing rules already cover this pattern, output just '- none'."
+    )
+    return "\n".join(parts)
 
-    if judgment not in FAIL_VERDICTS:
+
+def render_rules_file(
+    rules: list[str], sources: list[Path], n_added: int
+) -> str:
+    """Render the full feedback_rules.md content."""
+    timestamp = datetime.now(timezone.utc).isoformat()
+    src_names = ", ".join(s.name for s in sources) or "(none)"
+    header = (
+        f"<!-- Generated by tools/llm_advisor.py (feedback mode)\n"
+        f"     last_updated : {timestamp}\n"
+        f"     total_rules  : {len(rules)} (added {n_added} this run, "
+        f"capped at {MAX_RULES})\n"
+        f"     last_sources : {src_names} -->\n\n"
+        f"{RULES_SECTION_MARKER}\n"
+    )
+    body = "\n".join(f"- {r}" for r in rules) if rules else "(no rules yet)"
+    return header + body + f"\n{RULES_SECTION_END}\n"
+
+
+def run_feedback(metrics_spec: str, rules_out: Path, rec_path: Path) -> int:
+    metrics_paths = resolve_metrics_paths(metrics_spec)
+    if not metrics_paths:
+        raise SystemExit(
+            f"[feedback] no metrics files match {metrics_spec!r}. Pass a file, "
+            f"directory, or glob (e.g. 'outputs/runs/*.json')."
+        )
+
+    # Collect every FAIL metrics file with its parsed payload.
+    fail_runs: list[tuple[Path, dict]] = []
+    skipped: list[tuple[Path, str]] = []
+    for mp in metrics_paths:
+        m = load_metrics(mp)
+        verdict = str(m.get("judgment", "")).strip().lower()
+        if verdict in FAIL_VERDICTS:
+            fail_runs.append((mp, m))
+        else:
+            skipped.append((mp, m.get("judgment", "?")))
+
+    if skipped:
+        for p, v in skipped:
+            print(f"[feedback] skip {p.name}: judgment={v!r} (not FAIL)")
+
+    if not fail_runs:
         print(
-            f"[feedback] judgment={metrics.get('judgment')!r} in {metrics_path}; "
-            f"rules not updated (only FAIL triggers an update)."
+            f"[feedback] no FAIL judgments across {len(metrics_paths)} file(s); "
+            f"rules unchanged."
         )
         return 0
 
@@ -393,25 +526,61 @@ def run_feedback(metrics_path: Path, rules_out: Path, rec_path: Path) -> int:
     if rec is None:
         print(f"[feedback] note: {rec_path} unavailable; running without it.")
 
-    print("[feedback] judgment=FAIL; querying Solar Pro 3 for a rule...")
+    existing_rules = load_existing_rules(rules_out)
+    if existing_rules:
+        print(
+            f"[feedback] {len(existing_rules)} existing rule(s) loaded — "
+            f"asking LLM for non-duplicate additions only."
+        )
+
+    fail_blocks = [fail_summary_block(m, rec, p.name) for p, m in fail_runs]
+    user_prompt = build_feedback_user_prompt(fail_blocks, existing_rules)
+
+    print(
+        f"[feedback] {len(fail_runs)} FAIL run(s); querying Solar Pro 3..."
+    )
     try:
         client = SolarClient()
         rules_md = client.complete(
-            prompt=build_feedback_user_prompt(metrics, rec),
+            prompt=user_prompt,
             system=FEEDBACK_SYSTEM_PROMPT,
             temperature=0.2,
         )
     except SolarError as exc:
         raise SystemExit(f"[feedback] LLM error: {exc}")
 
-    timestamp = datetime.now(timezone.utc).isoformat()
-    header = (
-        f"<!-- Generated by tools/llm_advisor.py (feedback mode) at {timestamp} "
-        f"from {metrics_path.name} (judgment=FAIL) -->\n\n"
-    )
+    new_rules = parse_rules_from_markdown(rules_md)
+    # Drop anything the LLM accidentally repeated from the existing set.
+    existing_keys = {r.casefold() for r in existing_rules}
+    fresh = [r for r in new_rules if r.casefold() not in existing_keys]
+
+    if not new_rules:
+        print(
+            "[feedback] LLM returned no usable rules "
+            "(empty or below length floor); rules file untouched."
+        )
+        return 0
+    if not fresh:
+        print(
+            "[feedback] LLM produced only duplicates of existing rules; "
+            "rules file untouched."
+        )
+        return 0
+
+    combined = _dedupe_keep_order(existing_rules + fresh)
+    if len(combined) > MAX_RULES:
+        dropped = len(combined) - MAX_RULES
+        combined = combined[-MAX_RULES:]  # FIFO — keep most recent MAX_RULES
+        print(f"[feedback] capped at {MAX_RULES}; dropped {dropped} oldest rule(s).")
+
     rules_out.parent.mkdir(parents=True, exist_ok=True)
-    rules_out.write_text(header + rules_md.strip() + "\n", encoding="utf-8")
-    print(f"[feedback] wrote rules → {rules_out}")
+    rules_out.write_text(
+        render_rules_file(combined, [p for p, _ in fail_runs], n_added=len(fresh)),
+        encoding="utf-8",
+    )
+    print(f"[feedback] wrote {len(combined)} rule(s) → {rules_out}")
+    for r in fresh:
+        print(f"  + {r}")
     return 0
 
 
@@ -497,7 +666,9 @@ def main() -> int:
         "--metrics",
         dest="metrics_path",
         default=str(PROJECT_ROOT / "outputs" / "metrics.json"),
-        help="[feedback] path to metrics.json (produced by metrics.py)",
+        help="[feedback] metrics.json source — accepts a single file, a "
+        "directory (scans *.json), or a glob like 'outputs/runs/*.json' "
+        "to learn from multiple FAIL runs at once",
     )
     parser.add_argument(
         "--rec",
@@ -509,7 +680,7 @@ def main() -> int:
 
     if args.mode == "feedback":
         return run_feedback(
-            Path(args.metrics_path),
+            args.metrics_path,  # string: file, dir, or glob — resolved inside
             Path(args.feedback_path),
             Path(args.rec_context_path),
         )

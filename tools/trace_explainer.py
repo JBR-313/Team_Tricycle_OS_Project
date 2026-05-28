@@ -3,23 +3,29 @@
 Pipeline position (architecture_diagram.md, AFTER RUNNING phase):
 
     trace.jsonl  +  metrics.json  -->  trace_explainer.py  -->  trace_explanation.json
-                         ^
-              recommendation.json (optional, for target metric)
+                         ^                    ^
+              recommendation.json (optional)  correction_proposal.json (optional)
 
 What it does:
   1. Read a scheduling trace (`trace.jsonl`) and the computed `metrics.json`.
   2. Summarize both into a compact, token-friendly digest.
-  3. Ask Upstage Solar Pro 3 to explain — in natural language — what happened
+  3. If `correction_proposal.json` exists, surface the runtime monitor's
+     would-have-proposed correction so the explanation can reference it as
+     evidence ("the runtime monitor flagged X and suggested Y").
+  4. Ask Upstage Solar Pro 3 to explain — in natural language — what happened
      and why, returning the strict JSON schema the dashboard consumes
      (docs/dashboard_data_contract.md §7).
-  4. Write the result to `trace_explanation.json`.
+  5. Write the result to `trace_explanation.json`.
 
 The LLM only explains an already-finished run; it does not control anything.
+The correction proposal (if present) was preview-only, so the explanation
+must phrase it as "would have suggested" — never as "applied".
 
 Usage:
     python3 tools/trace_explainer.py
     python3 tools/trace_explainer.py --trace outputs/trace_mlfq.jsonl \
         --metrics outputs/metrics.json --out outputs/trace_explanation.json
+    python3 tools/trace_explainer.py --proposal outputs/correction_proposal.json ...
 """
 
 from __future__ import annotations
@@ -49,6 +55,13 @@ fair_timeslicing, priority_inversion).
 You are explaining an already-finished run — do not propose to change the \
 scheduler, only describe and, in `suggestion`, note what algorithm/parameters \
 would likely do better.
+
+If a RUNTIME MONITOR PREVIEW PROPOSAL block appears in the user prompt, \
+treat it as additional evidence: the runtime monitor (preview-only, never \
+applied to xv6) flagged events during the run and would have suggested a \
+correction. Mention it briefly in `evidence` using language like "the \
+runtime monitor would have suggested …" — never claim the correction was \
+applied.
 
 Respond with STRICT JSON only (no markdown, no prose outside JSON), exactly \
 these keys:
@@ -142,7 +155,40 @@ def summarize_trace(events: list[dict]) -> dict:
     }
 
 
-def build_user_prompt(digest: dict, metrics: dict | None, rec: dict | None) -> str:
+def _proposal_digest(proposal: dict) -> dict | None:
+    """Extract the minimum the LLM needs to mention the preview correction.
+
+    Returns None if the proposal is not a usable preview record.
+    """
+    if not isinstance(proposal, dict):
+        return None
+    if proposal.get("preview_only") is not True or proposal.get("applied") is not False:
+        return None
+    proposed = proposal.get("proposed") or {}
+    if not isinstance(proposed, dict):
+        return None
+    triggering = proposed.get("triggering_event") or {}
+    return {
+        "preview_only": True,
+        "applied": False,
+        "current_algorithm": proposal.get("current_scheduling_algorithm"),
+        "would_propose": {
+            "correction_type": proposed.get("correction_type"),
+            "new_algorithm": proposed.get("new_scheduling_algorithm"),
+            "rationale": proposed.get("rationale"),
+        },
+        "triggering_event_type": triggering.get("type"),
+        "triggering_event_detail": triggering.get("detail"),
+        "mode": (proposal.get("_meta") or {}).get("mode"),
+    }
+
+
+def build_user_prompt(
+    digest: dict,
+    metrics: dict | None,
+    rec: dict | None,
+    proposal_digest: dict | None,
+) -> str:
     parts = ["TRACE DIGEST:", json.dumps(digest, indent=2, ensure_ascii=False)]
     if metrics:
         # Drop the bulky per-process array; the digest already has a timeline.
@@ -150,6 +196,12 @@ def build_user_prompt(digest: dict, metrics: dict | None, rec: dict | None) -> s
         parts += ["\nMETRICS:", json.dumps(slim, indent=2, ensure_ascii=False)]
     if rec and rec.get("target_metric"):
         parts.append(f"\nTARGET METRIC: {rec['target_metric']}")
+    if proposal_digest:
+        parts += [
+            "\nRUNTIME MONITOR — PREVIEW PROPOSAL (NOT applied to xv6; "
+            "phrase as 'would have suggested', never as 'was applied'):",
+            json.dumps(proposal_digest, indent=2, ensure_ascii=False),
+        ]
     parts.append(
         "\nExplain this run and return the strict JSON object described in the "
         "system prompt."
@@ -191,6 +243,14 @@ def main() -> int:
         help="recommendation.json for the target metric (optional)",
     )
     parser.add_argument(
+        "--proposal",
+        dest="proposal_path",
+        default=str(PROJECT_ROOT / "outputs" / "correction_proposal.json"),
+        help="correction_proposal.json from the runtime monitor (optional). "
+        "When present and preview_only=true, the explanation will reference "
+        "what the monitor would have proposed.",
+    )
+    parser.add_argument(
         "--out",
         dest="out_path",
         default=str(PROJECT_ROOT / "outputs" / "trace_explanation.json"),
@@ -202,12 +262,20 @@ def main() -> int:
     digest = summarize_trace(events)
     metrics = load_json(Path(args.metrics_path), required=False)
     rec = load_json(Path(args.rec_path), required=False)
+    proposal_raw = load_json(Path(args.proposal_path), required=False)
+    proposal_digest = _proposal_digest(proposal_raw) if proposal_raw else None
+    if proposal_digest:
+        print(
+            f"[trace_explainer] including runtime monitor preview "
+            f"({proposal_digest['would_propose'].get('correction_type')} → "
+            f"{proposal_digest['would_propose'].get('new_algorithm')})"
+        )
 
     try:
         client = SolarClient()
         print(f"[trace_explainer] querying Solar Pro 3 (model={client.model})...")
         exp = client.complete_json(
-            prompt=build_user_prompt(digest, metrics, rec),
+            prompt=build_user_prompt(digest, metrics, rec, proposal_digest),
             system=SYSTEM_PROMPT,
             temperature=0.2,
         )

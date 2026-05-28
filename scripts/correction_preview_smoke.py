@@ -26,6 +26,10 @@ Usage:
     python3 scripts/correction_preview_smoke.py --recommendation \\
         dashboard_live/public/live-data/recommendation.json
 
+    # Also exercise the LLM-driven proposer (requires UPSTAGE_API_KEY in .env):
+    python3 scripts/correction_preview_smoke.py --mode llm
+    python3 scripts/correction_preview_smoke.py --mode both
+
 Exit codes:
     0 — every scenario produced a proposer + guard result (accepted or
         rejected — both are valid outcomes; the smoke just proves the
@@ -105,8 +109,15 @@ def _run(cmd: list[str]) -> int:
 
 
 def run_scenario(name: str, events: list[dict], rec: dict,
-                 tmp_root: Path) -> dict:
-    sandbox = tmp_root / name.replace(" ", "_").replace("(", "").replace(")", "")
+                 tmp_root: Path, mode: str) -> dict:
+    """Run one scenario through proposer (in `mode`) + guard.
+
+    `mode` is 'deterministic' or 'llm'; the LLM path requires
+    UPSTAGE_API_KEY in .env and gracefully degrades to deterministic
+    inside the proposer itself if the API call fails.
+    """
+    label = f"{name}__{mode}".replace(" ", "_").replace("(", "").replace(")", "")
+    sandbox = tmp_root / label
     sandbox.mkdir(parents=True, exist_ok=True)
     events_path = sandbox / "runtime_events.json"
     rec_path = sandbox / "recommendation.json"
@@ -117,11 +128,13 @@ def run_scenario(name: str, events: list[dict], rec: dict,
                                        "events": events}, indent=2))
     rec_path.write_text(json.dumps(rec, indent=2))
 
-    rc = _run([sys.executable, str(TOOLS_DIR / "correction_proposer.py"),
-               "--events", str(events_path),
-               "--recommendation", str(rec_path),
-               "--out", str(proposal_path)])
-    result: dict = {"name": name, "proposer_rc": rc}
+    proposer_cmd = [sys.executable, str(TOOLS_DIR / "correction_proposer.py"),
+                    "--events", str(events_path),
+                    "--recommendation", str(rec_path),
+                    "--out", str(proposal_path),
+                    "--mode", mode]
+    rc = _run(proposer_cmd)
+    result: dict = {"name": name, "mode": mode, "proposer_rc": rc}
     if rc != 0 or not proposal_path.is_file():
         result["status"] = "PROPOSER FAILED"
         return result
@@ -133,6 +146,9 @@ def run_scenario(name: str, events: list[dict], rec: dict,
     result["correction_type"] = proposed.get("correction_type")
     result["new_algo"] = proposed.get("new_scheduling_algorithm")
     result["rationale"] = proposed.get("rationale")
+    # Record which mode actually produced the proposal — the proposer
+    # may have fallen back from llm -> deterministic on a Solar error.
+    result["effective_mode"] = (proposal.get("_meta") or {}).get("mode", mode)
 
     rc = _run([sys.executable, str(TOOLS_DIR / "correction_guard.py"),
                "--proposal", str(proposal_path),
@@ -160,6 +176,11 @@ def main() -> int:
     ap.add_argument("--keep-tmp", action="store_true",
                     help="do not delete the temp directory at exit (useful for "
                          "inspecting the proposal/decision JSON)")
+    ap.add_argument("--mode", choices=["deterministic", "llm", "both"],
+                    default="deterministic",
+                    help="proposer mode to exercise: 'deterministic' (default, "
+                         "no API key needed), 'llm' (requires UPSTAGE_API_KEY), "
+                         "or 'both' (runs each scenario twice for comparison)")
     args = ap.parse_args()
 
     rec_path = Path(args.recommendation)
@@ -170,30 +191,37 @@ def main() -> int:
         rec = FALLBACK_RECOMMENDATION
         rec_source = "(baked default — recommendation.json absent)"
 
+    modes = ["deterministic", "llm"] if args.mode == "both" else [args.mode]
+
     print(f"recommendation source: {rec_source}")
-    print(f"scenarios: {len(SCENARIOS)}")
+    print(f"scenarios: {len(SCENARIOS)} × mode(s): {modes}")
     print()
 
     tmp_root = Path(tempfile.mkdtemp(prefix="correction_preview_smoke_"))
     try:
         results = []
-        for s in SCENARIOS:
-            print(f"--- scenario: {s['name']} ---")
-            results.append(run_scenario(s["name"], s["events"], rec, tmp_root))
-            print()
+        for m in modes:
+            for s in SCENARIOS:
+                print(f"--- scenario: {s['name']} [mode={m}] ---")
+                results.append(run_scenario(s["name"], s["events"], rec, tmp_root, m))
+                print()
 
-        print("=" * 78)
+        print("=" * 90)
         print("summary")
-        print("=" * 78)
-        header = (f"{'scenario':<36} {'status':<14} {'correction':<22} "
-                  f"{'algo':<8} {'guard':<10}")
+        print("=" * 90)
+        header = (f"{'scenario':<32} {'mode':<13} {'status':<14} "
+                  f"{'correction':<22} {'algo':<8} {'guard':<10}")
         print(header)
         print("-" * len(header))
         all_ok = True
         for r in results:
             ok = r.get("status") == "OK"
             all_ok = all_ok and ok and (r.get("preview_only") is True) and (r.get("applied") is False)
-            print(f"{r['name']:<36} {r['status']:<14} "
+            mode_label = r.get("mode", "?")
+            eff = r.get("effective_mode")
+            if eff and eff != mode_label:
+                mode_label = f"{mode_label}→{eff}"  # fallback indicator
+            print(f"{r['name'][:32]:<32} {mode_label:<13} {r['status']:<14} "
                   f"{str(r.get('correction_type','—'))[:22]:<22} "
                   f"{str(r.get('new_algo','—'))[:8]:<8} "
                   f"{str(r.get('guard_result','—'))[:10]:<10}")
