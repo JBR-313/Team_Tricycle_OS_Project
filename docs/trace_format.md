@@ -32,10 +32,31 @@ Emitted by the xv6 kernel scheduler.
 [SCHED] tick=<int> algo=<ALGO> event=<EVENT> pid=<int> state=<STATE> queue=<int> priority=<int> reason=<text>
 ```
 
-Events: `DISPATCH`, `PREEMPT`, `EXIT`, `QUEUE_CHANGE`, `ARRIVE`, `SLEEP`,
-`WAKEUP`. A line may also carry `from_queue` / `to_queue` (for `QUEUE_CHANGE`)
-and `turnaround` / `waiting` / `response` (for `EXIT`). Tokens are generic
-`key=value` pairs; not every token is present on every line.
+Events emitted today: `DISPATCH`, `PREEMPT`, `EXIT`, `QUEUE_CHANGE`,
+`ARRIVE`, `SLEEP`, `WAKEUP`. The simulator additionally emits `PRED_UPDATE`
+(SJF/SRTF EMA refresh). Tokens are generic `key=value` pairs; not every
+token is present on every line.
+
+**Per-event optional fields (loaders MUST tolerate missing keys):**
+
+| Event | Required | Optional |
+|---|---|---|
+| `ARRIVE` | `tick`, `pid` | `state`, `queue`, `priority` |
+| `DISPATCH` | `tick`, `pid` | `state`, `queue`, `priority` |
+| `PREEMPT` | `tick`, `pid` | `state`, `queue`, `priority`, `reason` |
+| `EXIT` | `tick`, `pid` | `state`, `queue`, `turnaround`, `waiting`, `response` |
+| `QUEUE_CHANGE` | `tick`, `pid`, `from_queue`, `to_queue` | `reason` (`demotion` / `aging_promotion` / `promotion`) |
+| `SLEEP` / `WAKEUP` | `tick`, `pid` | `state` |
+| `PRED_UPDATE` (simulator) | `tick`, `pid`, `observed`, `predicted_prev`, `predicted_next` | `source` (`ema` or `llm`) |
+
+> The spec-suggested discrete events `QUEUE_ENTER` / `QUEUE_LEAVE` /
+> `DEMOTE` / `PROMOTE` are **expressed** in this project as
+> `QUEUE_CHANGE` with `reason=demotion|aging_promotion|promotion` and the
+> `from_queue` / `to_queue` pair. Consumers that want the discrete view
+> should derive it from `QUEUE_CHANGE`. The parser preserves any unknown
+> tokens via its "carry every remaining token through" rule
+> (`tools/trace_parser.py:137-141`), so a future kernel patch can switch to
+> discrete events without breaking the parser.
 
 ```text
 [SCHED] tick=12 algo=MLFQ event=DISPATCH pid=3 state=RUNNING queue=0 priority=2
