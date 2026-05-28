@@ -57,7 +57,9 @@ def _read_json(path: Path) -> dict:
 
 def _algo(rec: dict) -> str:
     """Canonical UPPER for rule comparison; preserve original casing for output."""
-    return str(rec.get("recommended_scheduling_algorithm") or rec.get("algorithm") or "MLFQ")
+    return str(
+        rec.get("recommended_scheduling_algorithm") or rec.get("algorithm") or "MLFQ"
+    ).strip()
 
 
 def _params(rec: dict) -> dict:
@@ -224,7 +226,7 @@ def main() -> int:
         print("[correction_proposer] no proposal warranted (empty after filter).")
         return 0
 
-    Path(args.out).write_text(json.dumps(proposal, indent=2), encoding="utf-8")
+    Path(args.out).write_text(json.dumps(proposal, indent=2) + "\n", encoding="utf-8")
     print(f"[correction_proposer] wrote {args.out}: "
           f"{proposal['proposed']['correction_type']} on "
           f"{proposal['proposed']['triggering_event'].get('type')}")

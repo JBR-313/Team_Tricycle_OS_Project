@@ -81,8 +81,8 @@ class SolarClient:
         self.api_key = api_key or os.environ.get("UPSTAGE_API_KEY")
         if not self.api_key:
             raise SolarError(
-                "UPSTAGE_API_KEY is not set. Copy llm_service/.env.example to "
-                "llm_service/.env and put your Upstage API key there."
+                "UPSTAGE_API_KEY is not set. Copy tools/.env.example to "
+                "tools/.env and put your Upstage API key there."
             )
         self.model = model or os.environ.get("SOLAR_MODEL", DEFAULT_MODEL)
         self.base_url = (
@@ -209,7 +209,7 @@ class SolarClient:
 
 
 def _smoke_test() -> None:
-    """Manual check: `python3 llm_service/solar_client.py`."""
+    """Manual check: `python3 tools/solar_client.py`."""
     client = SolarClient()
     print(f"model      = {client.model}")
     print(f"base_url   = {client.base_url}")
