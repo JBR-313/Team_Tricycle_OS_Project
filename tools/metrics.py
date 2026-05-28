@@ -19,9 +19,12 @@ SYSTEM_PID = -1
 STARVATION_MULTIPLIER = 3
 MIN_STARVATION_WAIT_TICKS = 5
 
-# Regret/judgment thresholds (see Evaluation Plan).
+# Regret/judgment thresholds (see docs/evaluation_criteria_audit.md).
+# Updated 2026-05-28: NEAR_SUCCESS_REGRET tightened from 0.30 -> 0.25 per
+# the overnight work plan §5 (normalized regret evaluator). Constants are
+# the single source of truth; any callers hardcoding 0.30 must import these.
 SUCCESS_REGRET = 0.10
-NEAR_SUCCESS_REGRET = 0.30
+NEAR_SUCCESS_REGRET = 0.25
 
 # Only these algorithms produce a meaningful burst prediction error.
 PREDICTIVE_ALGORITHMS = ("SJF", "SRTF")
@@ -631,10 +634,43 @@ def compute_metrics(events, recommendation=None):
     return metrics
 
 
+def _explain_judgment(primary: dict, target_metric: str,
+                      selected_val, best_val, best_algo: str | None,
+                      regret, judgment: str) -> str:
+    """One-line human-readable explanation used by the dashboard Evaluation tab."""
+    sel_algo = primary.get("scheduling_algorithm", "?")
+    if primary.get("starvation_occurred"):
+        pids = primary.get("starvation_pids") or []
+        return (f"FAIL: {sel_algo} caused starvation"
+                + (f" on pid(s) {pids}" if pids else "")
+                + " — starvation forces FAIL regardless of regret.")
+    if regret is None or selected_val is None or best_val is None or best_algo is None:
+        return f"UNKNOWN: insufficient comparison data for {sel_algo} on {target_metric}."
+    pct = regret * 100
+    # Presentation-safe: when the best metric is near zero the raw regret can
+    # be in the thousands of percent, which reads as nonsense on a demo
+    # screen. Display ">999%" and add a tail note.
+    if pct >= 999.5:
+        pct_str = ">999%"
+        tail = "  (regret is huge because best value is near zero — relative gap is poorly defined here)"
+    else:
+        pct_str = f"{round(pct, 1)}%"
+        tail = ""
+    if judgment == "SUCCESS":
+        return (f"SUCCESS: {sel_algo} on {target_metric} = {selected_val} vs "
+                f"best ({best_algo}) = {best_val}; regret = {pct_str} (<= 10%).")
+    if judgment == "NEAR-SUCCESS":
+        return (f"NEAR-SUCCESS: {sel_algo} on {target_metric} = {selected_val} vs "
+                f"best ({best_algo}) = {best_val}; regret = {pct_str} (10-25%).")
+    return (f"FAIL: {sel_algo} on {target_metric} = {selected_val} vs "
+            f"best ({best_algo}) = {best_val}; regret = {pct_str} (> 25%).{tail}")
+
+
 def evaluate_run(primary, baseline, all_metrics, target_metric):
     """
     Fill in the comparison-dependent fields on the primary run's metrics:
-    best_algorithm, regret_score and the final judgment.
+    best_algorithm, regret_score and the final judgment, plus the verbose
+    evaluation block consumed by the dashboard Evaluation view.
 
       - best_algorithm: best performer on target_metric across all runs
                         (including the primary itself)
@@ -644,14 +680,33 @@ def evaluate_run(primary, baseline, all_metrics, target_metric):
       - judgment:       re-derived from regret_score, with starvation still
                         forcing an immediate FAIL
 
+    New fields populated for the dashboard Evaluation tab:
+      - target_metric
+      - selected_metric_value
+      - best_metric_value
+      - explanation
+
     Mutates and returns `primary`.
     """
-    primary["best_algorithm"] = pick_best_algorithm(all_metrics, target_metric)
+    best_algo = pick_best_algorithm(all_metrics, target_metric)
+    selected_val = primary.get(target_metric)
+    best_val = None
+    if best_algo and isinstance(all_metrics.get(best_algo), dict):
+        best_val = all_metrics[best_algo].get(target_metric)
+
+    primary["best_algorithm"] = best_algo
     primary["regret_score"] = compute_regret(
-        target_metric, primary.get(target_metric), baseline
+        target_metric, selected_val, baseline
     )
     primary["judgment"] = compute_judgment(
         primary["regret_score"], primary["starvation_occurred"]
+    )
+    primary["target_metric"] = target_metric
+    primary["selected_metric_value"] = selected_val
+    primary["best_metric_value"] = best_val
+    primary["explanation"] = _explain_judgment(
+        primary, target_metric, selected_val, best_val,
+        best_algo, primary["regret_score"], primary["judgment"]
     )
     return primary
 

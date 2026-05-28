@@ -479,6 +479,64 @@ def _add_compat_keys(decision: dict, rec: dict, *, fallback_used: bool) -> dict:
     return decision
 
 
+# Defense-in-depth bounds for LLM-supplied predicted bursts. Mirrors
+# tools/llm_advisor._clamp_burst so the guard catches bypass paths
+# (callers writing recommendation.json by hand, or future model versions).
+_GUARD_PB_MIN = 1
+_GUARD_PB_MAX = 100
+
+
+def _guard_clamp_predicted_bursts(items) -> tuple[list, list[str]]:
+    """Re-validate recommendation.predicted_bursts at the guard layer.
+
+    Returns (clean_list, warnings). Drops malformed entries; dedups by pid
+    (last wins); clamps every numeric burst to [_GUARD_PB_MIN,_GUARD_PB_MAX]
+    so a wild value cannot reach the SJF/SRTF predictor state.
+    """
+    if not isinstance(items, list):
+        return [], []
+    warnings: list[str] = []
+    by_pid: dict = {}
+    for it in items:
+        if not isinstance(it, dict):
+            warnings.append(f"guard: dropped non-object predicted_bursts entry: {it!r}")
+            continue
+        pid = it.get("pid")
+        if not isinstance(pid, int):
+            warnings.append(f"guard: dropped predicted_bursts entry with non-int pid: {pid!r}")
+            continue
+        out: dict = {"pid": pid}
+        pb = it.get("predicted_burst")
+        if isinstance(pb, (int, float)):
+            v = int(round(float(pb)))
+            cv = max(_GUARD_PB_MIN, min(_GUARD_PB_MAX, v))
+            if cv != v:
+                warnings.append(f"guard: pid={pid} predicted_burst clamped {v} -> {cv}")
+            out["predicted_burst"] = cv
+        pb_list = it.get("predicted_bursts")
+        if isinstance(pb_list, list):
+            cleaned = []
+            for x in pb_list:
+                if not isinstance(x, (int, float)):
+                    continue
+                v = int(round(float(x)))
+                cv = max(_GUARD_PB_MIN, min(_GUARD_PB_MAX, v))
+                if cv != v:
+                    warnings.append(f"guard: pid={pid} predicted_bursts[i] clamped {v} -> {cv}")
+                cleaned.append(cv)
+            if cleaned:
+                out["predicted_bursts"] = cleaned
+        if "predicted_burst" not in out and "predicted_bursts" not in out:
+            continue
+        if isinstance(it.get("confidence"), (int, float)):
+            c = max(0.0, min(1.0, float(it["confidence"])))
+            out["confidence"] = round(c, 3)
+        if isinstance(it.get("basis"), str):
+            out["basis"] = it["basis"][:200]
+        by_pid[pid] = out  # dedup last-wins
+    return list(by_pid.values()), warnings
+
+
 def guard(rec: dict) -> dict:
     """Run all guard validations. Returns guard_decision dict.
 
@@ -527,6 +585,26 @@ def guard(rec: dict) -> dict:
         if result == "accepted" and param_warnings:
             result = "accepted_with_warning"
 
+        # Defense-in-depth: re-clamp / dedup predicted_bursts from the
+        # recommendation. Advisor already validates, but the guard re-checks
+        # so a hand-written or future-model recommendation cannot smuggle
+        # negative / huge / duplicate hints into the scheduler.
+        pb_clean, pb_warnings = _guard_clamp_predicted_bursts(rec.get("predicted_bursts"))
+        # For SJF/SRTF, declare the prediction source so downstream
+        # (orchestrator / simulator) can route hints correctly. If no hints
+        # arrived, fall back to EMA explicitly rather than silently.
+        prediction_source = None
+        if algo in PREDICTOR_ALGORITHMS:
+            prediction_source = "llm" if pb_clean else "ema"
+            if not pb_clean:
+                pb_warnings.append(
+                    f"{algo} without predicted_bursts -> EMA fallback (xv6 default predictor)."
+                )
+        if pb_warnings:
+            messages.extend(pb_warnings)
+            if result == "accepted":
+                result = "accepted_with_warning"
+
         # Build output
         guard_decision: dict[str, Any] = {
             "guard_result": result,
@@ -535,6 +613,8 @@ def guard(rec: dict) -> dict:
             "target_metric": metric,
             "compatibility_score": compat_score,
             "confidence_score": confidence if confidence is not None else 0.5,
+            "predicted_bursts": pb_clean,
+            "prediction_source": prediction_source,
         }
 
         if result == "accepted":

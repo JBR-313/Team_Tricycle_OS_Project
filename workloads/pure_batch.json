@@ -1,0 +1,15 @@
+{
+  "id": "pure_batch",
+  "description": "Five equal-priority CPU-only jobs; classic FCFS / batch workload with no interactive component.",
+  "target_metric": "avg_turnaround_time",
+  "expected_best_algorithm": "FCFS",
+  "expected_behavior": "FCFS minimizes context-switch overhead with no harm (no convoy because bursts are similar). RR wastes preemption; MLFQ aging is irrelevant. SJF only marginally helps because bursts cluster.",
+  "schema_version": 2,
+  "processes": [
+    {"pid": 1, "arrival_time": 0, "cpu_bursts": [12], "actual_bursts": [12], "io_bursts": [], "priority": 5, "label": "cpu_bound"},
+    {"pid": 2, "arrival_time": 1, "cpu_bursts": [10], "actual_bursts": [10], "io_bursts": [], "priority": 5, "label": "cpu_bound"},
+    {"pid": 3, "arrival_time": 2, "cpu_bursts": [14], "actual_bursts": [14], "io_bursts": [], "priority": 5, "label": "cpu_bound"},
+    {"pid": 4, "arrival_time": 3, "cpu_bursts": [11], "actual_bursts": [11], "io_bursts": [], "priority": 5, "label": "cpu_bound"},
+    {"pid": 5, "arrival_time": 4, "cpu_bursts": [13], "actual_bursts": [13], "io_bursts": [], "priority": 5, "label": "cpu_bound"}
+  ]
+}

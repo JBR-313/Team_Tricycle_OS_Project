@@ -91,15 +91,32 @@ You are an ADVISOR only. You do not control the scheduler. Your job is to \
 output a recommendation; another component will verify it by actually running \
 the workload in xv6.
 
+When the recommended algorithm is SJF or SRTF, you may ALSO output a per-process \
+burst hint list, based ONLY on visible features in `visible_processes` (label, \
+arrival_time, priority, burst_count, io_count). DO NOT use any actual burst \
+values — they are not in the prompt and you must not invent them by guessing \
+the ground truth. Your hint is a *prediction*, mirroring what a smart kernel \
+predictor would estimate from the visible features.
+
 Respond with STRICT JSON only (no markdown, no prose outside JSON), with \
-exactly these keys:
+exactly these keys (predicted_bursts is OPTIONAL and only relevant for \
+SJF/SRTF):
 {{
   "algorithm": "<one of FCFS | RR | PRIORITY | MLFQ | SJF | SRTF>",
   "params": {{ ... algorithm-specific, see schema above ... }},
   "reason": "<concise explanation, 2-4 sentences, referencing the workload>",
   "target_metric": "<one of waiting_time | response_time | turnaround_time | \
 throughput | starvation | fairness>",
-  "confidence": <number between 0 and 1>
+  "confidence": <number between 0 and 1>,
+  "predicted_bursts": [   // OPTIONAL — only if algorithm is SJF or SRTF
+    {{
+      "pid":              <int>,
+      "predicted_burst":  <number>,           // first-burst hint in ticks
+      "predicted_bursts": [<number>, ...],     // OPTIONAL multi-burst list
+      "confidence":       <number 0..1>,
+      "basis":            "<short reason citing visible features>"
+    }}
+  ]
 }}
 """
 
@@ -141,7 +158,71 @@ def build_user_prompt(summary: dict) -> str:
     )
 
 
-def validate(rec: dict) -> dict:
+# Range used to clamp LLM-predicted burst values. Matches the xv6 predictor's
+# default [min=1, max=100] (proc.c: struct predictor_params). The guard /
+# kernel may further clamp; this is the first line of defence.
+PREDICTED_BURST_MIN = 1
+PREDICTED_BURST_MAX = 100
+
+
+def _clamp_burst(x: float) -> int:
+    """Coerce a numeric burst hint into an int within [MIN, MAX]."""
+    v = int(round(float(x)))
+    if v < PREDICTED_BURST_MIN: v = PREDICTED_BURST_MIN
+    if v > PREDICTED_BURST_MAX: v = PREDICTED_BURST_MAX
+    return v
+
+
+def _validate_predicted_bursts(items, expected_pids: set | None = None) -> list:
+    """Validation of the OPTIONAL predicted_bursts[] list.
+
+    Honesty contract (docs/sjf_srtf_prediction_audit.md §3 + verification_goal §7):
+      - Drops malformed entries instead of failing, so a partial model answer
+        still yields a usable recommendation.
+      - Deduplicates by pid (last hint wins — LLMs sometimes restate).
+      - Clamps numeric burst hints to [PREDICTED_BURST_MIN, PREDICTED_BURST_MAX]
+        so out-of-range / negative / huge values cannot reach the simulator
+        or the xv6 predictor.
+      - Drops items whose pid is not in the workload's visible pids when
+        `expected_pids` is provided.
+    """
+    if not isinstance(items, list):
+        return []
+    by_pid: dict[int, dict] = {}  # pid -> last-seen clean entry (dedup)
+    for it in items:
+        if not isinstance(it, dict):
+            continue
+        pid = it.get("pid")
+        if not isinstance(pid, int):
+            continue
+        if expected_pids is not None and pid not in expected_pids:
+            continue
+        out: dict = {"pid": pid}
+        # predicted_burst (scalar)
+        pb = it.get("predicted_burst")
+        if isinstance(pb, (int, float)):
+            out["predicted_burst"] = _clamp_burst(pb)
+        # predicted_bursts (list) — also clamp every element
+        pb_list = it.get("predicted_bursts")
+        if isinstance(pb_list, list):
+            pb_clean = [_clamp_burst(x) for x in pb_list
+                        if isinstance(x, (int, float))]
+            if pb_clean:
+                out["predicted_bursts"] = pb_clean
+        if "predicted_burst" not in out and "predicted_bursts" not in out:
+            continue
+        if isinstance(it.get("confidence"), (int, float)):
+            c = float(it["confidence"])
+            if c < 0.0: c = 0.0
+            if c > 1.0: c = 1.0
+            out["confidence"] = round(c, 3)
+        if isinstance(it.get("basis"), str):
+            out["basis"] = it["basis"][:200]
+        by_pid[pid] = out  # dedup: later occurrence wins
+    return list(by_pid.values())
+
+
+def validate(rec: dict, summary: dict | None = None) -> dict:
     if not isinstance(rec, dict):
         raise SolarError(f"Model returned non-object JSON: {rec!r}")
     algo = str(rec.get("algorithm", "")).strip()
@@ -163,6 +244,19 @@ def validate(rec: dict) -> dict:
     if params is not None and not isinstance(params, dict):
         raise SolarError(f"'params' must be an object, got {type(params).__name__}.")
     rec.setdefault("params", {})
+
+    # OPTIONAL predicted_bursts[] — only relevant for SJF/SRTF.
+    expected_pids = None
+    if summary and isinstance(summary.get("visible_processes"), list):
+        expected_pids = {vp.get("pid") for vp in summary["visible_processes"]
+                         if isinstance(vp.get("pid"), int)}
+    rec["predicted_bursts"] = _validate_predicted_bursts(
+        rec.get("predicted_bursts"), expected_pids
+    )
+    # If the LLM picked SJF/SRTF but gave no hints, that's fine — the simulator
+    # falls back to EMA. We log it for visibility.
+    if match in ("SJF", "SRTF") and not rec["predicted_bursts"]:
+        print("[llm_advisor] note: SJF/SRTF without predicted_bursts -> EMA fallback.")
     return rec
 
 
@@ -178,7 +272,7 @@ def validate(rec: dict) -> dict:
 #                                  outputs/feedback_rules.md
 #
 # Trigger: metrics.py writes a `judgment` field ∈ {SUCCESS, NEAR-SUCCESS, FAIL}.
-# Only `FAIL` (regret_score > 0.30, OR starvation_occurred = true) triggers a
+# Only `FAIL` (regret_score > 0.25, OR starvation_occurred = true) triggers a
 # rules update — SUCCESS / NEAR-SUCCESS leave the rules file untouched.
 # See docs/evaluation_plan.md for the full judgment criteria.
 
@@ -186,7 +280,7 @@ FEEDBACK_SYSTEM_PROMPT = """You are the Feedback Rule Generator for an \
 LLM-based CPU scheduling advisor.
 
 You receive ONE failed evaluation: the advisor recommended an algorithm whose \
-measured performance fell into the FAIL bucket (regret_score > 0.30, OR \
+measured performance fell into the FAIL bucket (regret_score > 0.25, OR \
 starvation occurred). Your job is to write a prompt-engineering rule that \
 prevents the same mistake in future recommendations.
 
@@ -323,7 +417,7 @@ def run_advise(in_path: Path, out_path: Path, feedback_path: Path) -> int:
             system=system_prompt,
             temperature=0.0,
         )
-        rec = validate(rec)
+        rec = validate(rec, summary=summary)
     except SolarError as exc:
         raise SystemExit(f"[llm_advisor] LLM error: {exc}")
 
