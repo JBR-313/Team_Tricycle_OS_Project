@@ -1,5 +1,5 @@
 {
-  "backend": "simulator",
+  "backend": "xv6",
   "seed": 42,
   "workload_type": "interactive",
   "llm_selected_algorithm": "MLFQ",
@@ -11,11 +11,11 @@
     "SJF",
     "SRTF"
   ],
-  "generated_at": "2026-05-28T10:17:28Z",
+  "generated_at": "2026-05-28T13:28:17Z",
   "orchestrator_version": "1.0.0",
-  "mode": "simulator",
-  "updated_at": "2026-05-28T10:17:28Z",
-  "version": 28,
+  "mode": "xv6-log",
+  "updated_at": "2026-05-28T13:28:17Z",
+  "version": 31,
   "workload": "interactive_heavy",
   "algorithms": [
     "MLFQ",
@@ -26,5 +26,6 @@
     "SRTF"
   ],
   "recommended_algorithm": "MLFQ",
-  "target_metric": "avg_response_time"
+  "target_metric": "avg_response_time",
+  "metadata_source": "demo_fallback"
 }
