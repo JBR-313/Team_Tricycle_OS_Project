@@ -19,6 +19,21 @@ SYSTEM_PID = -1
 STARVATION_MULTIPLIER = 3
 MIN_STARVATION_WAIT_TICKS = 5
 
+# Sparse-trace hardening (added 2026-06-03). Two extra gates on the
+# *statistical* starvation heuristic, both conjunctive with the relative +
+# absolute thresholds above. They only suppress false positives on very short
+# xv6 traces; they can never create a new positive. An explicit
+# STARVATION_WARNING event in the trace stays authoritative and is applied by
+# the caller AFTER this heuristic, so it bypasses both gates entirely.
+#   1. Minimum completed-process gate: with too few completed processes the
+#      average waiting time is not a robust statistic, so we refuse to call
+#      starvation from the heuristic at all.
+#   2. Makespan-fraction gate: a genuinely starved process waits a large
+#      portion of the whole run. A sub-tick outlier on a 30-tick xv6 trace
+#      never reaches this fraction, so it no longer false-triggers.
+MIN_COMPLETED_FOR_STARVATION = 3
+STARVATION_MAKESPAN_FRACTION = 0.5
+
 # Regret/judgment thresholds (see docs/evaluation_criteria_audit.md).
 # Updated 2026-05-28: NEAR_SUCCESS_REGRET tightened from 0.30 -> 0.25 per
 # the overnight work plan §5 (normalized regret evaluator). Constants are
@@ -319,9 +334,13 @@ def infer_params(events):
 # -------------------------------------------------
 def evaluate_starvation(per_process, cpu_used, avg_waiting_time, makespan):
     """
-    A process starves when BOTH conditions hold:
-        waited > STARVATION_MULTIPLIER * avg_waiting_time   (relative)
-        waited >= MIN_STARVATION_WAIT_TICKS                 (absolute floor)
+    A process starves (per the statistical heuristic) when ALL of these hold:
+        waited > STARVATION_MULTIPLIER * avg_waiting_time      (relative)
+        waited >= MIN_STARVATION_WAIT_TICKS                    (absolute floor)
+        waited >= STARVATION_MAKESPAN_FRACTION * makespan      (makespan share)
+    and only when the trace has enough completed processes for the average to
+    be a robust statistic:
+        completed_count >= MIN_COMPLETED_FOR_STARVATION        (sparse gate)
 
       - completed processes are judged by their final waiting_time
       - processes that never completed are judged by their waiting so far,
@@ -331,18 +350,36 @@ def evaluate_starvation(per_process, cpu_used, avg_waiting_time, makespan):
     The absolute floor exists because the multiplier alone is unstable on
     very short traces. xv6 workloads finish in tens of ticks with most
     waits at 0, so a single 1-tick wait can be 5x the (near-zero) average
-    and falsely register as starvation. A genuine starving process in a
-    simulator run easily clears both thresholds, so detection sensitivity
-    on real cases is preserved.
+    and falsely register as starvation. The sparse-process gate and the
+    makespan-fraction gate harden this further on short xv6 traces. A genuine
+    starving process in a simulator run waits a large share of a long run and
+    easily clears all gates, so detection sensitivity on real cases is
+    preserved. NOTE: explicit STARVATION_WARNING trace events are handled by
+    the caller and are authoritative regardless of these gates.
     """
     if avg_waiting_time is None or avg_waiting_time <= 0:
         return False, [], None
 
+    # Sparse-process gate: with too few completed processes the average is not
+    # a robust statistic, so the heuristic must not call starvation. An
+    # explicit STARVATION_WARNING (applied by the caller) still can.
+    completed_count = sum(
+        1 for p in per_process if p.get("finish_time") is not None
+    )
+    if completed_count < MIN_COMPLETED_FOR_STARVATION:
+        return False, [], None
+
     relative_threshold = STARVATION_MULTIPLIER * avg_waiting_time
-    # Reported threshold is the binding one (whichever is larger), so the
+    makespan_threshold = (
+        STARVATION_MAKESPAN_FRACTION * makespan
+        if makespan and makespan > 0 else 0.0
+    )
+    # Reported threshold is the binding one (the largest gate), so the
     # downstream metrics.json reflects the value a wait actually had to
     # clear to be considered starvation.
-    effective_threshold = max(relative_threshold, MIN_STARVATION_WAIT_TICKS)
+    effective_threshold = max(
+        relative_threshold, MIN_STARVATION_WAIT_TICKS, makespan_threshold
+    )
     starving = []
 
     for p in per_process:
@@ -357,7 +394,8 @@ def evaluate_starvation(per_process, cpu_used, avg_waiting_time, makespan):
 
         if (waited is not None
                 and waited > relative_threshold
-                and waited >= MIN_STARVATION_WAIT_TICKS):
+                and waited >= MIN_STARVATION_WAIT_TICKS
+                and waited >= makespan_threshold):
             starving.append(pid)
 
     return bool(starving), sorted(starving), round(float(effective_threshold), 2)
