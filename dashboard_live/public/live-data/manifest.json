@@ -11,11 +11,11 @@
     "SJF",
     "SRTF"
   ],
-  "generated_at": "2026-05-28T13:28:17Z",
+  "generated_at": "2026-06-03T07:05:31Z",
   "orchestrator_version": "1.0.0",
   "mode": "xv6-log",
-  "updated_at": "2026-05-28T13:28:17Z",
-  "version": 31,
+  "updated_at": "2026-06-03T07:05:31Z",
+  "version": 32,
   "workload": "interactive_heavy",
   "algorithms": [
     "MLFQ",
@@ -26,6 +26,5 @@
     "SRTF"
   ],
   "recommended_algorithm": "MLFQ",
-  "target_metric": "avg_response_time",
-  "metadata_source": "demo_fallback"
+  "target_metric": "avg_response_time"
 }
