@@ -645,7 +645,7 @@ for the 10 curated workloads and which algorithm each one favours.
 
 - **EMA baseline (default):** `tau_next = (alpha * observed + (100-alpha) * tau_prev) / 100`. Updated when a CPU burst ends (xv6: at `sleep()`; simulator: at end-of-burst). Defaults `alpha=50%, initial=10, [min=1, max=100]`. The simulator emits `[SCHED] event=PRED_UPDATE pid=… predicted_prev=… predicted_next=…` on every refresh.
 - **LLM hint (optional):** when the advisor picks SJF/SRTF it may also return `predicted_bursts: [{pid, predicted_burst|predicted_bursts, confidence, basis}]` based ONLY on visible features. The orchestrator forwards these to the simulator via `Simulator(prediction_source="llm")`. The xv6 backend currently uses EMA only; LLM hints are simulator-side until a future kernel patch.
-- **Trace evidence:** dashboard's Visualization tab + `[SCHED] event=PRED_UPDATE` shows EMA drift; LLM-hinted runs land closer to the oracle baseline on first dispatch.
+- **Trace evidence:** the `[SCHED] event=PRED_UPDATE` line is emitted by the **simulator only** (the xv6 kernel does not emit it yet — that is Future Work), so EMA drift is visible on the simulator path; on the xv6 demo path SJF/SRTF still schedule on the EMA `predicted_burst`, just without a per-update trace line. LLM-hinted runs tend to land closer to the ideal shortest-job baseline on first dispatch.
 
 ## 11.3 Running the End-to-End Demo (and without an API key)
 
@@ -1008,4 +1008,6 @@ fails fast with a clear error rather than silently faking a response.
 
 ## 17. One-sentence Summary
 
-**LLM Sched Copilot is an LLM-for-OS system where an LLM recommends, corrects, and explains xv6 Scheduling Algorithms, while xv6 executes them and metrics verify the result.**
+**LLM Sched Copilot is an LLM-for-OS system where an LLM recommends and explains xv6 Scheduling Algorithms (and proposes runtime corrections as preview-only work), while the Algorithm Guard checks the recommendation, xv6 executes it as the authority, and metrics verify whether it was useful.**
+
+> The LLM recommendation is a *hypothesis*: the Algorithm Guard validates it, xv6 (not the LLM) executes the chosen algorithm and remains the execution authority, and the Metrics Evaluator decides whether the hypothesis actually helped. The LLM never picks the next process at a timer tick and never modifies xv6 kernel state.

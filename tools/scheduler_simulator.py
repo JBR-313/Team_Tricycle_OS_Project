@@ -9,9 +9,11 @@ Role classification (see docs/codebase_slimming_plan.md §2.2):
 The final demo execution path is `--backend xv6` (real QEMU + xv6 +
 schedtest). Do not present simulator output as the final result.
 
-Caveat: SJF/SRTF in this simulator currently use the *actual* remaining
-burst (oracle), unlike the xv6 kernel which uses an exponential-averaging
-predictor. See docs/sjf_srtf_prediction_audit.md.
+SJF/SRTF here schedule on an EMA `predicted_burst` (mirroring the xv6 kernel's
+exponential-averaging predictor), never on the actual remaining burst — see
+`_pick_sjf` / `_pick_srtf`, which explicitly never read `p.remaining` (ground
+truth). `p.remaining` is used only by the simulation engine to advance time,
+not to make scheduling decisions. See docs/sjf_srtf_prediction_audit.md.
 
 Reads a workload JSON and a guard_decision JSON, simulates the chosen
 scheduling algorithm, and emits:

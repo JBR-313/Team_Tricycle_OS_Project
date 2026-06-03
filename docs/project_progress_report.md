@@ -226,7 +226,7 @@ workloads/*.json
   if starvation_occurred: return "FAIL"
   if regret_score is None: return "UNKNOWN"
   if regret_score <= 0.10: return "SUCCESS"
-  if regret_score <= 0.30: return "NEAR-SUCCESS"
+  if regret_score <= 0.25: return "NEAR-SUCCESS"
   return "FAIL"
   ```
 
@@ -356,7 +356,7 @@ throughput      = completed_process_count / total_execution_time
 
 - `tools/metrics.py:457-467` `compute_judgment`:
   - `starvation_occurred=True` → **즉시 FAIL**.
-  - 그렇지 않으면 `regret_score ≤ 0.10 → SUCCESS`, `≤ 0.30 → NEAR-SUCCESS`, else **FAIL**.
+  - 그렇지 않으면 `regret_score ≤ 0.10 → SUCCESS`, `≤ 0.25 → NEAR-SUCCESS`, else **FAIL**.
 - `tools/metrics.py:414-454` `compute_regret`:
   - lower-is-better metric: `regret = (llm − best) / best`.
   - higher-is-better metric(`throughput`): `regret = (best − llm) / best`.

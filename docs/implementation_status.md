@@ -46,7 +46,7 @@ formal test suite has been executed.
 | xv6 RR / FCFS / Priority+Aging / MLFQ | Implemented | `xv6-riscv/kernel/proc.c`, `xv6-riscv/user/schedtest.c` | `cd xv6-riscv && make qemu` then `schedtest rr\|fcfs\|priority\|mlfq` | Kernel trace lines are still sparse; rich `[SCHED]` events per the trace format are not all emitted yet. |
 | xv6 SJF / SRTF (burst predictor) | Implemented | `xv6-riscv/kernel/proc.c`, `xv6-riscv/user/schedtest.c` | `cd xv6-riscv && make qemu` then `schedtest sjf\|srtf` | Predictor is exponential-averaging based; actual future bursts must never be leaked. Quality of prediction not yet evaluated against metrics. |
 | Orchestrator — simulator backend | Implemented (dev / fallback) | `scripts/orchestrator.py`, `tools/scheduler_simulator.py` | `python3 scripts/orchestrator.py --backend simulator --seed 42 --workload interactive --run-all` | The simulator is a host-side model, not proof of real xv6 execution. Use it as the fast fallback / dev path. |
-| Orchestrator — xv6 backend (QEMU automation + schedtest seed/profile + kernel traces) | Implemented (final demo path) | `scripts/orchestrator.py` (xv6 path), `xv6-riscv/user/schedtest.c` | `python3 scripts/orchestrator.py --backend xv6 --seed 42 --workload interactive --run-all` | The Orchestrator builds the kernel (CPUS=1), boots QEMU per algorithm, types `schedtest <algo> <seed> <profile>`, captures the serial console, windows on RUN_BEGIN/RUN_END, parses to `trace_<algo>.jsonl`, rebases ticks, and aggregates `metrics.json`. Limitations: xv6 traces are short (handful of EXIT events) so the multiplier-based starvation rule in `tools/metrics.py` (3× avg waiting) can flag near-trivial waits as starvation and force a FAIL judgment. Kernel/user printf can occasionally interleave (`[SCHEDTEST] event=RUN_BEGIN ...` splits across lines); the windowing is intentionally lenient and matches on bare `RUN_BEGIN`/`RUN_END` substrings. |
+| Orchestrator — xv6 backend (QEMU automation + schedtest seed/profile + kernel traces) | Implemented (final demo path) | `scripts/orchestrator.py` (xv6 path), `xv6-riscv/user/schedtest.c` | `python3 scripts/orchestrator.py --backend xv6 --seed 42 --workload interactive --run-all` | The Orchestrator builds the kernel (CPUS=1), boots QEMU per algorithm, types `schedtest <algo> <seed> <profile>`, captures the serial console, windows on RUN_BEGIN/RUN_END, parses to `trace_<algo>.jsonl`, rebases ticks, and aggregates `metrics.json`. Limitations: xv6 traces are short (handful of EXIT events). The starvation rule in `tools/metrics.py` is hardened against this — beyond the relative 3× rule it now also requires an absolute ≥5-tick floor, a minimum completed-process count, and a wait ≥50% of makespan — so trivial waits no longer false-trigger starvation. (Current xv6 `FAIL` judgments on `cpu_bound` / `priority_sensitive` are **regret-driven** — the LLM picked a non-optimal algorithm on a short workload — not starvation.) Kernel/user printf can occasionally interleave (`[SCHEDTEST] event=RUN_BEGIN ...` splits across lines); the windowing is intentionally lenient and matches on bare `RUN_BEGIN`/`RUN_END` substrings. |
 | trace_parser — real xv6 log support | Implemented | `tools/trace_parser.py` | `python3 tools/trace_parser.py --input <log> --algo MLFQ --out-dir outputs/live --seed 42 --profile interactive` | Recognizes `[SCHED]`/`[SCHEDTEST]` prefixes only. Lines corrupted by printf interleave (lacking the prefix) are silently skipped — the orchestrator's RUN_BEGIN/RUN_END windowing recovers anyway. |
 | Python simulator (dev / fallback comparison) | Implemented | `tools/scheduler_simulator.py` | `python3 tools/scheduler_simulator.py --workload workloads/interactive_heavy.json --guard outputs/_demo_fixtures/guard_decision.json --out-dir outputs/live` | Not the final backend. Must not be presented as real xv6 execution. Do not delete — it powers UI development and comparison. |
 | Algorithm Guard | Implemented | `tools/algorithm_guard.py` | `python3 tools/algorithm_guard.py` | Currently validates FCFS / RR / Priority / MLFQ; SJF/SRTF guard rules (predictor availability) need expansion. |
@@ -89,11 +89,14 @@ formal test suite has been executed.
   in `manifest.json`; the dashboard then downgrades the badge to `FALLBACK`.
 - **xv6 traces are short and sparse.** `schedtest` only runs a handful of child
   processes (5 in the curated profiles), so each `trace_<algo>.jsonl` is only
-  30–80 events. Simulator traces are typically richer. The multiplier-based
-  starvation rule in `tools/metrics.py` (3× avg waiting time) can therefore
-  flag a tiny waiting-time outlier as starvation and force a `FAIL` judgment
-  on xv6 runs even when nothing pathological happened — this is a known
-  metric-rule limitation on small workloads, not a scheduler bug.
+  30–80 events. Simulator traces are typically richer. The starvation rule in
+  `tools/metrics.py` is hardened for this regime: a process is only flagged as
+  starving when it clears the relative 3× rule **and** an absolute ≥5-tick floor
+  **and** a wait ≥50% of makespan, and only when enough processes completed for
+  the average to be robust (see `tools/test_metrics_starvation.py`). An explicit
+  `STARVATION_WARNING` trace event remains authoritative. As a result a tiny
+  waiting-time outlier no longer forces a false `FAIL`; the remaining xv6 `FAIL`
+  judgments are regret-driven, not starvation.
 - **Kernel/user printf interleave on xv6.** Occasionally a `[SCHEDTEST] event=
   RUN_BEGIN ...` line is split mid-print by a kernel `[SCHED]` line. The
   orchestrator's windowing matches the bare `RUN_BEGIN` / `RUN_END` substrings

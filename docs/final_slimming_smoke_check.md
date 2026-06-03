@@ -139,45 +139,30 @@ canonical JSONL).
 
 ## 4. Metrics Generation Check
 
-**Goal:** `metrics.py` still produces the judgment + regret fields the
-dashboard expects.
+**Goal:** the `metrics.json` the dashboard reads still carries the judgment +
+regret fields it expects.
 
-Command:
+`tools/metrics.py` is invoked by the Orchestrator (not by hand with flags); its
+own CLI takes at most one optional positional argument — an explicit trace path
+— and has no `--trace-dir` / `--out` flags. The lightweight smoke check is
+therefore to assert on the published `metrics.json` the Orchestrator already
+wrote (regenerate it first with `scripts/final_demo_check.py` if it is stale):
 
 ```bash
-python3 - <<'PY'
-import json, subprocess, sys, pathlib
-out = pathlib.Path("outputs/_smoke/metrics.json")
-out.parent.mkdir(parents=True, exist_ok=True)
-subprocess.check_call([
-    sys.executable, "tools/metrics.py",
-    "--trace-dir", "dashboard_live/public/live-data",
-    "--out", str(out),
-])
-m = json.load(open(out))
-assert "judgment" in m, "missing judgment"
-assert "regret_score" in m, "missing regret_score"
-assert m.get("scheduling_algorithm"), "missing scheduling_algorithm"
-print("metrics OK:", {k: m.get(k) for k in
-     ("scheduling_algorithm","judgment","regret_score","best_algorithm")})
-PY
+python3 -c "import json; m=json.load(open('dashboard_live/public/live-data/metrics.json')); \
+assert 'judgment' in m and 'regret_score' in m and m.get('comparison'), 'missing contract fields'; \
+print({k:m.get(k) for k in ('scheduling_algorithm','judgment','regret_score','best_algorithm')})"
 ```
 
 Expected:
 
 - `EXIT 0`.
-- Printed line ends with a dict containing `judgment ∈ {SUCCESS, NEAR-SUCCESS, FAIL, UNKNOWN}`,
+- Printed dict contains `judgment ∈ {SUCCESS, NEAR-SUCCESS, FAIL, UNKNOWN}`,
   `regret_score` (float or null), and `best_algorithm` (string or null).
-- File `outputs/_smoke/metrics.json` is non-empty and parses as JSON.
+- `dashboard_live/public/live-data/metrics.json` is non-empty and parses as JSON.
 
-If `metrics.py`'s CLI signature differs, fall back to the orchestrator-run
-`metrics.json` directly:
-
-```bash
-python3 -c "import json; m=json.load(open('dashboard_live/public/live-data/metrics.json')); print({k:m.get(k) for k in ('scheduling_algorithm','judgment','regret_score','best_algorithm')})"
-```
-
-— same expected output dict.
+> Note: per-algorithm metrics live under the `comparison` array (6 algorithms);
+> the top-level `judgment` / `regret_score` reflect the LLM-selected algorithm.
 
 ---
 
@@ -228,15 +213,16 @@ Commands:
 ```bash
 # Strict default contract over the flat live-data root:
 python3 tools/validate_dashboard_contract.py --strict \
-    --live-data dashboard_live/public/live-data
+    --dir dashboard_live/public/live-data
 
-# All four committed xv6 profile snapshots:
-python3 tools/validate_dashboard_contract.py --strict --snapshots \
-    --live-data dashboard_live/public/live-data
+# All four committed xv6 profile snapshots (--snapshots takes the path):
+python3 tools/validate_dashboard_contract.py --strict \
+    --dir dashboard_live/public/live-data \
+    --snapshots dashboard_live/public/live-data/snapshots
 
 # Optional: preview-only runtime-correction artefacts (off by default):
 python3 tools/validate_dashboard_contract.py --preview \
-    --live-data dashboard_live/public/live-data
+    --dir dashboard_live/public/live-data
 ```
 
 Expected:
