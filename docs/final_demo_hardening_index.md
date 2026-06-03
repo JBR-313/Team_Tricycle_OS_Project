@@ -18,10 +18,13 @@ project's final-demo posture readable from one page.
 1. **Final-demo execution path = xv6 + QEMU + `schedtest`.** Simulator,
    `dashboard_test`, Streamlit `dashboard/` are all explicitly labelled
    FALLBACK / SANDBOX / LEGACY in the README and in this bundle.
-2. **xv6 SJF/SRTF passes the burst-prediction rule.** The simulator's
-   version is an oracle and must be disclosed if shown.
-3. **Judgment thresholds (0.10 / 0.30) are constants with a stated
-   rationale**, not learned percentiles, so they hold up to questioning.
+2. **Both backends pass the burst-prediction rule.** xv6 and the simulator
+   now both schedule SJF/SRTF on an EMA `predicted_burst`; neither reads a
+   future burst (the simulator's oracle path was removed 2026-05-28). The
+   simulator remains a host-side model, not proof of real xv6 execution.
+3. **Judgment thresholds (SUCCESS ≤ 0.10 / NEAR-SUCCESS ≤ 0.25) are
+   constants with a stated rationale**, not learned percentiles, so they hold
+   up to questioning.
 4. **MLFQ-only recommendation diversity gap is real** — addressed at the
    workload level (4 new profiles proposed) before adding new LLM tricks.
 5. **The “Run Experiment” button is a backend service**, not a frontend

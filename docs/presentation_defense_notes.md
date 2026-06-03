@@ -78,8 +78,11 @@ sees it. The Guard checks:
   threshold reasonable, etc).
 - The output matches the required JSON schema.
 - For burst-prediction-dependent algorithms (`SJF`, `SRTF`), the Guard
-  also checks that no actual future-burst values were leaked into the
-  LLM input (the "burst prediction rule" from `CLAUDE.md`).
+  validates that any recommended burst *hints* are within safe ranges.
+  The "burst prediction rule" itself — that no actual future-burst values
+  reach the LLM input — is enforced upstream by `tools/workload_analyzer.py`,
+  which never puts `actual_bursts` into the workload summary; the kernel and
+  simulator schedule on an EMA `predicted_burst` only.
 
 If anything fails, the Guard rejects the recommendation and falls back
 to a safe algorithm (RR). The decision is written to

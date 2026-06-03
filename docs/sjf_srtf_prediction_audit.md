@@ -16,12 +16,14 @@
 | Backend | Predictor type | Oracle (uses true future burst)? | Rule compliance |
 |---|---|---|---|
 | **xv6** (final demo path) | Integer exponential averaging on **observed** CPU usage | **No** — only `cur_burst_run` (already-consumed) and the prior `predicted_burst` are read | **PASS** |
-| **simulator** (dev/fallback) | None. SJF/SRTF picker compares `p.remaining` — which is the **actual remaining CPU burst** taken from the workload JSON | **YES — oracle** | **FAIL** (acceptable for a dev fallback, but must not be presented as the final result) |
+| **simulator** (dev/fallback) | Integer exponential averaging on **observed** CPU usage (mirrors xv6; fixed 2026-05-28). SJF/SRTF picker uses `predicted_burst`, never `p.remaining` | **No** — `p.remaining` is used only by the simulation engine to advance time, not by the picker | **PASS** (still a host-side model — must not be presented as the final result) |
 
 > The simulator is documented elsewhere as a “host-side model, not proof of
-> real xv6 execution” (`docs/implementation_status.md`). This audit makes the
-> SJF/SRTF-specific consequence explicit so it is not mistakenly cited as
-> evidence of predictor quality.
+> real xv6 execution” (`docs/implementation_status.md`). Both backends now use
+> the same EMA `predicted_burst` rule, so neither leaks future bursts; what the
+> simulator still cannot prove is *real xv6 execution* — its numbers are a
+> host-side model, not predictor-quality evidence. Predictor accuracy (MAE) is
+> not yet measured (§3.4, Future Work).
 
 ---
 
@@ -180,70 +182,61 @@ explicit comment on line 595 calls this out:
 
 ---
 
-## 3. Simulator SJF/SRTF — oracle gap
+## 3. Simulator SJF/SRTF — EMA prediction (oracle gap CLOSED 2026-05-28)
+
+> **Status update.** The oracle gap described in earlier drafts of this audit
+> has been fixed. As of 2026-05-28 the simulator schedules SJF/SRTF on an EMA
+> `predicted_burst`, mirroring the xv6 kernel. The picker never reads the true
+> remaining burst. The text below reflects the **current** code.
 
 ### 3.1 What the simulator does
 
-`tools/scheduler_simulator.py:157-167`
+`tools/scheduler_simulator.py` (`_pick_sjf` / `_pick_srtf`):
 
 ```python
 def _pick_sjf(self) -> Optional[Process]:
+    """Predicted SJF — uses predicted_burst, NEVER p.remaining (ground truth)."""
     r = self._runnable()
     if not r:
         return None
-    return min(r, key=lambda p: (p.remaining, p.pid))
+    return min(r, key=lambda p: (p.predicted_burst, p.ctime, p.pid))
 
 def _pick_srtf(self) -> Optional[Process]:
-    r = self._runnable()
-    if not r:
-        return None
-    return min(r, key=lambda p: (p.remaining, p.pid))
+    """Predicted SRTF — predicted_burst minus already-observed cur_burst_run,
+    floored at predictor.min. Never reads p.remaining (ground truth)."""
+    ...
+    return min(r, key=lambda p: (predicted_remaining(p), p.ctime, p.pid))
 ```
 
-`p.remaining` is set from the workload JSON’s `cpu_bursts` list
-(`scheduler_simulator.py:228-230`):
+The simulator carries a `predicted_burst` field plus an EMA `BurstPredictor`
+(`alpha_percent`, `initial`, `min`, `max`), seeds it from `predictor.initial`
+(or per-process LLM hints when `prediction_source == "llm"`), and refreshes it
+at end-of-burst via `update_burst_prediction()` — the same shape as the xv6
+kernel's `update_burst_prediction()`. `p.remaining` still exists, but it is used
+**only** by the simulation engine to advance time (decrement actual remaining
+each tick); it is never read by the scheduling decision.
 
-```python
-for p in self.procs:
-    p.remaining = p.bursts[0] if p.bursts else 0
-```
+### 3.2 Comparability with xv6
 
-That is the **true remaining CPU time** for the current burst — i.e. the
-picker reads the future. There is no `predicted_burst` field, no
-`alpha_percent`, no `update_burst_prediction`.
+Because both backends now schedule on an EMA `predicted_burst` with the same
+defaults (`alpha=50, initial=10, min=1, max=100`), the simulator vs xv6 SJF/SRTF
+numbers in the `comparison` block are directly comparable, and the
+Counterfactual Metric View no longer risks labelling SJF/SRTF "best on metric X"
+using oracle numbers.
 
-### 3.2 Why this still appears in the dashboard
+### 3.3 Disclosure (in place)
 
-`scheduler_simulator.run_all_algorithms()` runs SJF/SRTF over the same
-workload and `metrics.json` lists their numbers in the `comparison` block.
-The Counterfactual Metric View card may therefore label SJF/SRTF as the
-“best on metric X” using oracle numbers — that is a misleading comparison
-when shown next to the xv6 SJF/SRTF numbers (which are EMA-predicted).
+- `README.md`, `docs/implementation_status.md`, and `docs/demo_runbook.md` all
+  state that SJF/SRTF use EMA prediction and that actual future bursts never
+  reach the scheduler/LLM. The stale "simulator is oracle" caveat in
+  `tools/scheduler_simulator.py`'s module docstring has been corrected.
 
-### 3.3 Required disclosure (already partially in place)
+### 3.4 Remaining future work
 
-- `docs/work_status_sjf_srtf.md` and `docs/implementation_status.md` mention
-  the predictor; they do not currently flag the simulator as oracle. **TODO**
-  in this audit: add a one-line warning to both, plus a footnote on the
-  dashboard `CounterfactualMetricView` when the backend badge is
-  `SIMULATOR FALLBACK`.
-
-### 3.4 Recommendation
-
-Two options, in priority order:
-
-1. **Cheap fix (P1):** add an EMA `predicted_burst` to the simulator’s
-   `Process` and switch `_pick_sjf` / `_pick_srtf` to use it. Use the same
-   default `(alpha=50, initial=10, min=1, max=100)` so simulator and xv6
-   numbers become directly comparable. This is ~30 lines.
-2. **Disclosure-only fix (P0 for the demo):** add a `CAUTION: SJF/SRTF in
-   simulator uses oracle remaining time` banner in the
-   `CounterfactualMetricView` card whenever `manifest.metadata_source` is
-   `simulator`, plus the same line to `docs/work_status_sjf_srtf.md` and the
-   README `final-status` table.
-
-For the final demo the disclosure is the minimum that prevents misleading
-the audience; the cheap fix is the right long-term answer.
+- **Predictor quality evaluation.** The EMA predictor is implemented, but its
+  prediction *accuracy* (e.g. MAE of `predicted_burst` vs observed burst) is not
+  yet measured or surfaced on the dashboard. A full predictor-MAE view is
+  **Future Work**, not part of the final demo.
 
 ---
 
@@ -251,22 +244,22 @@ the audience; the cheap fix is the right long-term answer.
 
 | Quantity | xv6 default | Simulator |
 |---|---|---|
-| `alpha_percent` (EMA smoothing) | 50 (`pred.alpha_percent = 50`) | n/a (oracle) |
-| `initial_predicted_burst`       | 10                              | n/a |
-| `min_predicted_burst`           | 1                               | n/a |
-| `max_predicted_burst`           | 100                             | n/a |
-| Update trigger                  | `sleep()` (I/O block)           | — |
-| Picker key (SJF)                | `predicted_burst`               | `remaining` (oracle) |
-| Picker key (SRTF)               | `predicted_burst − cur_burst_run` (floored) | `remaining` (oracle) |
+| `alpha_percent` (EMA smoothing) | 50 (`pred.alpha_percent = 50`) | 50 |
+| `initial_predicted_burst`       | 10                              | 10 |
+| `min_predicted_burst`           | 1                               | 1 |
+| `max_predicted_burst`           | 100                             | 100 |
+| Update trigger                  | `sleep()` (I/O block)           | end-of-burst |
+| Picker key (SJF)                | `predicted_burst`               | `predicted_burst` |
+| Picker key (SRTF)               | `predicted_burst − cur_burst_run` (floored) | `predicted_burst − cur_burst_run` (floored) |
 
 ---
 
 ## 5. Action items (for the demo window)
 
-| Priority | Action | Owner | Where |
+| Priority | Action | Owner | Status |
 |---|---|---|---|
-| **P0** | Add a “simulator SJF/SRTF is oracle” disclosure in `docs/work_status_sjf_srtf.md` and the README final-status table. | docs | this PR |
-| **P0** | Show a small caveat in `CounterfactualMetricView` when `manifest.metadata_source ≠ xv6`. | frontend | future PR |
-| P1     | Port EMA predictor into `tools/scheduler_simulator.py` so simulator vs xv6 SJF/SRTF numbers are comparable. | sched-sim owner | post-demo |
-| P2     | Emit a `[SCHED] event=PRED_UPDATE pid=… predicted=…` line on every EMA update in xv6 so the dashboard can show prediction drift. | xv6 lead | post-demo |
+| ~~P1~~ | Port EMA predictor into `tools/scheduler_simulator.py` so simulator vs xv6 SJF/SRTF numbers are comparable. | sched-sim owner | **DONE (2026-05-28)** — picker now uses `predicted_burst`. |
+| ~~P0~~ | Correct the "simulator SJF/SRTF is oracle" wording in code/docs. | docs | **DONE** — module docstring + this audit updated. |
+| Future | Measure predictor accuracy (MAE of `predicted_burst` vs observed) and surface it on the dashboard. | sched-sim owner | Future Work (not in final demo). |
+| Future | Emit a `[SCHED] event=PRED_UPDATE pid=… predicted=…` line on every EMA update in xv6 so the dashboard can show prediction drift. | xv6 lead | Future Work. |
 

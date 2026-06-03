@@ -160,10 +160,13 @@ for module interfaces, and `docs/trace_format.md` for the trace formats.
   in `manifest.json`, and the dashboard downgrades the badge to `FALLBACK`.
 - xv6 traces are short and sparse (5 children per curated profile, typically
   30–80 events per algorithm). The simulator typically produces richer traces.
-  The multiplier-based starvation rule in `tools/metrics.py` (3× avg waiting)
-  may flag tiny waits as starvation on these short runs and force a `FAIL`
-  judgment — this is a metric-rule limitation on small workloads, not a
-  scheduler bug.
+  The starvation rule in `tools/metrics.py` is hardened for short traces (it
+  requires the relative 3× rule, an absolute ≥5-tick floor, a wait ≥50% of
+  makespan, and a minimum completed-process count; an explicit
+  `STARVATION_WARNING` event stays authoritative), so tiny waits no longer
+  false-trigger a starvation `FAIL`. The remaining xv6 `FAIL` judgments are
+  regret-driven (the LLM picked a non-optimal algorithm on a small workload),
+  not starvation.
 
 ---
 
@@ -272,6 +275,8 @@ audience can see that the data is from the host model, not real xv6.
   `Backend: FALLBACK`. Should not occur in a real demo.
 - **xv6 traces are short educational traces.** 5 children per curated
   profile, ~30–80 events per algorithm. Simulator traces are typically
-  richer. The starvation + judgment rules now both apply an absolute
-  tick floor (see `tools/metrics.py` and `scripts/orchestrator.py`) so
-  sub-tick noise on these short workloads is no longer flagged.
+  richer. The starvation rule applies multiple conjunctive gates (relative
+  3×, absolute ≥5-tick floor, ≥50%-of-makespan share, and a minimum
+  completed-process count; explicit `STARVATION_WARNING` stays authoritative
+  — see `tools/metrics.py` and `tools/test_metrics_starvation.py`) so
+  sub-tick noise on these short workloads is no longer flagged as starvation.
