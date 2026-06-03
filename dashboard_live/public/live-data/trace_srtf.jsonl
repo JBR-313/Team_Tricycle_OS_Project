@@ -1,126 +1,66 @@
-{"tick": 0, "algo": "SRTF", "event": "ARRIVE", "pid": 1, "state": "RUNNABLE", "queue": 0, "priority": 1, "burst_hint": null}
-{"tick": 0, "algo": "SRTF", "event": "DISPATCH", "pid": 1, "state": "RUNNING", "queue": 0}
-{"tick": 0, "algo": "SRTF", "event": "PRED_UPDATE", "pid": 1, "observed": 1, "predicted_prev": 10, "predicted_next": 5, "source": "ema"}
-{"tick": 0, "algo": "SRTF", "event": "EXIT", "pid": 1, "state": "ZOMBIE", "queue": 0, "turnaround": 0, "waiting": 0, "response": 0}
-{"tick": 1, "algo": "SRTF", "event": "ARRIVE", "pid": 2, "state": "RUNNABLE", "queue": 0, "priority": 1, "burst_hint": null}
-{"tick": 1, "algo": "SRTF", "event": "DISPATCH", "pid": 2, "state": "RUNNING", "queue": 0}
-{"tick": 1, "algo": "SRTF", "event": "PRED_UPDATE", "pid": 2, "observed": 1, "predicted_prev": 10, "predicted_next": 5, "source": "ema"}
-{"tick": 2, "algo": "SRTF", "event": "ARRIVE", "pid": 3, "state": "RUNNABLE", "queue": 0, "priority": 1, "burst_hint": null}
-{"tick": 2, "algo": "SRTF", "event": "DISPATCH", "pid": 2, "state": "RUNNING", "queue": 0}
-{"tick": 2, "algo": "SRTF", "event": "PRED_UPDATE", "pid": 2, "observed": 1, "predicted_prev": 5, "predicted_next": 3, "source": "ema"}
-{"tick": 2, "algo": "SRTF", "event": "EXIT", "pid": 2, "state": "ZOMBIE", "queue": 0, "turnaround": 1, "waiting": 0, "response": 0}
-{"tick": 3, "algo": "SRTF", "event": "ARRIVE", "pid": 4, "state": "RUNNABLE", "queue": 0, "priority": 1, "burst_hint": null}
-{"tick": 3, "algo": "SRTF", "event": "DISPATCH", "pid": 3, "state": "RUNNING", "queue": 0}
-{"tick": 3, "algo": "SRTF", "event": "PRED_UPDATE", "pid": 3, "observed": 1, "predicted_prev": 10, "predicted_next": 5, "source": "ema"}
-{"tick": 3, "algo": "SRTF", "event": "EXIT", "pid": 3, "state": "ZOMBIE", "queue": 0, "turnaround": 1, "waiting": 0, "response": 1}
-{"tick": 4, "algo": "SRTF", "event": "ARRIVE", "pid": 5, "state": "RUNNABLE", "queue": 0, "priority": 1, "burst_hint": null}
-{"tick": 4, "algo": "SRTF", "event": "DISPATCH", "pid": 4, "state": "RUNNING", "queue": 0}
-{"tick": 4, "algo": "SRTF", "event": "PRED_UPDATE", "pid": 4, "observed": 1, "predicted_prev": 10, "predicted_next": 5, "source": "ema"}
-{"tick": 5, "algo": "SRTF", "event": "ARRIVE", "pid": 6, "state": "RUNNABLE", "queue": 0, "priority": 1, "burst_hint": null}
-{"tick": 5, "algo": "SRTF", "event": "DISPATCH", "pid": 4, "state": "RUNNING", "queue": 0}
-{"tick": 5, "algo": "SRTF", "event": "PRED_UPDATE", "pid": 4, "observed": 1, "predicted_prev": 5, "predicted_next": 3, "source": "ema"}
-{"tick": 5, "algo": "SRTF", "event": "EXIT", "pid": 4, "state": "ZOMBIE", "queue": 0, "turnaround": 2, "waiting": 0, "response": 1}
-{"tick": 6, "algo": "SRTF", "event": "ARRIVE", "pid": 7, "state": "RUNNABLE", "queue": 0, "priority": 1, "burst_hint": null}
-{"tick": 6, "algo": "SRTF", "event": "DISPATCH", "pid": 5, "state": "RUNNING", "queue": 0}
-{"tick": 6, "algo": "SRTF", "event": "PRED_UPDATE", "pid": 5, "observed": 1, "predicted_prev": 10, "predicted_next": 5, "source": "ema"}
-{"tick": 6, "algo": "SRTF", "event": "EXIT", "pid": 5, "state": "ZOMBIE", "queue": 0, "turnaround": 2, "waiting": 1, "response": 2}
-{"tick": 7, "algo": "SRTF", "event": "ARRIVE", "pid": 8, "state": "RUNNABLE", "queue": 0, "priority": 1, "burst_hint": null}
-{"tick": 7, "algo": "SRTF", "event": "DISPATCH", "pid": 6, "state": "RUNNING", "queue": 0}
-{"tick": 7, "algo": "SRTF", "event": "PRED_UPDATE", "pid": 6, "observed": 1, "predicted_prev": 10, "predicted_next": 5, "source": "ema"}
-{"tick": 8, "algo": "SRTF", "event": "ARRIVE", "pid": 9, "state": "RUNNABLE", "queue": 0, "priority": 1, "burst_hint": null}
-{"tick": 8, "algo": "SRTF", "event": "DISPATCH", "pid": 6, "state": "RUNNING", "queue": 0}
-{"tick": 8, "algo": "SRTF", "event": "PRED_UPDATE", "pid": 6, "observed": 1, "predicted_prev": 5, "predicted_next": 3, "source": "ema"}
-{"tick": 8, "algo": "SRTF", "event": "EXIT", "pid": 6, "state": "ZOMBIE", "queue": 0, "turnaround": 3, "waiting": 1, "response": 2}
-{"tick": 9, "algo": "SRTF", "event": "ARRIVE", "pid": 10, "state": "RUNNABLE", "queue": 0, "priority": 1, "burst_hint": null}
-{"tick": 9, "algo": "SRTF", "event": "DISPATCH", "pid": 7, "state": "RUNNING", "queue": 0}
-{"tick": 9, "algo": "SRTF", "event": "PRED_UPDATE", "pid": 7, "observed": 1, "predicted_prev": 10, "predicted_next": 5, "source": "ema"}
-{"tick": 9, "algo": "SRTF", "event": "EXIT", "pid": 7, "state": "ZOMBIE", "queue": 0, "turnaround": 3, "waiting": 2, "response": 3}
-{"tick": 10, "algo": "SRTF", "event": "ARRIVE", "pid": 11, "state": "RUNNABLE", "queue": 0, "priority": 1, "burst_hint": null}
-{"tick": 10, "algo": "SRTF", "event": "DISPATCH", "pid": 8, "state": "RUNNING", "queue": 0}
-{"tick": 10, "algo": "SRTF", "event": "PRED_UPDATE", "pid": 8, "observed": 1, "predicted_prev": 10, "predicted_next": 5, "source": "ema"}
-{"tick": 11, "algo": "SRTF", "event": "ARRIVE", "pid": 12, "state": "RUNNABLE", "queue": 0, "priority": 1, "burst_hint": null}
-{"tick": 11, "algo": "SRTF", "event": "DISPATCH", "pid": 8, "state": "RUNNING", "queue": 0}
-{"tick": 11, "algo": "SRTF", "event": "PRED_UPDATE", "pid": 8, "observed": 1, "predicted_prev": 5, "predicted_next": 3, "source": "ema"}
-{"tick": 11, "algo": "SRTF", "event": "EXIT", "pid": 8, "state": "ZOMBIE", "queue": 0, "turnaround": 4, "waiting": 2, "response": 3}
-{"tick": 12, "algo": "SRTF", "event": "ARRIVE", "pid": 13, "state": "RUNNABLE", "queue": 0, "priority": 1, "burst_hint": null}
-{"tick": 12, "algo": "SRTF", "event": "DISPATCH", "pid": 9, "state": "RUNNING", "queue": 0}
-{"tick": 12, "algo": "SRTF", "event": "PRED_UPDATE", "pid": 9, "observed": 1, "predicted_prev": 10, "predicted_next": 5, "source": "ema"}
-{"tick": 12, "algo": "SRTF", "event": "EXIT", "pid": 9, "state": "ZOMBIE", "queue": 0, "turnaround": 4, "waiting": 3, "response": 4}
-{"tick": 13, "algo": "SRTF", "event": "ARRIVE", "pid": 14, "state": "RUNNABLE", "queue": 0, "priority": 1, "burst_hint": null}
-{"tick": 13, "algo": "SRTF", "event": "DISPATCH", "pid": 10, "state": "RUNNING", "queue": 0}
-{"tick": 13, "algo": "SRTF", "event": "PRED_UPDATE", "pid": 10, "observed": 1, "predicted_prev": 10, "predicted_next": 5, "source": "ema"}
-{"tick": 13, "algo": "SRTF", "event": "EXIT", "pid": 10, "state": "ZOMBIE", "queue": 0, "turnaround": 4, "waiting": 3, "response": 4}
-{"tick": 14, "algo": "SRTF", "event": "ARRIVE", "pid": 15, "state": "RUNNABLE", "queue": 0, "priority": 1, "burst_hint": null}
-{"tick": 14, "algo": "SRTF", "event": "DISPATCH", "pid": 11, "state": "RUNNING", "queue": 0}
-{"tick": 14, "algo": "SRTF", "event": "PRED_UPDATE", "pid": 11, "observed": 1, "predicted_prev": 10, "predicted_next": 5, "source": "ema"}
-{"tick": 15, "algo": "SRTF", "event": "ARRIVE", "pid": 16, "state": "RUNNABLE", "queue": 0, "priority": 1, "burst_hint": null}
-{"tick": 15, "algo": "SRTF", "event": "DISPATCH", "pid": 11, "state": "RUNNING", "queue": 0}
-{"tick": 15, "algo": "SRTF", "event": "PRED_UPDATE", "pid": 11, "observed": 1, "predicted_prev": 5, "predicted_next": 3, "source": "ema"}
-{"tick": 15, "algo": "SRTF", "event": "EXIT", "pid": 11, "state": "ZOMBIE", "queue": 0, "turnaround": 5, "waiting": 3, "response": 4}
-{"tick": 16, "algo": "SRTF", "event": "ARRIVE", "pid": 17, "state": "RUNNABLE", "queue": 0, "priority": 1, "burst_hint": null}
-{"tick": 16, "algo": "SRTF", "event": "DISPATCH", "pid": 12, "state": "RUNNING", "queue": 0}
-{"tick": 16, "algo": "SRTF", "event": "PRED_UPDATE", "pid": 12, "observed": 1, "predicted_prev": 10, "predicted_next": 5, "source": "ema"}
-{"tick": 17, "algo": "SRTF", "event": "ARRIVE", "pid": 18, "state": "RUNNABLE", "queue": 0, "priority": 1, "burst_hint": null}
-{"tick": 17, "algo": "SRTF", "event": "DISPATCH", "pid": 12, "state": "RUNNING", "queue": 0}
-{"tick": 17, "algo": "SRTF", "event": "PRED_UPDATE", "pid": 12, "observed": 1, "predicted_prev": 5, "predicted_next": 3, "source": "ema"}
-{"tick": 17, "algo": "SRTF", "event": "EXIT", "pid": 12, "state": "ZOMBIE", "queue": 0, "turnaround": 6, "waiting": 4, "response": 5}
-{"tick": 18, "algo": "SRTF", "event": "ARRIVE", "pid": 19, "state": "RUNNABLE", "queue": 0, "priority": 1, "burst_hint": null}
-{"tick": 18, "algo": "SRTF", "event": "DISPATCH", "pid": 13, "state": "RUNNING", "queue": 0}
-{"tick": 18, "algo": "SRTF", "event": "PRED_UPDATE", "pid": 13, "observed": 1, "predicted_prev": 10, "predicted_next": 5, "source": "ema"}
-{"tick": 19, "algo": "SRTF", "event": "ARRIVE", "pid": 20, "state": "RUNNABLE", "queue": 0, "priority": 1, "burst_hint": null}
-{"tick": 19, "algo": "SRTF", "event": "DISPATCH", "pid": 13, "state": "RUNNING", "queue": 0}
-{"tick": 19, "algo": "SRTF", "event": "PRED_UPDATE", "pid": 13, "observed": 1, "predicted_prev": 5, "predicted_next": 3, "source": "ema"}
-{"tick": 19, "algo": "SRTF", "event": "EXIT", "pid": 13, "state": "ZOMBIE", "queue": 0, "turnaround": 7, "waiting": 5, "response": 6}
-{"tick": 20, "algo": "SRTF", "event": "ARRIVE", "pid": 21, "state": "RUNNABLE", "queue": 0, "priority": 1, "burst_hint": null}
-{"tick": 20, "algo": "SRTF", "event": "DISPATCH", "pid": 14, "state": "RUNNING", "queue": 0}
-{"tick": 20, "algo": "SRTF", "event": "PRED_UPDATE", "pid": 14, "observed": 1, "predicted_prev": 10, "predicted_next": 5, "source": "ema"}
-{"tick": 20, "algo": "SRTF", "event": "EXIT", "pid": 14, "state": "ZOMBIE", "queue": 0, "turnaround": 7, "waiting": 6, "response": 7}
-{"tick": 21, "algo": "SRTF", "event": "ARRIVE", "pid": 22, "state": "RUNNABLE", "queue": 0, "priority": 1, "burst_hint": null}
-{"tick": 21, "algo": "SRTF", "event": "DISPATCH", "pid": 15, "state": "RUNNING", "queue": 0}
-{"tick": 21, "algo": "SRTF", "event": "PRED_UPDATE", "pid": 15, "observed": 1, "predicted_prev": 10, "predicted_next": 5, "source": "ema"}
-{"tick": 22, "algo": "SRTF", "event": "ARRIVE", "pid": 23, "state": "RUNNABLE", "queue": 0, "priority": 1, "burst_hint": null}
-{"tick": 22, "algo": "SRTF", "event": "DISPATCH", "pid": 15, "state": "RUNNING", "queue": 0}
-{"tick": 22, "algo": "SRTF", "event": "PRED_UPDATE", "pid": 15, "observed": 1, "predicted_prev": 5, "predicted_next": 3, "source": "ema"}
-{"tick": 22, "algo": "SRTF", "event": "EXIT", "pid": 15, "state": "ZOMBIE", "queue": 0, "turnaround": 8, "waiting": 6, "response": 7}
-{"tick": 23, "algo": "SRTF", "event": "ARRIVE", "pid": 24, "state": "RUNNABLE", "queue": 0, "priority": 1, "burst_hint": null}
-{"tick": 23, "algo": "SRTF", "event": "DISPATCH", "pid": 16, "state": "RUNNING", "queue": 0}
-{"tick": 23, "algo": "SRTF", "event": "PRED_UPDATE", "pid": 16, "observed": 1, "predicted_prev": 10, "predicted_next": 5, "source": "ema"}
-{"tick": 23, "algo": "SRTF", "event": "EXIT", "pid": 16, "state": "ZOMBIE", "queue": 0, "turnaround": 8, "waiting": 7, "response": 8}
-{"tick": 24, "algo": "SRTF", "event": "ARRIVE", "pid": 25, "state": "RUNNABLE", "queue": 0, "priority": 1, "burst_hint": null}
-{"tick": 24, "algo": "SRTF", "event": "DISPATCH", "pid": 17, "state": "RUNNING", "queue": 0}
-{"tick": 24, "algo": "SRTF", "event": "PRED_UPDATE", "pid": 17, "observed": 1, "predicted_prev": 10, "predicted_next": 5, "source": "ema"}
-{"tick": 25, "algo": "SRTF", "event": "DISPATCH", "pid": 17, "state": "RUNNING", "queue": 0}
-{"tick": 25, "algo": "SRTF", "event": "PRED_UPDATE", "pid": 17, "observed": 1, "predicted_prev": 5, "predicted_next": 3, "source": "ema"}
-{"tick": 25, "algo": "SRTF", "event": "EXIT", "pid": 17, "state": "ZOMBIE", "queue": 0, "turnaround": 9, "waiting": 7, "response": 8}
-{"tick": 26, "algo": "SRTF", "event": "DISPATCH", "pid": 18, "state": "RUNNING", "queue": 0}
-{"tick": 26, "algo": "SRTF", "event": "PRED_UPDATE", "pid": 18, "observed": 1, "predicted_prev": 10, "predicted_next": 5, "source": "ema"}
-{"tick": 26, "algo": "SRTF", "event": "EXIT", "pid": 18, "state": "ZOMBIE", "queue": 0, "turnaround": 9, "waiting": 8, "response": 9}
-{"tick": 27, "algo": "SRTF", "event": "DISPATCH", "pid": 19, "state": "RUNNING", "queue": 0}
-{"tick": 27, "algo": "SRTF", "event": "PRED_UPDATE", "pid": 19, "observed": 1, "predicted_prev": 10, "predicted_next": 5, "source": "ema"}
-{"tick": 28, "algo": "SRTF", "event": "DISPATCH", "pid": 19, "state": "RUNNING", "queue": 0}
-{"tick": 28, "algo": "SRTF", "event": "PRED_UPDATE", "pid": 19, "observed": 1, "predicted_prev": 5, "predicted_next": 3, "source": "ema"}
-{"tick": 28, "algo": "SRTF", "event": "EXIT", "pid": 19, "state": "ZOMBIE", "queue": 0, "turnaround": 10, "waiting": 8, "response": 9}
-{"tick": 29, "algo": "SRTF", "event": "DISPATCH", "pid": 20, "state": "RUNNING", "queue": 0}
-{"tick": 29, "algo": "SRTF", "event": "PRED_UPDATE", "pid": 20, "observed": 1, "predicted_prev": 10, "predicted_next": 5, "source": "ema"}
-{"tick": 29, "algo": "SRTF", "event": "EXIT", "pid": 20, "state": "ZOMBIE", "queue": 0, "turnaround": 10, "waiting": 9, "response": 10}
-{"tick": 30, "algo": "SRTF", "event": "DISPATCH", "pid": 21, "state": "RUNNING", "queue": 0}
-{"tick": 30, "algo": "SRTF", "event": "PRED_UPDATE", "pid": 21, "observed": 1, "predicted_prev": 10, "predicted_next": 5, "source": "ema"}
-{"tick": 31, "algo": "SRTF", "event": "DISPATCH", "pid": 21, "state": "RUNNING", "queue": 0}
-{"tick": 31, "algo": "SRTF", "event": "PRED_UPDATE", "pid": 21, "observed": 1, "predicted_prev": 5, "predicted_next": 3, "source": "ema"}
-{"tick": 31, "algo": "SRTF", "event": "EXIT", "pid": 21, "state": "ZOMBIE", "queue": 0, "turnaround": 11, "waiting": 9, "response": 10}
-{"tick": 32, "algo": "SRTF", "event": "DISPATCH", "pid": 22, "state": "RUNNING", "queue": 0}
-{"tick": 32, "algo": "SRTF", "event": "PRED_UPDATE", "pid": 22, "observed": 1, "predicted_prev": 10, "predicted_next": 5, "source": "ema"}
-{"tick": 33, "algo": "SRTF", "event": "DISPATCH", "pid": 22, "state": "RUNNING", "queue": 0}
-{"tick": 33, "algo": "SRTF", "event": "PRED_UPDATE", "pid": 22, "observed": 1, "predicted_prev": 5, "predicted_next": 3, "source": "ema"}
-{"tick": 33, "algo": "SRTF", "event": "EXIT", "pid": 22, "state": "ZOMBIE", "queue": 0, "turnaround": 12, "waiting": 10, "response": 11}
-{"tick": 34, "algo": "SRTF", "event": "DISPATCH", "pid": 23, "state": "RUNNING", "queue": 0}
-{"tick": 34, "algo": "SRTF", "event": "PRED_UPDATE", "pid": 23, "observed": 1, "predicted_prev": 10, "predicted_next": 5, "source": "ema"}
-{"tick": 34, "algo": "SRTF", "event": "EXIT", "pid": 23, "state": "ZOMBIE", "queue": 0, "turnaround": 12, "waiting": 11, "response": 12}
-{"tick": 35, "algo": "SRTF", "event": "DISPATCH", "pid": 24, "state": "RUNNING", "queue": 0}
-{"tick": 35, "algo": "SRTF", "event": "PRED_UPDATE", "pid": 24, "observed": 1, "predicted_prev": 10, "predicted_next": 5, "source": "ema"}
-{"tick": 36, "algo": "SRTF", "event": "DISPATCH", "pid": 24, "state": "RUNNING", "queue": 0}
-{"tick": 36, "algo": "SRTF", "event": "PRED_UPDATE", "pid": 24, "observed": 1, "predicted_prev": 5, "predicted_next": 3, "source": "ema"}
-{"tick": 36, "algo": "SRTF", "event": "EXIT", "pid": 24, "state": "ZOMBIE", "queue": 0, "turnaround": 13, "waiting": 11, "response": 12}
-{"tick": 37, "algo": "SRTF", "event": "DISPATCH", "pid": 25, "state": "RUNNING", "queue": 0}
-{"tick": 37, "algo": "SRTF", "event": "PRED_UPDATE", "pid": 25, "observed": 1, "predicted_prev": 10, "predicted_next": 5, "source": "ema"}
-{"tick": 37, "algo": "SRTF", "event": "EXIT", "pid": 25, "state": "ZOMBIE", "queue": 0, "turnaround": 13, "waiting": 12, "response": 13}
+{"tick": null, "algo": "SRTF", "event": "RUN_BEGIN", "source": "xv6", "kind": "schedtest", "seed": 42, "profile": "interactive", "nproc": 5}
+{"tick": null, "algo": "SRTF", "event": "PROC_DEF", "source": "xv6", "kind": "schedtest", "pid": 4, "arrival": 0, "cpu_burst": 3, "priority": 10, "label": "interactive", "seed": 42, "profile": "interactive"}
+{"tick": null, "algo": "SRTF", "event": "CHILD_EXIT", "source": "xv6", "kind": "schedtest", "pid": 4, "seed": 42, "profile": "interactive"}
+{"tick": null, "algo": "SRTF", "event": "PROC_DEF", "source": "xv6", "kind": "schedtest", "pid": 5, "arrival": 2, "cpu_burst": 1, "priority": 10, "label": "interactive", "seed": 42, "profile": "interactive"}
+{"tick": null, "algo": "SRTF", "event": "CHILD_START", "source": "xv6", "kind": "schedtest", "pid": 5, "priority": 10, "seed": 42, "profile": "interactive"}
+{"tick": null, "algo": "SRTF", "event": "CHILD_EXIT", "source": "xv6", "kind": "schedtest", "pid": 5, "seed": 42, "profile": "interactive"}
+{"tick": null, "algo": "SRTF", "event": "PROC_DEF", "source": "xv6", "kind": "schedtest", "pid": 6, "arrival": 5, "cpu_burst": 2, "priority": 10, "label": "interactive", "seed": 42, "profile": "interactive"}
+{"tick": null, "algo": "SRTF", "event": "CHILD_START", "source": "xv6", "kind": "schedtest", "pid": 6, "priority": 10, "seed": 42, "profile": "interactive"}
+{"tick": null, "algo": "SRTF", "event": "CHILD_EXIT", "source": "xv6", "kind": "schedtest", "pid": 6, "seed": 42, "profile": "interactive"}
+{"tick": null, "algo": "SRTF", "event": "PROC_DEF", "source": "xv6", "kind": "schedtest", "pid": 7, "arrival": 10, "cpu_burst": 4, "priority": 10, "label": "cpu", "seed": 42, "profile": "interactive"}
+{"tick": null, "algo": "SRTF", "event": "CHILD_START", "source": "xv6", "kind": "schedtest", "pid": 7, "priority": 10, "seed": 42, "profile": "interactive"}
+{"tick": null, "algo": "SRTF", "event": "CHILD_EXIT", "source": "xv6", "kind": "schedtest", "pid": 7, "seed": 42, "profile": "interactive"}
+{"tick": null, "algo": "SRTF", "event": "PROC_DEF", "source": "xv6", "kind": "schedtest", "pid": 8, "arrival": 15, "cpu_burst": 1, "priority": 10, "label": "interactive", "seed": 42, "profile": "interactive"}
+{"tick": null, "algo": "SRTF", "event": "CHILD_START", "source": "xv6", "kind": "schedtest", "pid": 8, "priority": 10, "seed": 42, "profile": "interactive"}
+{"tick": null, "algo": "SRTF", "event": "CHILD_EXIT", "source": "xv6", "kind": "schedtest", "pid": 8, "seed": 42, "profile": "interactive"}
+{"tick": null, "algo": "SRTF", "event": "RUN_END", "source": "xv6", "kind": "schedtest", "seed": 42, "profile": "interactive"}
+{"tick": 0, "algo": "SRTF", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 4, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
+{"tick": 1, "algo": "SRTF", "event": "PREEMPT", "source": "xv6", "kind": "sched", "pid": 4, "state": "RUNNABLE", "queue": 0, "priority": 10, "reason": "timer_tick", "seed": 42, "profile": "interactive"}
+{"tick": 1, "algo": "SRTF", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 3, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
+{"tick": 1, "algo": "SRTF", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 4, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
+{"tick": 2, "algo": "SRTF", "event": "PREEMPT", "source": "xv6", "kind": "sched", "pid": 4, "state": "RUNNABLE", "queue": 0, "priority": 10, "reason": "timer_tick", "seed": 42, "profile": "interactive"}
+{"tick": 2, "algo": "SRTF", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 3, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
+{"tick": 2, "algo": "SRTF", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 4, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
+{"tick": 3, "algo": "SRTF", "event": "PREEMPT", "source": "xv6", "kind": "sched", "pid": 4, "state": "RUNNABLE", "queue": 0, "priority": 10, "reason": "timer_tick", "seed": 42, "profile": "interactive"}
+{"tick": 3, "algo": "SRTF", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 3, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
+{"tick": 3, "algo": "SRTF", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 4, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
+{"tick": 4, "algo": "SRTF", "event": "PREEMPT", "source": "xv6", "kind": "sched", "pid": 4, "state": "RUNNABLE", "queue": 0, "priority": 10, "reason": "timer_tick", "seed": 42, "profile": "interactive"}
+{"tick": 4, "algo": "SRTF", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 3, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
+{"tick": 4, "algo": "SRTF", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 4, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
+{"tick": 4, "algo": "SRTF", "event": "EXIT", "source": "xv6", "kind": "sched", "pid": 4, "state": "ZOMBIE", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
+{"tick": 4, "algo": "SRTF", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 5, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
+{"tick": 5, "algo": "SRTF", "event": "PREEMPT", "source": "xv6", "kind": "sched", "pid": 5, "state": "RUNNABLE", "queue": 0, "priority": 10, "reason": "timer_tick", "seed": 42, "profile": "interactive"}
+{"tick": 5, "algo": "SRTF", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 3, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
+{"tick": 5, "algo": "SRTF", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 5, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
+{"tick": 5, "algo": "SRTF", "event": "EXIT", "source": "xv6", "kind": "sched", "pid": 5, "state": "ZOMBIE", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
+{"tick": 5, "algo": "SRTF", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 6, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
+{"tick": 6, "algo": "SRTF", "event": "PREEMPT", "source": "xv6", "kind": "sched", "pid": 6, "state": "RUNNABLE", "queue": 0, "priority": 10, "reason": "timer_tick", "seed": 42, "profile": "interactive"}
+{"tick": 6, "algo": "SRTF", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 3, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
+{"tick": 6, "algo": "SRTF", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 6, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
+{"tick": 7, "algo": "SRTF", "event": "PREEMPT", "source": "xv6", "kind": "sched", "pid": 6, "state": "RUNNABLE", "queue": 0, "priority": 10, "reason": "timer_tick", "seed": 42, "profile": "interactive"}
+{"tick": 7, "algo": "SRTF", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 3, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
+{"tick": 7, "algo": "SRTF", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 6, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
+{"tick": 7, "algo": "SRTF", "event": "EXIT", "source": "xv6", "kind": "sched", "pid": 6, "state": "ZOMBIE", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
+{"tick": 8, "algo": "SRTF", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 3, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
+{"tick": 9, "algo": "SRTF", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 3, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
+{"tick": 10, "algo": "SRTF", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 3, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
+{"tick": 10, "algo": "SRTF", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 7, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
+{"tick": 11, "algo": "SRTF", "event": "PREEMPT", "source": "xv6", "kind": "sched", "pid": 7, "state": "RUNNABLE", "queue": 0, "priority": 10, "reason": "timer_tick", "seed": 42, "profile": "interactive"}
+{"tick": 11, "algo": "SRTF", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 3, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
+{"tick": 11, "algo": "SRTF", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 7, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
+{"tick": 12, "algo": "SRTF", "event": "PREEMPT", "source": "xv6", "kind": "sched", "pid": 7, "state": "RUNNABLE", "queue": 0, "priority": 10, "reason": "timer_tick", "seed": 42, "profile": "interactive"}
+{"tick": 12, "algo": "SRTF", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 3, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
+{"tick": 12, "algo": "SRTF", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 7, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
+{"tick": 13, "algo": "SRTF", "event": "PREEMPT", "source": "xv6", "kind": "sched", "pid": 7, "state": "RUNNABLE", "queue": 0, "priority": 10, "reason": "timer_tick", "seed": 42, "profile": "interactive"}
+{"tick": 13, "algo": "SRTF", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 3, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
+{"tick": 13, "algo": "SRTF", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 7, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
+{"tick": 14, "algo": "SRTF", "event": "PREEMPT", "source": "xv6", "kind": "sched", "pid": 7, "state": "RUNNABLE", "queue": 0, "priority": 10, "reason": "timer_tick", "seed": 42, "profile": "interactive"}
+{"tick": 14, "algo": "SRTF", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 3, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
+{"tick": 14, "algo": "SRTF", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 7, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
+{"tick": 14, "algo": "SRTF", "event": "EXIT", "source": "xv6", "kind": "sched", "pid": 7, "state": "ZOMBIE", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
+{"tick": 15, "algo": "SRTF", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 3, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
+{"tick": 15, "algo": "SRTF", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 8, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
+{"tick": 16, "algo": "SRTF", "event": "PREEMPT", "source": "xv6", "kind": "sched", "pid": 8, "state": "RUNNABLE", "queue": 0, "priority": 10, "reason": "timer_tick", "seed": 42, "profile": "interactive"}
+{"tick": 16, "algo": "SRTF", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 8, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
+{"tick": 16, "algo": "SRTF", "event": "EXIT", "source": "xv6", "kind": "sched", "pid": 8, "state": "ZOMBIE", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
+{"tick": 16, "algo": "SRTF", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 3, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
