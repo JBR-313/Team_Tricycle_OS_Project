@@ -280,3 +280,44 @@ audience can see that the data is from the host model, not real xv6.
   completed-process count; explicit `STARVATION_WARNING` stays authoritative
   — see `tools/metrics.py` and `tools/test_metrics_starvation.py`) so
   sub-tick noise on these short workloads is no longer flagged as starvation.
+
+### 6. Recovery scenarios (verified during rehearsals — see `docs/demo_rehearsal_notes.md`)
+
+Concrete fixes for things that actually went wrong while rehearsing the demo.
+
+- **The dev server won't stop / port 5174 stays busy.** `npm run dev` spawns a
+  child `vite` process that survives a `kill` of the wrapper. Kill the child by
+  name and confirm the port is free:
+  ```bash
+  pkill -f "vite --port 5174"
+  curl -sf http://localhost:5174/ >/dev/null && echo "still serving" || echo "port free"
+  ```
+
+- **`live-data` looks wrong after running checks (badge flipped, version jumped).**
+  `final_demo_check.py` and especially `multi_profile_demo_check.py` rewrite
+  `dashboard_live/public/live-data/` (the multi-profile run leaves the LAST
+  profile). Restore the committed honest xv6 snapshot:
+  ```bash
+  git checkout -- dashboard_live/public/live-data
+  rm -f dashboard_live/public/live-data/correction_proposal.json \
+        dashboard_live/public/live-data/correction_guard_decision.json
+  ```
+  Confirm the badge basis is back to `XV6 TRACE` (`backend=xv6`,
+  `metadata_source` absent in `manifest.json`).
+
+- **No API key on the demo machine.** Two honest behaviors, by design:
+  - `python3 scripts/final_demo_check.py` (strict default) **refuses** with a
+    non-zero exit — it will not invent a Solar Pro 3 response. This is correct,
+    not a crash.
+  - `python3 scripts/final_demo_check.py --offline-fixture` runs the real xv6
+    backend on the committed `outputs/_demo_fixtures/` recommendation, stamps
+    `metadata_source=demo_fallback`, and the dashboard shows `Backend: FALLBACK`.
+    Say out loud that this is committed demo data, not a live recommendation.
+  - To get back to a live `XV6 TRACE` recommendation, restore the key and re-run
+    without `--offline-fixture`. If you temporarily moved the key file, restore
+    it immediately (a `trap '... ' EXIT` guard is the safe way) and verify
+    `.env` is back before continuing.
+
+- **xv6/QEMU itself is broken on the machine.** Fall back to the simulator
+  backend (`--backend simulator`, §4); the badge downgrades to
+  `SIMULATOR FALLBACK` so the audience sees the data is a host-side model.
