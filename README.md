@@ -2,37 +2,6 @@
 
 **The LLM-Assisted Scheduler for xv6**
 
-> ## Final Demo Path *(read this first — 30 s)*
->
-> ```
-> Workload  →  Workload Analyzer  →  LLM Advisor  →  Algorithm Guard
->           →  xv6 + QEMU  →  Trace Parser  →  Metrics Evaluator
->           →  dashboard_live
-> ```
->
-> | Question | Answer |
-> |---|---|
-> | What is the **main demo path**? | The arrow above. xv6 + QEMU runs `schedtest`; the LLM only advises. |
-> | Which **dashboard** should I open? | **`dashboard_live/`** (`http://localhost:5174`). Anything else is a sandbox or legacy. The dashboard has three tabs: **LLM / Visualization / Evaluation**. The **RUN** button on the LLM tab triggers a fresh experiment when `scripts/run_server.py` is up. |
-> | Is **xv6** the primary backend? | Yes. `scripts/orchestrator.py --backend xv6` is the demo path. |
-> | Is the **simulator** only a fallback? | Yes. `tools/scheduler_simulator.py` + `--backend simulator` is **dev/test only**. The dashboard shows a `SIMULATOR` badge when it is in use. |
-> | Does **SJF/SRTF** see future bursts? | **No**. The xv6 kernel uses an exponential-averaging (EMA) burst predictor; the simulator was refactored on 2026-05-28 to do the same (`predicted_burst` only — `actual_bursts` never leaks into the picker). LLM may **predict** bursts as hints via `recommendation.predicted_bursts[]`. See [`docs/sjf_srtf_prediction_audit.md`](docs/sjf_srtf_prediction_audit.md). |
-> | What's the **judgment rule**? | Normalized regret on the workload's `target_metric`. SUCCESS ≤ 10%, NEAR-SUCCESS ≤ 25%, else FAIL; starvation forces FAIL. Output includes `selected_metric_value`, `best_metric_value`, `explanation`. See [`docs/evaluation_criteria_audit.md`](docs/evaluation_criteria_audit.md). |
-> | What if I have **no API key**? | The orchestrator uses the committed `outputs/_demo_fixtures/` set and the dashboard shows a `FALLBACK` badge. No silent guessing. |
-> | Which modules are **preview-only**? | The runtime-correction loop: `tools/event_detector.py`, `tools/correction_proposer.py`, `tools/correction_guard.py`, dashboard card `RuntimeCorrectionPreview`. Closed-loop xv6 apply is **Future Work**. |
-> | Where is the **slimming/hardening plan**? | [`docs/codebase_slimming_plan.md`](docs/codebase_slimming_plan.md) (labels & post-demo move queue) and [`docs/final_slimming_smoke_check.md`](docs/final_slimming_smoke_check.md) (verification commands). |
-
-LLM Sched Copilot is an **LLM-for-OS** project that uses an LLM as a high-level decision support layer for xv6 CPU scheduling.
-
-The LLM analyzes workload summaries and Scheduling Trace Logs, recommends a suitable **Scheduling Algorithm**, suggests algorithm parameters, and explains the execution result in natural language. Closed-loop runtime correction (detect → propose → guard → apply) is **Partial / Future Work** — see §11.1.
-
-The LLM does **not** replace the xv6 scheduler.  
-xv6 remains the execution authority.  
-The Metrics Evaluator verifies the LLM's judgment using concrete scheduling metrics.  
-The GUI visualizes the whole process as an observability dashboard.
-
-> **LLM suggests. Algorithm Guard checks. xv6 executes. Metrics verify. GUI explains.**
-
 ---
 
 ## 1. Core Idea
