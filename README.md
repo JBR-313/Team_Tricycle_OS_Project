@@ -24,7 +24,7 @@
 
 LLM Sched Copilot is an **LLM-for-OS** project that uses an LLM as a high-level decision support layer for xv6 CPU scheduling.
 
-The LLM analyzes workload summaries and Scheduling Trace Logs, recommends a suitable **Scheduling Algorithm**, suggests algorithm parameters, and explains the execution result in natural language. Closed-loop runtime correction (detect → propose → guard → apply) is **Partial / Future Work** — see §12.1.
+The LLM analyzes workload summaries and Scheduling Trace Logs, recommends a suitable **Scheduling Algorithm**, suggests algorithm parameters, and explains the execution result in natural language. Closed-loop runtime correction (detect → propose → guard → apply) is **Partial / Future Work** — see §11.1.
 
 The LLM does **not** replace the xv6 scheduler.  
 xv6 remains the execution authority.  
@@ -35,25 +35,7 @@ The GUI visualizes the whole process as an observability dashboard.
 
 ---
 
-## 1. Project Direction
-
-This project follows **Direction B: LLM for OS**.
-
-The project integrates an LLM into a classical OS problem: **CPU Scheduling**.
-
-Instead of using the LLM as a simple chatbot, this project uses the LLM as a scheduling decision support layer:
-
-- The LLM interprets workload characteristics.
-- The LLM recommends a Scheduling Algorithm and parameters.
-- The LLM proposes runtime corrections when trace monitoring detects problems. *(Partial / Future Work — only event detection ships today; see §12.1.)*
-- The LLM explains Scheduling Trace Logs and Scheduling Metrics.
-- The LLM generates feedback rules for future recommendations. *(Partial / Future Work — no production feedback-rule generator today; see §12.1.)*
-
-The actual Scheduling Algorithm execution is performed by xv6.
-
----
-
-## 2. Core Idea
+## 1. Core Idea
 
 Traditional xv6 scheduling behavior is usually visible only through terminal logs or source code.  
 This project turns that low-level behavior into a trace-verified scheduling workflow.
@@ -97,7 +79,7 @@ The main question of this project is:
 
 ---
 
-## 3. System Principle
+## 2. System Principle
 
 The system separates responsibility clearly.
 
@@ -169,28 +151,28 @@ The LLM cannot:
 
 ---
 
-## 4. Supported Scheduling Algorithms
+## 3. Supported Scheduling Algorithms
 
 The project targets the following Scheduling Algorithms.
 
-### 4.1 Round Robin
+### 3.1 Round Robin
 
 Round Robin is the baseline Scheduling Algorithm.  
 It gives runnable processes CPU time in turn and prevents a single process from monopolizing the CPU.
 
-### 4.2 FCFS
+### 3.2 FCFS
 
 FCFS executes processes in arrival order.  
 It is simple, but it can suffer from the convoy effect when a long CPU-bound process arrives before short jobs.
 
-### 4.3 Priority Scheduling + Aging
+### 3.3 Priority Scheduling + Aging
 
 Priority Scheduling selects a process based on priority.  
 It can improve the response of important processes, but low-priority processes may suffer from starvation.
 
 Aging is used to reduce starvation by gradually increasing the effective priority of waiting processes.
 
-### 4.4 MLFQ
+### 3.4 MLFQ
 
 MLFQ uses multiple queues with different time quantums.  
 It can favor short or interactive jobs while demoting long CPU-bound jobs.
@@ -202,7 +184,7 @@ LLM Sched Copilot can suggest MLFQ parameters such as:
 - aging threshold
 - boost interval
 
-### 4.5 SJF / SRTF + Burst Prediction
+### 3.5 SJF / SRTF + Burst Prediction
 
 SJF and SRTF are powerful Scheduling Algorithms because they favor short CPU bursts.
 
@@ -219,15 +201,15 @@ The LLM must not receive the actual future CPU burst as input.
 
 ---
 
-## 5. LLM Roles
+## 4. LLM Roles
 
 The LLM works in three phases.
 
 ---
 
-### 5.1 Before Running
+### 4.1 Before Running
 
-#### 5.1.1 Workload Interpreter
+#### 4.1.1 Workload Interpreter
 
 The LLM receives a workload summary generated from observable workload information.
 
@@ -254,7 +236,7 @@ Example output:
 
 The LLM does not know exact future execution results.
 
-#### 5.1.2 Scheduling Algorithm Advisor
+#### 4.1.2 Scheduling Algorithm Advisor
 
 The LLM recommends a Scheduling Algorithm and parameters.
 
@@ -279,16 +261,16 @@ The recommendation is sent to the Algorithm Guard before execution.
 
 ---
 
-### 5.2 Running
+### 4.2 Running
 
-#### 5.2.1 Runtime Correction Proposer *(Partial / Future Work)*
+#### 4.2.1 Runtime Correction Proposer *(Partial / Future Work)*
 
 > This subsection describes the **planned** closed-loop runtime
 > correction design — the **target**, not what ships today. On
 > current main only `tools/event_detector.py` exists. The proposer,
 > the LLM call, the guard re-check on a correction, the apply step
 > in xv6, and the `CORRECTION_APPLIED` trace event the dashboard
-> would render are all Future Work. See the §12.1 Implementation
+> would render are all Future Work. See the §11.1 Implementation
 > Status row.
 
 During execution, the Trace Monitor watches the Scheduling Trace Log.
@@ -329,13 +311,13 @@ Possible correction types:
 
 The correction would be re-checked by the Algorithm Guard.
 
-In the design target, the correction would be applied at the next scheduling point, not by interrupting every timer tick with an LLM call. **Today this apply step is still Future Work** (see §12.1).
+In the design target, the correction would be applied at the next scheduling point, not by interrupting every timer tick with an LLM call. **Today this apply step is still Future Work** (see §11.1).
 
 ---
 
-### 5.3 After Running
+### 4.3 After Running
 
-#### 5.3.1 Trace Explainer
+#### 4.3.1 Trace Explainer
 
 After execution, the system summarizes:
 
@@ -364,12 +346,12 @@ Example output:
 
 The Trace Explainer helps users understand not only what happened, but why it happened.
 
-#### 5.3.2 Feedback Rule Generator *(Partial / Future Work)*
+#### 4.3.2 Feedback Rule Generator *(Partial / Future Work)*
 
 > Design target, not shipped today. No production feedback-rule
 > generator exists in `tools/`. The example below is the **planned**
 > JSON shape, included so the design is visible to readers. See
-> §12.1.
+> §11.1.
 
 If the LLM recommendation was poor, the system asks the LLM to generate a feedback rule.
 
@@ -390,7 +372,7 @@ The feedback rule can be used in later LLM prompts.
 
 ---
 
-## 6. Algorithm Guard
+## 5. Algorithm Guard
 
 The Algorithm Guard prevents invalid or unsafe LLM output from being applied.
 
@@ -422,7 +404,7 @@ Example decisions:
 
 ---
 
-## 7. Scheduling Trace Log
+## 6. Scheduling Trace Log
 
 The Scheduling Trace Log records important scheduling events.
 
@@ -448,7 +430,7 @@ Target events:
 
 ---
 
-## 8. Metrics Evaluator
+## 7. Metrics Evaluator
 
 The Metrics Evaluator verifies whether the LLM recommendation was actually useful.
 
@@ -483,7 +465,7 @@ FAIL         = LLM result is clearly worse than the best result
 
 ---
 
-## 9. GUI Observability Dashboard
+## 8. GUI Observability Dashboard
 
 The GUI is not the core scheduler.  
 It is the observability dashboard that visualizes the whole LLM-assisted scheduling process.
@@ -513,7 +495,7 @@ The GUI shows (as `dashboard_live`, the primary React/Vite UI on
   updated timestamp.
 
 > Runtime-correction events and Feedback Rule output are **not**
-> rendered today — they are Partial / Future Work (see §12.1).
+> rendered today — they are Partial / Future Work (see §11.1).
 
 Main dashboard message:
 
@@ -521,7 +503,7 @@ Main dashboard message:
 
 ---
 
-## 10. Example Demo Scenario
+## 9. Example Demo Scenario
 
 > **The shipped demo flow today** is: workload → LLM recommendation
 > → Algorithm Guard → xv6 schedtest execution (per algorithm on the
@@ -570,7 +552,7 @@ Main dashboard message:
 
 ---
 
-## 11. Data Files
+## 10. Data Files
 
 Actual layout today — what the orchestrator writes and the
 dashboard reads. `docs/dashboard_data_contract.md` is canonical;
@@ -600,7 +582,7 @@ dashboard_live/public/live-data/snapshots/priority_sensitive/…
 ```
 
 Planned but **not shipped** today (Partial / Future Work, see
-§12.1):
+§11.1):
 
 ```text
 outputs/runtime_events.json   # event_detector output (only event detection ships)
@@ -610,7 +592,7 @@ outputs/feedback_rules.md     # no production feedback-rule generator
 
 ---
 
-## 11.1 Workload Format (v2 + hidden burst rule)
+## 10.1 Workload Format (v2 + hidden burst rule)
 
 Each file in `workloads/` is a JSON object:
 
@@ -641,13 +623,13 @@ io_count) and — for SJF/SRTF — the EMA / LLM-predicted `predicted_burst`.
 See [`docs/workload_coverage_matrix.md`](docs/workload_coverage_matrix.md)
 for the 10 curated workloads and which algorithm each one favours.
 
-## 11.2 EMA and LLM Burst Prediction (SJF / SRTF)
+## 10.2 EMA and LLM Burst Prediction (SJF / SRTF)
 
 - **EMA baseline (default):** `tau_next = (alpha * observed + (100-alpha) * tau_prev) / 100`. Updated when a CPU burst ends (xv6: at `sleep()`; simulator: at end-of-burst). Defaults `alpha=50%, initial=10, [min=1, max=100]`. The simulator emits `[SCHED] event=PRED_UPDATE pid=… predicted_prev=… predicted_next=…` on every refresh.
 - **LLM hint (optional):** when the advisor picks SJF/SRTF it may also return `predicted_bursts: [{pid, predicted_burst|predicted_bursts, confidence, basis}]` based ONLY on visible features. The orchestrator forwards these to the simulator via `Simulator(prediction_source="llm")`. The xv6 backend currently uses EMA only; LLM hints are simulator-side until a future kernel patch.
 - **Trace evidence:** the `[SCHED] event=PRED_UPDATE` line is emitted by the **simulator only** (the xv6 kernel does not emit it yet — that is Future Work), so EMA drift is visible on the simulator path; on the xv6 demo path SJF/SRTF still schedule on the EMA `predicted_burst`, just without a per-update trace line. LLM-hinted runs tend to land closer to the ideal shortest-job baseline on first dispatch.
 
-## 11.3 Running the End-to-End Demo (and without an API key)
+## 10.3 Running the End-to-End Demo (and without an API key)
 
 ```bash
 # 1) Real LLM (Solar Pro 3) — set up once
@@ -675,7 +657,7 @@ RUNNING → PARSING → EVALUATING → DONE, and the views auto-reload. Without
 the server the RUN card hides and the dashboard is read-only over
 `live-data/`.
 
-## 12. Repository Structure
+## 11. Repository Structure
 
 Actual top-level layout today (kept honest — paths that don't exist or are
 misnamed should be fixed in the README, not faked):
@@ -837,7 +819,7 @@ See `docs/demo_runbook.md` for full pipeline details.
 
 ---
 
-## 12.1 Implementation Status
+## 11.1 Implementation Status
 
 Concise current status (full evidence in `docs/implementation_status.md`):
 
@@ -871,7 +853,7 @@ checklist.
 
 ---
 
-## 13. OS Concepts Used
+## 12. OS Concepts Used
 
 This project directly uses the following OS concepts:
 
@@ -890,7 +872,7 @@ This project directly uses the following OS concepts:
 
 ---
 
-## 14. Tech Stack
+## 13. Tech Stack
 
 ### OS Environment
 
@@ -946,7 +928,7 @@ fails fast with a clear error rather than silently faking a response.
 
 ---
 
-## 15. Development Roadmap
+## 14. Development Roadmap
 
 ### Phase 1 — Basic Trace and Metrics
 
@@ -994,7 +976,7 @@ fails fast with a clear error rather than silently faking a response.
 
 ---
 
-## 16. Limitations
+## 15. Limitations
 
 - The LLM is not called at every timer tick.
 - The LLM does not directly choose the next process.
@@ -1006,7 +988,7 @@ fails fast with a clear error rather than silently faking a response.
 
 ---
 
-## 17. One-sentence Summary
+## 16. One-sentence Summary
 
 **LLM Sched Copilot is an LLM-for-OS system where an LLM recommends and explains xv6 Scheduling Algorithms (and proposes runtime corrections as preview-only work), while the Algorithm Guard checks the recommendation, xv6 executes it as the authority, and metrics verify whether it was useful.**
 
