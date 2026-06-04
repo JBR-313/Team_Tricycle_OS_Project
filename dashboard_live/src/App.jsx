@@ -9,9 +9,14 @@ import {
   loadRuntimeEvents, loadCorrectionProposal, loadCorrectionGuardDecision,
 } from './data/liveDataClient.js'
 
-// Tiny inline toolbar for the Visualization tab — algorithm + tick scrubber.
+// Tiny inline toolbar for the Visualization tab — algorithm + tick scrubber + playback.
 // Lives here (not Header) so the controls only appear when they're useful.
-function VizToolbar({ algo, onAlgoChange, currentTick, maxTick, onTickChange }) {
+function VizToolbar({
+  algo, onAlgoChange, currentTick, maxTick, onTickChange,
+  isPlaying, onTogglePlay, onReset, speed, onSpeedChange,
+}) {
+  const SPEEDS = [1, 2, 4]
+  const atEnd = currentTick >= maxTick
   return (
     <div className="viz-toolbar">
       <label className="viz-toolbar-label">Algorithm</label>
@@ -22,6 +27,31 @@ function VizToolbar({ algo, onAlgoChange, currentTick, maxTick, onTickChange }) 
       >
         {ALGOS.map(a => <option key={a} value={a}>{a}</option>)}
       </select>
+      <button
+        className="viz-toolbar-playbtn"
+        onClick={onTogglePlay}
+        title={isPlaying ? 'Pause' : (atEnd ? 'Replay from start' : 'Play')}
+      >
+        {isPlaying ? '⏸' : (atEnd ? '⟲' : '▶')}
+      </button>
+      <button
+        className="viz-toolbar-resetbtn"
+        onClick={onReset}
+        title="Reset to tick 0"
+      >
+        ⏮
+      </button>
+      <div className="viz-toolbar-speeds">
+        {SPEEDS.map(s => (
+          <button
+            key={s}
+            className={`viz-toolbar-speed ${speed === s ? 'active' : ''}`}
+            onClick={() => onSpeedChange(s)}
+          >
+            {s}x
+          </button>
+        ))}
+      </div>
       <label className="viz-toolbar-label">Tick</label>
       <span className="viz-toolbar-tick">{currentTick}<span className="viz-toolbar-tickmax">/ {maxTick}</span></span>
       <input
@@ -67,6 +97,7 @@ import MLFQQueuePanel from './components/MLFQQueuePanel.jsx'
 // imported by reference only.
 
 const POLL_INTERVAL_MS = 1500
+const BASE_TICKS_PER_SEC = 6    // 1x speed → ~10s per 60-tick trace
 
 function formatUpdatedAt(iso) {
   if (!iso || iso === '1970-01-01T00:00:00Z') return null
@@ -79,6 +110,8 @@ export default function App() {
   const [algo, setAlgo] = useState('MLFQ')
   const [tick, setTick] = useState(0)
   const [selectedMetric, setSelectedMetric] = useState('avg_response_time')
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [playSpeed, setPlaySpeed] = useState(1)  // multiplier of BASE_TICKS_PER_SEC
 
   const [traces,          setTraces]          = useState(fallbackTraces)
   const [recommendation,  setRecommendation]  = useState(null)
@@ -165,6 +198,20 @@ export default function App() {
   // Default the visualization tick to a mid-trace position when the algo changes.
   useEffect(() => { setTick(Math.round(maxTick * 0.55)) }, [maxTick, algoKey])
 
+  // Fake-live playback: while isPlaying, advance `tick` by 1 every interval.
+  // Stops automatically when reaching maxTick (no looping — feels more like a real run).
+  useEffect(() => {
+    if (!isPlaying) return
+    const intervalMs = Math.max(16, Math.round(1000 / (BASE_TICKS_PER_SEC * playSpeed)))
+    const id = setInterval(() => {
+      setTick(t => {
+        if (t >= maxTick) { setIsPlaying(false); return t }
+        return t + 1
+      })
+    }, intervalMs)
+    return () => clearInterval(id)
+  }, [isPlaying, playSpeed, maxTick])
+
   const totalTraceEvents = useMemo(
     () => Object.values(traces).reduce((sum, evs) => sum + (evs?.length || 0), 0),
     [traces],
@@ -172,10 +219,38 @@ export default function App() {
 
   function handleAlgoChange(newAlgo) {
     setAlgo(newAlgo)
+    setIsPlaying(false)
     const newEvents = traces[Object.keys(traces).find(k => k.toLowerCase() === newAlgo.toLowerCase())] || []
     const newMax = Math.max(...newEvents.map(e => e.tick), 1)
     setTick(Math.round(newMax * 0.55))
   }
+
+  // Manual scrub: pause auto-play so user controls take over.
+  function handleTickChange(newTick) {
+    setIsPlaying(false)
+    setTick(newTick)
+  }
+
+  function handleTogglePlay() {
+    setIsPlaying(p => {
+      if (!p && tick >= maxTick) setTick(0)  // at end → replay from start
+      return !p
+    })
+  }
+
+  function handleReset() {
+    setIsPlaying(false)
+    setTick(0)
+  }
+
+  // After a RUN completes (new traces arrive), jump to tick 0 and auto-play
+  // so the user sees the experiment "stream in" instead of a static snapshot.
+  const onRunComplete = useCallback(() => {
+    loadAll().then(() => {
+      setTick(0)
+      setIsPlaying(true)
+    })
+  }, [loadAll])
 
   const dataStatus = {
     mode: dataMode, updatedAt, manifestVersion,
@@ -210,7 +285,10 @@ export default function App() {
       <div className="viz-page">
         <VizToolbar
           algo={algo} onAlgoChange={handleAlgoChange}
-          currentTick={tick} maxTick={maxTick} onTickChange={setTick}
+          currentTick={tick} maxTick={maxTick} onTickChange={handleTickChange}
+          isPlaying={isPlaying} onTogglePlay={handleTogglePlay}
+          onReset={handleReset}
+          speed={playSpeed} onSpeedChange={setPlaySpeed}
         />
         <div className="tab-grid viz-grid">
           <div className="tab-col viz-col-left">
@@ -249,7 +327,7 @@ export default function App() {
     <div className="dashboard-shell">
       <Header
         tab={tab} onTabChange={setTab}
-        onRunComplete={loadAll}
+        onRunComplete={onRunComplete}
       />
       <div className="dashboard-main tab-main">
         {tab === 'LLM' && renderLLMTab()}
