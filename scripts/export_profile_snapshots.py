@@ -7,13 +7,11 @@ validates the published live-data, and copies the result into
 ``dashboard_live/public/live-data/snapshots_manifest.json`` listing every
 profile snapshot the dashboard can pick from.
 
-The default flat live-data (the one ``scripts/final_demo_check.py``
-exercises) is preserved: with ``--restore-default <profile>`` (default
+The default flat live-data is preserved: with
+``--restore-default <profile>`` (default
 ``interactive``) the script restores that profile's snapshot into the flat
 root after all per-profile runs complete, so the dashboard's default
 view continues to match the on-stage demo path.
-
-See ``docs/profile_snapshot_plan.md`` for the full schema and rationale.
 
 Usage:
     python3 scripts/export_profile_snapshots.py

@@ -27,8 +27,8 @@ RR (default, baseline) | FCFS | Priority + Aging | MLFQ | SJF/SRTF (optional, re
 ## Run Commands
 ```bash
 make qemu                             # build & run xv6
-python3 tools/scheduler_simulator.py  # host-side simulation fallback
-streamlit run dashboard/dashboard.py  # GUI Observability Dashboard
+python3 scripts/orchestrator.py --backend xv6  # full pipeline (xv6 execution)
+cd dashboard_live && npm run dev      # GUI Observability Dashboard
 ```
 
 ## LLM Role

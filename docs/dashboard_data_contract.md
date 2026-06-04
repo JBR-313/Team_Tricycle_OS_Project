@@ -1,8 +1,7 @@
 # Dashboard Data Contract
 
 All data files live in `dashboard_live/public/live-data/`.
-They are produced by `scripts/orchestrator.py` (the old
-`scripts/run_live_dashboard_pipeline.py` is a deprecated shim).
+They are produced by `scripts/orchestrator.py`.
 All formats are JSON or JSONL (JSON Lines). No CSV.
 
 ---

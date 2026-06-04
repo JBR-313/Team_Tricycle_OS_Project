@@ -18,9 +18,9 @@ Orchestrator only coordinates the surrounding modules and the run order.
 
 ## Why a host-side Orchestrator exists
 
-Before this refactor, the live-data pipeline was a single script
-(`run_live_dashboard_pipeline.py`) wired specifically around the simulator. The
-xv6 path, the LLM advisor, the guard, and the parser were separate manual steps.
+Before this refactor, the live-data pipeline was a single script wired
+specifically around the simulator. The xv6 path, the LLM advisor, the
+guard, and the parser were separate manual steps.
 The Orchestrator replaces that with one control plane that owns the whole flow
 and records what backend actually produced the data.
 
@@ -46,7 +46,7 @@ The Python simulator (`tools/scheduler_simulator.py`) models the scheduling
 algorithms on the host. It is fast, deterministic, and convenient, which makes
 it ideal for:
 
-- fast UI development for `dashboard_live` and `dashboard_test`,
+- fast UI development for `dashboard_live`,
 - generating fixture data,
 - a fallback / comparison backend when xv6 is not available.
 

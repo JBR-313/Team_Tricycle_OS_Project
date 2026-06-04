@@ -43,12 +43,12 @@ Additional `PROFILE_MAP` entries that are **not** in `XV6_PROFILES`
 
 | Profile | Status on xv6 |
 |---------|---------------|
-| `short_jobs`      | **Not curated for xv6.** Orchestrator would substitute `mixed` if invoked, but `multi_profile_demo_check.py` refuses to silently substitute and reports it as SKIPPED. |
+| `short_jobs`      | **Not curated for xv6.** Orchestrator would substitute `mixed` if invoked; not in `XV6_PROFILES`. |
 | `starvation_risk` | **Not curated for xv6.** Same behaviour as above. |
 
 ## 3. Empirical run (xv6 backend, seed=42)
 
-`python3 scripts/multi_profile_demo_check.py --backend xv6` exercises
+`python3 scripts/export_profile_snapshots.py --backend xv6` exercises
 every `XV6_PROFILES` entry end-to-end (orchestrator → strict contract
 validator). Result on `main` at audit time:
 
@@ -80,8 +80,8 @@ metrics + publish + validate).
   are intentionally **not** part of the xv6 path. If a future demo
   needs them on xv6, a new `WORKLOADS[]` entry would have to be added
   in `schedtest.c` and the profile listed in `XV6_PROFILES`. Until
-  then, `multi_profile_demo_check.py` correctly reports them as
-  SKIPPED rather than silently substituting `mixed`.
+  then, they are reported as SKIPPED rather than silently
+  substituting `mixed`.
 
 ## 5. Out of scope for this audit
 

@@ -99,7 +99,7 @@ flowchart TD
         Generates rules when LLM recommendation failed"]
 
         A3["🖼️ GUI Observability Dashboard
-        dashboard/dashboard.py
+        dashboard_live (React)
         ─────────────────
         Gantt · Queue · Metrics · Correction · Explanation"]
 
@@ -387,7 +387,7 @@ flowchart TD
         LLM 추천 실패 시 규칙 생성"]
 
         A3["🖼️ GUI 관측 대시보드
-        dashboard/dashboard.py
+        dashboard_live (React)
         ─────────────────
         Gantt · 큐 · 메트릭 · 보정 · 설명"]
 
