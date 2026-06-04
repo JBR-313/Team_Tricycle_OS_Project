@@ -132,86 +132,101 @@ flowchart TD
 
 ```mermaid
 flowchart LR
-    subgraph INPUT ["📂 Input"]
-        WJ["workloads/*.json"]
-    end
 
-    subgraph BEFORE_TOOLS ["⬛ Before Running"]
-        WA["workload_analyzer.py"]
-        LI["llm_advisor.py (Interpreter)"]
-        LA["llm_advisor.py (Advisor)"]
-        AG["algorithm_guard.py"]
-    end
+subgraph INPUT["📂 Input"]
+    WJ["workloads/*.json"]
+end
 
-    subgraph RUNNING_TOOLS ["🟩 Running"]
-        XV["xv6 Scheduling Algorithm Execution"]
-        SS["scheduler_simulator.py"]
-        TP["trace_parser.py"]
-        ME["metrics.py"]
-        ED["event_detector.py"]
-        RC["runtime_correction.py"]
-    end
+subgraph BEFORE_TOOLS["⬛ Before Running"]
+    WA["workload_analyzer.py"]
+    LI["llm_advisor.py (Interpreter)"]
+    LA["llm_advisor.py (Advisor)"]
+    AG["algorithm_guard.py"]
+end
 
-    subgraph AFTER_TOOLS ["🟦 After Running"]
-        TE["trace_explainer.py"]
-        FG["feedback_generator.py"]
-        DB["dashboard.py"]
-    end
+subgraph RUNNING_TOOLS["🟩 Running"]
+    XV["xv6 Scheduling Algorithm Execution"]
+    SS["scheduler_simulator.py"]
+    TP["trace_parser.py"]
+    ME["metrics.py"]
+    ED["event_detector.py"]
+    RC["runtime_correction.py"]
+end
 
-    subgraph FILES ["📄 Data Files"]
-        ws["workload_summary.json"]
-        rc["recommendation.json"]
-        gd["guard_decision.json"]
-        tr["trace.jsonl"]
-        mt["metrics.json"]
-        re["runtime_events.json"]
-        co["correction.json"]
-        te["trace_explanation.json"]
-        fb["feedback_rules.md"]
-    end
+subgraph AFTER_TOOLS["🟦 After Running"]
+    TE["trace_explainer.py"]
+    FG["feedback_generator.py"]
+    DB["dashboard.py"]
+end
 
-    WJ  -->|reads|  WA
-    WA  -->|writes| ws
-    ws  -->|reads|  LI
-    LI  -->|reads|  LA
-    LA  -->|writes| rc
-    rc  -->|reads|  AG
-    AG  -->|writes| gd
-    gd  -->|reads|  XV
-    gd  -->|reads|  SS
-    XV  -->|writes| tr
-    SS  -->|writes| tr
-    tr  -->|reads|  TP
-    TP  -->|reads|  ME
-    TP  -->|reads|  ED
-    ME  -->|writes| mt
-    ED  -->|writes| re
-    re  -->|reads|  RC
-    RC  -->|writes| co
-    co  -->|reads → Guard → next point| XV
-    co  -->|reads → Guard → next point| SS
-    tr  -->|reads|  TE
-    mt  -->|reads|  TE
-    mt  -->|reads|  FG
-    TE  -->|writes| te
-    FG  -->|writes| fb
-    fb  -.->|reads · next run| LA
-    tr  -->|reads|  DB
-    mt  -->|reads|  DB
-    rc  -->|reads|  DB
-    re  -->|reads|  DB
-    te  -->|reads|  DB
-    fb  -->|reads|  DB
+subgraph FILES["📄 Data Files"]
+    WS["workload_summary.json"]
+    REC["recommendation.json"]
+    GD["guard_decision.json"]
+    TR["trace.jsonl"]
+    MT["metrics.json"]
+    RE["runtime_events.json"]
+    COR["correction.json"]
+    TEX["trace_explanation.json"]
+    FB["feedback_rules.md"]
+end
 
-    classDef before fill:#E6F1FB,stroke:#185FA5,color:#0C447C
-    classDef running fill:#E1F5EE,stroke:#0F6E56,color:#085041
-    classDef after  fill:#EEEDFE,stroke:#534AB7,color:#3C3489
-    classDef data   fill:#F1EFE8,stroke:#888780,color:#2C2C2A
+WJ --> WA
+WA --> WS
 
-    class WA,LI,LA,AG before
-    class XV,SS,TP,ME,ED,RC running
-    class TE,FG,DB after
-    class ws,rc,gd,tr,mt,re,co,te,fb data
+WS --> LI
+LI --> LA
+LA --> REC
+
+REC --> AG
+AG --> GD
+
+GD --> XV
+GD --> SS
+
+XV --> TR
+SS --> TR
+
+TR --> TP
+
+TP --> ME
+TP --> ED
+
+ME --> MT
+ED --> RE
+
+RE --> RC
+RC --> COR
+
+COR --> XV
+COR --> SS
+
+TR --> TE
+MT --> TE
+
+MT --> FG
+
+TE --> TEX
+FG --> FB
+
+FB -.-> LA
+
+TR --> DB
+MT --> DB
+REC --> DB
+RE --> DB
+TEX --> DB
+FB --> DB
+
+classDef before fill:#E6F1FB,stroke:#185FA5
+classDef running fill:#E1F5EE,stroke:#0F6E56
+classDef after fill:#EEEDFE,stroke:#534AB7
+classDef data fill:#F1EFE8,stroke:#888780
+
+class WA,LI,LA,AG before
+class XV,SS,TP,ME,ED,RC running
+class TE,FG,DB after
+class WS,REC,GD,TR,MT,RE,COR,TEX,FB data
 ```
 
 ---
