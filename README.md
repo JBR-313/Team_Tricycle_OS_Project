@@ -638,22 +638,14 @@ misnamed should be fixed in the README, not faked):
 ├── .env.example
 ├── .github/workflows/                  # lightweight CI (no QEMU)
 │
-├── docs/                               # PRIMARY — architecture + audits
-│   ├── architecture.md
-│   ├── trace_format.md
-│   ├── data_format.md
-│   ├── evaluation_plan.md
-│   ├── implementation_status.md
-│   ├── orchestrator_design.md
-│   ├── demo_runbook.md  · demo_checklist.md  · presenter_script.md
-│   ├── final_demo_acceptance.md  · final_release_candidate_report.md
-│   ├── repo_cleanup_plan.md            # NEW — labelling + post-demo queue
-│   ├── sjf_srtf_prediction_audit.md    # NEW — predictor verification
-│   ├── evaluation_criteria_audit.md    # NEW — judgment thresholds rationale
-│   ├── workload_coverage_matrix.md     # NEW — workload × algorithm matrix
-│   ├── dashboard_run_button_design.md  # NEW — Run-button API design (deferred)
-│   ├── mlfq_queue_visualization_review.md # NEW — MLFQ panel proposal
-│   └── …
+├── docs/                               # PRIMARY — execution & structure reference
+│   ├── architecture.md                 # three-phase architecture + module roles
+│   ├── orchestrator_design.md          # control plane, backends, fairness rule
+│   ├── data_format.md                  # module-to-module JSON / JSONL interfaces
+│   ├── trace_format.md                 # raw [SCHED]/[SCHEDTEST] + normalized JSONL
+│   ├── dashboard_data_contract.md      # canonical files the dashboard reads
+│   ├── evaluation_plan.md              # metrics, thresholds, recommendation judging
+│   └── xv6_profile_support.md          # xv6 workload profile coverage audit
 │
 ├── workloads/                          # PRIMARY — curated workload JSONs
 │   ├── interactive_heavy.json  · short_jobs.json  · mixed_workload.json
