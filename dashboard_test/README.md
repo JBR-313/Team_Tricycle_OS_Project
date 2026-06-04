@@ -3,7 +3,6 @@
 > **Role:** DEV / FALLBACK — UI prototype/sandbox only.
 > **Not** on the final demo path. The final demo dashboard is
 > [`dashboard_live/`](../dashboard_live/) on `http://localhost:5174`.
-> See [`docs/codebase_slimming_plan.md`](../docs/codebase_slimming_plan.md) §2.6.
 
 This is the **UI test dashboard** using static fixture data (`src/data/demoData.js`).
 

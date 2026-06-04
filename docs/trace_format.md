@@ -66,8 +66,7 @@ token is present on every line.
 ```
 
 > Status note: the full set of rich `[SCHED]` events is part of the in-progress
-> xv6 backend. Not all events are emitted by the kernel yet. See
-> `docs/implementation_status.md`.
+> xv6 backend. Not all events are emitted by the kernel yet.
 
 ### User-program metadata lines — `[SCHEDTEST]`
 
@@ -255,9 +254,7 @@ A process has moved from one MLFQ queue to another (demotion or aging promotion)
 > The current pipeline ships **preview-only** correction artifacts
 > (`runtime_events.json`, `correction_proposal.json`,
 > `correction_guard_decision.json`) and does **not** emit
-> `CORRECTION_APPLIED`. See
-> `docs/runtime_correction_preview_design.md` §7. The schema
-> below is the design target.
+> `CORRECTION_APPLIED`. The schema below is the design target.
 
 When the closed loop is wired, a runtime correction proposed and
 guard-validated would be applied at the next scheduling point.

@@ -39,8 +39,7 @@ dashboard_live/public/live-data/  → dashboard_live
 
 The **final experiment path** is xv6 `schedtest` driven by the Orchestrator. The
 Python simulator is used for fast UI development and fallback comparison; it is
-not proof of real xv6 execution. See `docs/orchestrator_design.md` and
-`docs/implementation_status.md`.
+not proof of real xv6 execution. See `docs/orchestrator_design.md`.
 
 The main question of this project is:
 
@@ -88,7 +87,7 @@ Workload (workloads/*.json or schedtest profile)
 | `tools/scheduler_simulator.py` + `--backend simulator` | **FALLBACK (dev/test)** | Host-side Python model. Not proof of real xv6 execution; used for UI iteration and when QEMU is unavailable. | yes, with badge `SIMULATOR FALLBACK` |
 | `outputs/_demo_fixtures/` (offline demo fallback) | **FALLBACK (no API key / no QEMU)** | Committed fixture data so the dashboard still has something to show. Stamps `manifest.metadata_source = "demo_fallback"`. | yes, with badge `FALLBACK` |
 | `dashboard_test/` | **FALLBACK (UI prototype/sandbox)** | Static fixture data for component iteration. **Not real scheduling output by design.** | no (developer-only) |
-| `dashboard/` (Streamlit) | **LEGACY** | Superseded by `dashboard_live`. Kept for the host-only fallback case. Archive plan in [`docs/repo_cleanup_plan.md`](docs/repo_cleanup_plan.md). | no |
+| `dashboard/` (Streamlit) | **LEGACY** | Superseded by `dashboard_live`. Kept for the host-only fallback case. | no |
 | `xv6-style-scheduler/` | **DEV** | Standalone scheduler study sandbox; not on the demo path. | no |
 | `traces/` (root) | **LEGACY** | Pre-orchestrator trace samples. Canonical fixtures live in `outputs/_demo_fixtures/` and `dashboard_live/public/live-data/snapshots/`. | no |
 
@@ -477,8 +476,7 @@ Main dashboard message:
 > **The shipped demo flow today** is: workload → LLM recommendation
 > → Algorithm Guard → xv6 schedtest execution (per algorithm on the
 > same seed + profile) → Metrics Evaluator → snapshot tour across
-> the four curated xv6 profiles. See `docs/demo_runbook.md`,
-> `docs/demo_checklist.md`, and `docs/presenter_script.md`.
+> the four curated xv6 profiles.
 >
 > The scenario below is the **target narrative for closed-loop
 > runtime correction** — it is Partial / Future Work today
@@ -589,8 +587,8 @@ NOT read `actual_bursts`. They see `visible_processes` in
 `workload_summary.json` (pid, arrival_time, priority, label, burst_count,
 io_count) and — for SJF/SRTF — the EMA / LLM-predicted `predicted_burst`.
 
-See [`docs/workload_coverage_matrix.md`](docs/workload_coverage_matrix.md)
-for the 10 curated workloads and which algorithm each one favours.
+The `workloads/` directory holds the curated workloads and which
+algorithm each one favours.
 
 ## 10.2 EMA and LLM Burst Prediction (SJF / SRTF)
 
@@ -708,17 +706,13 @@ misnamed should be fixed in the README, not faked):
 └── traces/                             # LEGACY — pre-orchestrator samples
 ```
 
-See [`docs/repo_cleanup_plan.md`](docs/repo_cleanup_plan.md) for the full
-file-by-file labelling and the post-demo cleanup queue (no files are deleted
-before the demo).
-
 ## Dashboard roles
 
 | Dashboard        | Role                                        | Command                              |
 |------------------|---------------------------------------------|--------------------------------------|
 | `dashboard_live` | **PRIMARY demo** — loads real generated JSON/JSONL (xv6 trace or simulator fallback); shows backend badge | `cd dashboard_live && npm run dev` |
 | `dashboard_test` | **FALLBACK (UI prototype/sandbox)** — static fixture data only; not real scheduling output by design | `cd dashboard_test && npm run dev` |
-| `dashboard/`     | **LEGACY** — Streamlit; superseded by `dashboard_live`. Kept for host-only fallback. See [`docs/repo_cleanup_plan.md`](docs/repo_cleanup_plan.md) §6.4 | `streamlit run dashboard/dashboard.py` |
+| `dashboard/`     | **LEGACY** — Streamlit; superseded by `dashboard_live`. Kept for host-only fallback. | `streamlit run dashboard/dashboard.py` |
 
 > `dashboard-react` has been removed. `dashboard_test` is its direct successor and fully supersedes it.
 
@@ -730,7 +724,6 @@ simulator.
 
 ```bash
 # Step 1: one-command demo prep (compile + xv6 orchestrator + strict validator).
-# Runs the on-stage release contract from docs/final_demo_acceptance.md.
 python3 scripts/final_demo_check.py
 
 # Step 2: start dashboard
@@ -784,13 +777,11 @@ cd dashboard_test && npm run build
 cd dashboard_live && npm run build
 ```
 
-See `docs/demo_runbook.md` for full pipeline details.
-
 ---
 
 ## 11.1 Implementation Status
 
-Concise current status (full evidence in `docs/implementation_status.md`):
+Concise current status:
 
 | Component | Status | Role |
 |-----------|--------|------|
@@ -802,7 +793,7 @@ Concise current status (full evidence in `docs/implementation_status.md`):
 | `scripts/multi_profile_demo_check.py` (xv6 backend across all curated profiles) | **Implemented** | broader pre-demo confidence (not a substitute for the on-stage check) |
 | `scripts/export_profile_snapshots.py` + committed per-profile xv6 snapshots | **Implemented** | dashboard switches across `interactive` / `cpu_bound` / `mixed` / `priority_sensitive` without re-running QEMU |
 | `scripts/analyze_algorithm_winners.py` | **Implemented** | offline verifier for the algorithm-diversity audit |
-| `tools/validate_dashboard_contract.py` (`--strict --snapshots --preview …`) | **Implemented** | catches empty traces, missing manifest fields, cross-file algo disagreement; `--snapshots` extends per profile snapshot; `--preview` is opt-in and validates the runtime-correction preview artifacts (`preview_only=true`, `applied=false`, no `CORRECTION_APPLIED`). Default mode is unchanged — preview files remain optional and off the strict contract. See `docs/runtime_correction_preview_validation.md`. |
+| `tools/validate_dashboard_contract.py` (`--strict --snapshots --preview …`) | **Implemented** | catches empty traces, missing manifest fields, cross-file algo disagreement; `--snapshots` extends per profile snapshot; `--preview` is opt-in and validates the runtime-correction preview artifacts (`preview_only=true`, `applied=false`, no `CORRECTION_APPLIED`). Default mode is unchanged — preview files remain optional and off the strict contract. |
 | `dashboard_live` (React + `public/live-data/`) | **Implemented** | **final demo UI** — backend badge + snapshot selector + manifest meta + per-row Judge |
 | `dashboard_live` Demo flow + Why this algorithm + Metric trade-off cards | **Implemented** | DemoGuide (click-to-flash), RecommendationEvidence ("Why this algorithm?"), CounterfactualMetricView ("Metric trade-off") — see PRs #32 #43 #46 #47 |
 | `.github/workflows/ci.yml` (lightweight CI) | **Implemented** | py_compile + strict validator on committed live-data + dashboard builds. **No QEMU/xv6 in CI** — local `final_demo_check.py` remains authoritative |
@@ -815,10 +806,7 @@ Concise current status (full evidence in `docs/implementation_status.md`):
 
 > **LLM suggests. Algorithm Guard checks. xv6 executes. Metrics verify. GUI explains.**
 
-See `docs/implementation_status.md` for evidence files, run commands, and
-remaining risks per feature; `docs/orchestrator_design.md` for the control
-plane and fairness design; and `docs/demo_runbook.md` for the presenter
-checklist.
+See `docs/orchestrator_design.md` for the control plane and fairness design.
 
 ---
 
@@ -872,9 +860,7 @@ This project directly uses the following OS concepts:
 - **UI prototype/sandbox:** React + Vite (`dashboard_test`) — static fixtures
   only; component iteration.
 - **Legacy fallback:** Streamlit + pandas + Plotly (`dashboard/dashboard.py`)
-  — kept for the host-only case where Node is unavailable. Marked deprecated;
-  see [`docs/repo_cleanup_plan.md`](docs/repo_cleanup_plan.md) §6.4 for the
-  archive plan.
+  — kept for the host-only case where Node is unavailable. Marked deprecated.
 
 ### LLM Backend
 

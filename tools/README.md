@@ -189,7 +189,7 @@ Reads the trace (compresses it to a per-process timeline + event counts) and, wh
 | **SJF** | `{ "alpha_percent": int [0, 100], "initial": int >=1, "min": int >=1, "max": int (>=min, <=100000) }` | Prediction-based, non-preemptive (exponential-averaging predictor) |
 | **SRTF** | same as SJF | Prediction-based, preemptive variant of SJF |
 
-SJF/SRTF use an exponential-averaging burst predictor — the LLM tunes only the predictor params, never the real future bursts (the kernel updates predictions from observed CPU usage only). See [`docs/work_status_sjf_srtf.md`](../docs/work_status_sjf_srtf.md). The predictor's cross-field rules (`min <= max`, `initial` clamped into `[min, max]`) are enforced by the guard.
+SJF/SRTF use an exponential-averaging burst predictor — the LLM tunes only the predictor params, never the real future bursts (the kernel updates predictions from observed CPU usage only). The predictor's cross-field rules (`min <= max`, `initial` clamped into `[min, max]`) are enforced by the guard.
 
 ### Using SolarClient Directly
 
@@ -378,7 +378,7 @@ python3 tools/trace_explainer.py \
 | **SJF** | `{ "alpha_percent": int [0, 100], "initial": int >=1, "min": int >=1, "max": int (>=min, <=100000) }` | 예측 기반, 비선점 (지수 평균 predictor) |
 | **SRTF** | SJF와 동일 | 예측 기반, SJF의 선점 버전 |
 
-SJF/SRTF는 지수 평균 버스트 predictor를 사용합니다 — LLM은 predictor 파라미터만 추천하고, 실제 미래 버스트는 절대 받지 않습니다 (커널이 관측된 CPU 사용량으로만 예측 갱신). [`docs/work_status_sjf_srtf.md`](../docs/work_status_sjf_srtf.md) 참고. predictor의 교차 검증(`min <= max`, `initial`을 `[min, max]`로 clamp)은 guard가 수행합니다.
+SJF/SRTF는 지수 평균 버스트 predictor를 사용합니다 — LLM은 predictor 파라미터만 추천하고, 실제 미래 버스트는 절대 받지 않습니다 (커널이 관측된 CPU 사용량으로만 예측 갱신). predictor의 교차 검증(`min <= max`, `initial`을 `[min, max]`로 clamp)은 guard가 수행합니다.
 
 ### SolarClient 직접 사용
 

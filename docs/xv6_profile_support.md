@@ -3,9 +3,8 @@
 Post-RC audit of which schedtest profiles are actually runnable on the
 xv6 backend, recorded against `main` at the time of this document.
 
-> See `docs/final_demo_acceptance.md` §0 for the broader validation
-> scope (local final demo check vs broader multi-profile check vs
-> lightweight CI).
+> The broader validation scope spans the local final demo check, the
+> broader multi-profile check, and lightweight CI.
 
 ---
 
@@ -76,8 +75,7 @@ metrics + publish + validate).
   today.** No additional schedtest workload tables need to be added
   to satisfy the post-RC profile-depth goal.
 - The on-stage demo path remains `--seed 42 --workload interactive`
-  per `docs/final_demo_acceptance.md` §0 — this audit is broader
-  confidence, not a replacement for the demo check.
+  — this audit is broader confidence, not a replacement for the demo check.
 - The two simulator-only profiles (`short_jobs`, `starvation_risk`)
   are intentionally **not** part of the xv6 path. If a future demo
   needs them on xv6, a new `WORKLOADS[]` entry would have to be added

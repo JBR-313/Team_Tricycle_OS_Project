@@ -120,9 +120,8 @@ python3 scripts/orchestrator.py --backend simulator --seed 42 --workload interac
 
 > Status note: both backends run end to end today. The xv6 backend is the
 > final demo / experiment path; the simulator is the fast dev / fallback
-> path. See `docs/implementation_status.md` for honest per-feature status and
-> known limitations on xv6 traces (short runs, multiplier-based starvation
-> rule).
+> path. Known limitations on xv6 traces (short runs, multiplier-based
+> starvation rule) still apply.
 
 ### Workload profile mapping
 
@@ -215,5 +214,3 @@ repeat on the same seed/profile; the LLM-selected algorithm runs first.
 - `docs/architecture.md` — three-phase architecture and module responsibilities.
 - `docs/trace_format.md` — raw `[SCHED]` / `[SCHEDTEST]` line formats and the
   normalized JSONL fields.
-- `docs/implementation_status.md` — honest status of each feature.
-- `docs/demo_runbook.md` — how to run the final demo.
