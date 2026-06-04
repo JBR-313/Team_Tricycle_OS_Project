@@ -191,7 +191,10 @@ For backward compatibility with v1.5 consumers, every line **also** carries
 
 **Core events:** `ARRIVE`, `DISPATCH`, `PREEMPT`, `EXIT`, `IDLE`,
 `STARVATION_WARNING`
-**States:** `RUNNABLE`, `RUNNING`, `ZOMBIE`, `IDLE`
+**Feedback evidence events** (trace-only, consumed later by the LLM feedback
+loop; emitted with `pid: null` or the affected pid, and `state: "CONTROL"`):
+`POLICY_FEEDBACK_SIGNAL`, `METRIC_SNAPSHOT`, `RUN_SUMMARY`
+**States:** `RUNNABLE`, `RUNNING`, `ZOMBIE`, `IDLE`, `CONTROL`
 
 ### Event-specific fields
 
@@ -245,6 +248,62 @@ Example (RR):
 `severity` is `"high"` when `current_waiting_time >= threshold * 2`,
 `"medium"` otherwise.
 
+### Feedback evidence events
+
+These events are produced for the downstream LLM feedback loop. They carry
+`state: "CONTROL"` and either `pid: null` or the pid the signal concerns.
+They are silently ignored by `tools/metrics.py` (no impact on per-process
+accounting, regret, or judgment).
+
+#### `POLICY_FEEDBACK_SIGNAL`
+
+Emitted when the current execution shows a feedback-worthy issue. Deterministic
+conservative thresholds:
+
+| `signal_type`         | When emitted                                                                                                |
+|-----------------------|-------------------------------------------------------------------------------------------------------------|
+| `starvation_risk`     | at the same tick as a `STARVATION_WARNING` (once per waiting period per pid)                                |
+| `high_waiting_time`   | when a runnable process's `current_waiting_time >= starvation_threshold` (paired with `starvation_risk`)    |
+| `preemption_overhead` | under RR, the first tick that `preemption_count_so_far >= max(4, total_process_count * 2)` (latched, once)  |
+
+Fields:
+
+```json
+{
+  "tick": 100, "algo": "SJF", "event": "POLICY_FEEDBACK_SIGNAL",
+  "pid": 2, "state": "CONTROL",
+  "signal_type": "starvation_risk",
+  "target_metric": "max_waiting_time",
+  "current_value": 99, "threshold": 10, "deviation_ratio": 9.9,
+  "affected_pids": [2],
+  "severity": "high",
+  "feedback_hint": "SJF may reduce average waiting time but can starve long jobs on this workload."
+}
+```
+
+`severity` is `"high"` when `deviation_ratio >= 2.0`, otherwise `"medium"`.
+`feedback_hint` is a short algorithm-specific note the LLM can quote.
+
+#### `METRIC_SNAPSHOT`
+
+Opt-in via `--feedback-snapshot-interval N` (default `0`, disabled). When
+`N > 0`, emitted at dispatch boundaries whenever
+`tick - last_snapshot_tick >= N`.
+
+Fields: `completed_count`, `total_process_count`, `ready_queue_len`,
+`runnable_count`, `preemption_count_so_far`, `starvation_warning_count_so_far`,
+`idle_ticks_so_far`, `cpu_busy_ticks_so_far`, `cpu_utilization_so_far`,
+`max_ready_queue_len`, `max_waiting_observed`.
+
+#### `RUN_SUMMARY`
+
+Always emitted once, on the final tick of the trace.
+
+Fields: `completed_count`, `total_process_count`, `total_ticks`,
+`preemption_count`, `starvation_warning_count`, `idle_ticks`, `cpu_busy_ticks`,
+`cpu_utilization`, `max_ready_queue_len`, `max_waiting_observed`,
+`feedback_signal_count`, `high_severity_signal_count`.
+
 ## Starvation warning rule
 
 Configured with `--starvation-threshold N` (default `20`; `0` or negative
@@ -276,6 +335,9 @@ python3 simulator.py --workload <path> [options]
   --output PATH                trace path; default traces/<workload>_<algo>.jsonl
   --quantum N                  RR time quantum (default 10)
   --starvation-threshold N     warn after N waiting ticks (default 20; 0 disables)
+  --feedback-snapshot-interval N
+                               emit a METRIC_SNAPSHOT at dispatch boundaries
+                               every >= N ticks (default 0; disabled)
 ```
 
 Paths in the examples below are relative to the **repo root**
@@ -311,6 +373,15 @@ python3 xv6-style-scheduler/simulator/simulator.py \
   --workload workloads/mixed_workload.json \
   --guard outputs/guard_decision.json \
   --output outputs/trace_mixed_guard_selected.jsonl
+
+# Feedback evidence: paired POLICY_FEEDBACK_SIGNAL + METRIC_SNAPSHOT
+# (RUN_SUMMARY is always emitted at end of trace)
+python3 xv6-style-scheduler/simulator/simulator.py \
+  --workload workloads/starvation_risk.json \
+  --algorithm SJF \
+  --output outputs/trace_feedback_sjf.jsonl \
+  --starvation-threshold 10 \
+  --feedback-snapshot-interval 10
 ```
 
 ## Limitations (v1)

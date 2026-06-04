@@ -49,11 +49,47 @@ EV_EXIT = "EXIT"
 EV_IDLE = "IDLE"
 EV_STARVATION = "STARVATION_WARNING"
 
+# Trace-only feedback evidence events (consumed later by the LLM feedback loop;
+# ignored by tools/metrics.py because they carry pid=null and a CONTROL state).
+EV_POLICY_FEEDBACK = "POLICY_FEEDBACK_SIGNAL"
+EV_METRIC_SNAPSHOT = "METRIC_SNAPSHOT"
+EV_RUN_SUMMARY = "RUN_SUMMARY"
+
 # Trace state names.
 ST_RUNNABLE = "RUNNABLE"
 ST_RUNNING = "RUNNING"
 ST_ZOMBIE = "ZOMBIE"
 ST_IDLE = "IDLE"
+ST_CONTROL = "CONTROL"          # non-process, simulator-level evidence events
+
+
+# Feedback hints keyed by signal_type then algorithm. Each is a short,
+# algorithm-specific natural-language note the downstream LLM can quote.
+FEEDBACK_HINTS = {
+    "starvation_risk": {
+        "SJF": "SJF may reduce average waiting time but can starve long jobs on this workload.",
+        "FCFS": "FCFS does not preempt; long jobs can block the queue and starve others.",
+        "PRIORITY": "Priority scheduling may need stronger aging or fallback.",
+        "RR": "Even under RR, an over-long ready queue can push waits past the threshold.",
+    },
+    "high_waiting_time": {
+        "SJF": "SJF favors short jobs; longer jobs may accumulate excessive waiting time.",
+        "FCFS": "FCFS waiting time grows behind any long-running predecessor.",
+        "PRIORITY": "Priority scheduling may need stronger aging or fallback.",
+        "RR": "RR waiting time is high; verify quantum and the ready-queue length.",
+    },
+    "preemption_overhead": {
+        "RR": "RR quantum may be too small and cause excessive preemptions.",
+    },
+}
+
+
+def _feedback_hint(signal_type: str, algorithm: str) -> str:
+    by_algo = FEEDBACK_HINTS.get(signal_type, {})
+    return by_algo.get(
+        algorithm,
+        f"{signal_type} detected under {algorithm}; review scheduling parameters.",
+    )
 
 
 # --------------------------------------------------------------------------- #
@@ -368,6 +404,7 @@ def simulate(
     algorithm: str,
     quantum: int,
     starvation_threshold: int,
+    snapshot_interval: int = 0,
 ) -> List[dict]:
     """Run one algorithm and return the trace as a list of JSON-ready dicts.
 
@@ -377,8 +414,29 @@ def simulate(
 
     Every record carries primary keys ``tick``/``algo`` plus legacy aliases
     ``time``/``algorithm`` for backward compatibility with v1.5 consumers.
+
+    ``snapshot_interval`` (>0) enables METRIC_SNAPSHOT events at dispatch
+    boundaries. POLICY_FEEDBACK_SIGNAL and the closing RUN_SUMMARY are always
+    enabled and serve as evidence for the downstream LLM feedback loop.
     """
     trace: List[dict] = []
+    total = len(processes)
+
+    counters = {
+        "completed_count": 0,
+        "preemption_count": 0,
+        "starvation_warning_count": 0,
+        "idle_ticks": 0,
+        "cpu_busy_ticks": 0,
+        "feedback_signal_count": 0,
+        "high_severity_signal_count": 0,
+        "max_ready_queue_len": 0,
+        "max_waiting_observed": 0,
+    }
+    feedback_state = {
+        "last_snapshot_tick": 0,
+        "preemption_overhead_emitted": False,
+    }
 
     def emit(tick: int, event: str, pid: object, state: Optional[str], **extra) -> None:
         record = {
@@ -397,6 +455,76 @@ def simulate(
     pending = sorted(processes, key=lambda p: (p.arrival_time, pid_sort_key(p.pid)))
     ready: List[Process] = []
 
+    def track_queue_len() -> None:
+        if len(ready) > counters["max_ready_queue_len"]:
+            counters["max_ready_queue_len"] = len(ready)
+
+    def cpu_utilization_so_far() -> float:
+        denom = counters["cpu_busy_ticks"] + counters["idle_ticks"]
+        return round(counters["cpu_busy_ticks"] / denom, 4) if denom else 0.0
+
+    def emit_policy_signal(
+        tick: int,
+        signal_type: str,
+        current_value: float,
+        threshold: float,
+        affected_pids: List[object],
+        target_metric: str,
+    ) -> None:
+        deviation_ratio = (current_value / threshold) if threshold else 0.0
+        severity = "high" if deviation_ratio >= 2.0 else "medium"
+        pid = affected_pids[0] if affected_pids else None
+        emit(
+            tick, EV_POLICY_FEEDBACK, pid, ST_CONTROL,
+            signal_type=signal_type,
+            target_metric=target_metric,
+            current_value=current_value,
+            threshold=threshold,
+            deviation_ratio=round(deviation_ratio, 3),
+            affected_pids=list(affected_pids),
+            severity=severity,
+            feedback_hint=_feedback_hint(signal_type, algorithm),
+        )
+        counters["feedback_signal_count"] += 1
+        if severity == "high":
+            counters["high_severity_signal_count"] += 1
+
+    def maybe_emit_snapshot(tick: int) -> None:
+        if snapshot_interval <= 0:
+            return
+        if tick - feedback_state["last_snapshot_tick"] < snapshot_interval:
+            return
+        runnable_count = sum(
+            1 for p in processes if p.arrived and p.remaining > 0
+        )
+        emit(
+            tick, EV_METRIC_SNAPSHOT, None, ST_CONTROL,
+            completed_count=counters["completed_count"],
+            total_process_count=total,
+            ready_queue_len=len(ready),
+            runnable_count=runnable_count,
+            preemption_count_so_far=counters["preemption_count"],
+            starvation_warning_count_so_far=counters["starvation_warning_count"],
+            idle_ticks_so_far=counters["idle_ticks"],
+            cpu_busy_ticks_so_far=counters["cpu_busy_ticks"],
+            cpu_utilization_so_far=cpu_utilization_so_far(),
+            max_ready_queue_len=counters["max_ready_queue_len"],
+            max_waiting_observed=counters["max_waiting_observed"],
+        )
+        feedback_state["last_snapshot_tick"] = tick
+
+    def maybe_emit_preemption_overhead(tick: int) -> None:
+        if algorithm != "RR" or feedback_state["preemption_overhead_emitted"]:
+            return
+        threshold = max(4, total * 2)
+        if counters["preemption_count"] >= threshold:
+            emit_policy_signal(
+                tick, "preemption_overhead",
+                counters["preemption_count"], threshold,
+                [], "preemption_count",
+            )
+            feedback_state["preemption_overhead_emitted"] = True
+
     def admit(tick: int) -> None:
         # Idempotent: admits every not-yet-arrived process whose arrival time
         # has been reached. Safe to call repeatedly at the same tick.
@@ -412,6 +540,7 @@ def simulate(
                     priority=proc.priority,
                     burst_hint=None,
                 )
+        track_queue_len()
 
     def check_starvation(tick: int, dispatched: Process) -> None:
         if starvation_threshold <= 0:
@@ -420,6 +549,8 @@ def simulate(
             if proc is dispatched:
                 continue
             wait = tick - proc.ready_since
+            if wait > counters["max_waiting_observed"]:
+                counters["max_waiting_observed"] = wait
             if wait >= starvation_threshold and not proc.warned:
                 severity = "high" if wait >= starvation_threshold * 2 else "medium"
                 emit(
@@ -430,10 +561,20 @@ def simulate(
                     threshold=starvation_threshold,
                     severity=severity,
                 )
+                counters["starvation_warning_count"] += 1
+                # Feedback evidence: paired starvation_risk + high_waiting_time
+                # signals so the downstream LLM can reason about either framing.
+                emit_policy_signal(
+                    tick, "starvation_risk", wait, starvation_threshold,
+                    [proc.pid], "max_waiting_time",
+                )
+                emit_policy_signal(
+                    tick, "high_waiting_time", wait, starvation_threshold,
+                    [proc.pid], "avg_waiting_time",
+                )
                 proc.warned = True
 
     select_key = _selection_key(algorithm)
-    total = len(processes)
     finished = 0
     tick = 0
     running: Optional[Process] = None
@@ -449,7 +590,9 @@ def simulate(
                 if not upcoming:
                     break  # safety; should not happen while finished < total
                 emit(tick, EV_IDLE, None, ST_IDLE)
-                tick = min(upcoming)
+                next_tick = min(upcoming)
+                counters["idle_ticks"] += next_tick - tick
+                tick = next_tick
                 admit(tick)
                 continue
 
@@ -469,11 +612,13 @@ def simulate(
                 running.first_run_time = tick
             quantum_left = quantum          # only consulted for RR
             emit(tick, EV_DISPATCH, running.pid, ST_RUNNING, queue=0)
+            maybe_emit_snapshot(tick)
 
         # Execute exactly one tick.
         running.remaining -= 1
         tick += 1
         quantum_left -= 1
+        counters["cpu_busy_ticks"] += 1
 
         # Admit arrivals at the new tick before re-queuing any preempted
         # process, so freshly-arrived processes sit ahead of it (standard RR).
@@ -494,6 +639,7 @@ def simulate(
             )
             running = None
             finished += 1
+            counters["completed_count"] += 1
         elif algorithm == "RR" and quantum_left == 0:
             emit(
                 tick, EV_PREEMPT, running.pid, ST_RUNNABLE,
@@ -503,8 +649,27 @@ def simulate(
             running.ready_since = tick
             running.warned = False
             ready.append(running)           # preempted -> back of the queue
+            counters["preemption_count"] += 1
+            track_queue_len()
+            maybe_emit_preemption_overhead(tick)
             running = None
         # otherwise the same process keeps running next tick
+
+    emit(
+        tick, EV_RUN_SUMMARY, None, ST_CONTROL,
+        completed_count=counters["completed_count"],
+        total_process_count=total,
+        total_ticks=tick,
+        preemption_count=counters["preemption_count"],
+        starvation_warning_count=counters["starvation_warning_count"],
+        idle_ticks=counters["idle_ticks"],
+        cpu_busy_ticks=counters["cpu_busy_ticks"],
+        cpu_utilization=cpu_utilization_so_far(),
+        max_ready_queue_len=counters["max_ready_queue_len"],
+        max_waiting_observed=counters["max_waiting_observed"],
+        feedback_signal_count=counters["feedback_signal_count"],
+        high_severity_signal_count=counters["high_severity_signal_count"],
+    )
 
     return trace
 
@@ -562,6 +727,13 @@ def build_parser() -> argparse.ArgumentParser:
         help=f"emit STARVATION_WARNING after this many waiting ticks. "
              f"Default: {DEFAULT_STARVATION_THRESHOLD}. Use 0 (or negative) to disable.",
     )
+    parser.add_argument(
+        "--feedback-snapshot-interval", type=int, default=0,
+        dest="feedback_snapshot_interval",
+        help="emit a METRIC_SNAPSHOT at dispatch boundaries whenever the tick has "
+             "advanced by at least N since the previous snapshot. "
+             "Default: 0 (disabled).",
+    )
     return parser
 
 
@@ -595,18 +767,27 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     threshold = args.starvation_threshold
 
+    snapshot_interval = args.feedback_snapshot_interval
+    if snapshot_interval < 0:
+        warn("feedback-snapshot-interval must be >= 0; disabling.")
+        snapshot_interval = 0
+
     output_path = (
         Path(args.output) if args.output
         else default_output_path(workload_path, algorithm)
     )
 
-    trace = simulate(processes, algorithm, quantum, threshold)
+    trace = simulate(processes, algorithm, quantum, threshold, snapshot_interval)
     write_trace(trace, output_path)
 
     warnings = sum(1 for r in trace if r["event"] == EV_STARVATION)
+    feedback_signals = sum(1 for r in trace if r["event"] == EV_POLICY_FEEDBACK)
+    snapshots = sum(1 for r in trace if r["event"] == EV_METRIC_SNAPSHOT)
     print(f"workload   : {workload_path}  ({len(processes)} processes)")
     print(f"algorithm  : {algorithm}" + (f"  (quantum={quantum})" if algorithm == "RR" else ""))
     print(f"starvation : threshold={threshold if threshold > 0 else 'disabled'}, warnings={warnings}")
+    print(f"feedback   : signals={feedback_signals}, snapshots={snapshots}"
+          + (f" (interval={snapshot_interval})" if snapshot_interval > 0 else ""))
     print(f"trace      : {output_path}  ({len(trace)} events)")
     return 0
 
