@@ -6,7 +6,7 @@ import {
   loadManifest, loadRecommendation, loadGuardDecision,
   loadWorkloadSummary, loadMetrics, loadAllTraces,
   getLiveDataBase,
-  loadRuntimeEvents, loadCorrectionProposal, loadCorrectionGuardDecision,
+  loadRuntimeEvents, loadCorrectionProposal, loadCorrectionGuardDecision, loadCorrectionApplied,
 } from './data/liveDataClient.js'
 import { tickToMs } from './components/constants.js'
 import { useRun } from './data/useRun.js'
@@ -186,6 +186,7 @@ import LLMRecommendation   from './components/LLMRecommendation.jsx'
 import AlgorithmGuard      from './components/AlgorithmGuard.jsx'
 import EvaluationResult    from './components/EvaluationResult.jsx'
 import TraceExplanationCard from './components/TraceExplanationCard.jsx'
+import RuntimeCorrectionCard from './components/RuntimeCorrectionCard.jsx'
 import LLMExplanation      from './components/LLMExplanation.jsx'
 import AnalyzingStatus     from './components/AnalyzingStatus.jsx'
 import MainGantt           from './components/MainGantt.jsx'
@@ -237,6 +238,7 @@ export default function App() {
   const [runtimeEvents,           setRuntimeEvents]           = useState(null)
   const [correctionProposal,      setCorrectionProposal]      = useState(null)
   const [correctionGuardDecision, setCorrectionGuardDecision] = useState(null)
+  const [correctionApplied,       setCorrectionApplied]       = useState(null)
 
   const manifestVersionRef = useRef(null)
   const recommendedAlgoRef = useRef('MLFQ')
@@ -284,14 +286,16 @@ export default function App() {
         if (exRes.ok) setTraceExplanation(await exRes.json())
       } catch {/* optional */}
 
-      const [re, cp, cd] = await Promise.all([
+      const [re, cp, cd, ca] = await Promise.all([
         loadRuntimeEvents(),
         loadCorrectionProposal(),
         loadCorrectionGuardDecision(),
+        loadCorrectionApplied(),
       ])
       setRuntimeEvents(re)
       setCorrectionProposal(cp)
       setCorrectionGuardDecision(cd)
+      setCorrectionApplied(ca)
     } catch (err) {
       setLoadError(err.message)
       setDataMode('fallback')
@@ -559,6 +563,7 @@ export default function App() {
             onSelectedMetricChange={setSelectedMetric}
           />
           <TraceExplanationCard explanation={traceExplanation} />
+          <RuntimeCorrectionCard correction={correctionApplied} />
         </div>
       </div>
     )
