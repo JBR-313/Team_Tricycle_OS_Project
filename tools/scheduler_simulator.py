@@ -1,6 +1,6 @@
 """Scheduler Simulator — DEV / FALLBACK only, NOT the final demo backend.
 
-Role classification (see docs/codebase_slimming_plan.md §2.2):
+Role classification (see docs/architecture.md and docs/implementation_status.md):
   DEV / FALLBACK — used by `scripts/orchestrator.py --backend simulator` when
   QEMU/xv6 is unavailable, and by host-side smoke tests. It is a Python
   model of the algorithms, **not** proof of real xv6 execution. The dashboard
@@ -13,7 +13,8 @@ SJF/SRTF here schedule on an EMA `predicted_burst` (mirroring the xv6 kernel's
 exponential-averaging predictor), never on the actual remaining burst — see
 `_pick_sjf` / `_pick_srtf`, which explicitly never read `p.remaining` (ground
 truth). `p.remaining` is used only by the simulation engine to advance time,
-not to make scheduling decisions. See docs/sjf_srtf_prediction_audit.md.
+not to make scheduling decisions. See docs/system_limitations.md
+("SJF/SRTF are limited by the no-future-burst rule").
 
 Reads a workload JSON and a guard_decision JSON, simulates the chosen
 scheduling algorithm, and emits:
@@ -48,7 +49,7 @@ from schema_compat import (
 )
 
 
-# ── Hidden-burst separation (matches xv6 kernel: docs/sjf_srtf_prediction_audit.md)
+# ── Hidden-burst separation (matches xv6 kernel: docs/system_limitations.md)
 # `actual_bursts` are the ground-truth runtime values: used by execution
 # (decrementing `remaining`) and by evaluation. SJF/SRTF MUST NOT read them.
 # `predicted_burst` is the scheduler-visible value used by SJF/SRTF picks; it

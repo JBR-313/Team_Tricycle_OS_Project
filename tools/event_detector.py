@@ -1,15 +1,20 @@
-"""Event Detector — feeds the PREVIEW-ONLY runtime correction loop.
+"""Event Detector — feeds the runtime correction loop.
 
-Role classification (see docs/codebase_slimming_plan.md §2.2):
-  FUTURE-WORK (used in preview path). The closed-loop runtime correction
-  (detect -> propose -> guard -> APPLY back to xv6 -> CORRECTION_APPLIED
-  event) is NOT implemented. Only the first three stages exist today:
+Role classification (see docs/implementation_status.md):
+  detect -> propose -> guard -> APPLY is implemented HOST-SIDE as a
+  post-evaluation loop: orchestrator.py `_run_correction_apply_loop`
+  re-runs the backend with the corrected Scheduling Algorithm/params and
+  records the before/after in correction_applied.json. The three stages
+  feeding it are:
     tools/event_detector.py       (this file)
-    tools/correction_proposer.py  (preview only)
-    tools/correction_guard.py     (preview only)
-  No code path applies a correction to a running xv6 kernel. Anything that
-  looks like “runtime correction” in the dashboard is the
-  RuntimeCorrectionPreview card — labelled preview-only.
+    tools/correction_proposer.py
+    tools/correction_guard.py
+  There is NO in-kernel, mid-run injection: no code path rewrites a
+  *running* xv6 kernel's decisions at a timer tick, and the LLM never
+  picks the next process. "Correction" means a guarded host-side re-run,
+  surfaced in the dashboard's RuntimeCorrection card. The separate
+  preview-only artifacts (correction_proposal.json /
+  correction_guard_decision.json) stay labelled preview_only=true.
 
 This module watches a trace JSONL for scheduling problems and emits
 runtime_events.json.

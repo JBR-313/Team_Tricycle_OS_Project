@@ -212,7 +212,7 @@ def _clamp_burst(x: float) -> int:
 def _validate_predicted_bursts(items, expected_pids: set | None = None) -> list:
     """Validation of the OPTIONAL predicted_bursts[] list.
 
-    Honesty contract (docs/sjf_srtf_prediction_audit.md §3 + verification_goal §7):
+    Honesty contract (docs/system_limitations.md, no-future-burst rule):
       - Drops malformed entries instead of failing, so a partial model answer
         still yields a usable recommendation.
       - Deduplicates by pid (last hint wins — LLMs sometimes restate).

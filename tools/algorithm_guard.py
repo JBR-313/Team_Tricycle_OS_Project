@@ -48,7 +48,7 @@ except ImportError:  # when run as `python3 tools/algorithm_guard.py`
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 # RR/FCFS/PRIORITY/MLFQ implemented in xv6; SJF/SRTF are prediction-based
-# (exponential averaging) — see docs/work_status_sjf_srtf.md.
+# (exponential averaging) — see docs/system_limitations.md.
 SUPPORTED_ALGORITHMS = list(CANONICAL_ALGOS)
 SUPPORTED_METRICS = [
     "response_time",

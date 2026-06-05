@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """run_server.py — minimal HTTP backend for the dashboard's RUN button.
 
-Design contract: docs/dashboard_run_button_design.md.
+Invokes the pipeline described in docs/orchestrator_design.md.
 Single-run-at-a-time, stdlib-only (no Flask/FastAPI), localhost-only by default.
 
 Endpoints (CORS-allowed for http://localhost:5174):
@@ -45,6 +45,12 @@ XV6_PROFILES = {
     "short_jobs", "starvation_risk",
 }
 SIM_PROFILES = XV6_PROFILES | {
+    # v2 workload-ID aliases offered by the dashboard's simulator dropdown
+    # (dashboard_live/.../RunControls.jsx PROFILES_SIM). These resolve in
+    # orchestrator.PROFILE_MAP; keep this whitelist in sync or the RUN button
+    # 400s on a profile the orchestrator would happily accept.
+    "interactive_heavy", "short_jobs_clustered", "long_job_first_convoy",
+    "interactive_mixed", "priority_critical_tasks",
     "cpu_bound_vs_io_bound", "ambiguous_mixed",
     "pure_batch", "bursty_long_tail",
     # Scheduling-lab coverage workloads (simulator only).

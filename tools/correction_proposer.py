@@ -23,7 +23,9 @@ both unchanged):
       the LLM returns an unparseable / out-of-range proposal — the
       Correction Guard then ratifies whichever survived.
 
-See docs/runtime_correction_preview_design.md for the schema.
+See docs/dashboard_data_contract.md (§2b correction_applied.json and the
+preview-only correction_proposal.json / correction_guard_decision.json) for
+the schema.
 
 Usage:
     python3 tools/correction_proposer.py \\

@@ -34,7 +34,7 @@ MIN_STARVATION_WAIT_TICKS = 5
 MIN_COMPLETED_FOR_STARVATION = 3
 STARVATION_MAKESPAN_FRACTION = 0.5
 
-# Regret/judgment thresholds (see docs/evaluation_criteria_audit.md).
+# Regret/judgment thresholds (see docs/evaluation_plan.md §Regret Score).
 # Updated 2026-05-28: NEAR_SUCCESS_REGRET tightened from 0.30 -> 0.25 per
 # the overnight work plan §5 (normalized regret evaluator). Constants are
 # the single source of truth; any callers hardcoding 0.30 must import these.

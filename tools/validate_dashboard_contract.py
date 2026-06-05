@@ -349,8 +349,8 @@ def _check_correction_guard(d: Path, proposal: dict | None, r: Report) -> dict |
 
 def _check_preview(d: Path, r: Report) -> None:
     """Optional --preview pass. Validates the three preview artifacts if any
-    of them is present, against the §3 schema in
-    docs/runtime_correction_preview_validation.md.
+    of them is present, against the schema in
+    docs/dashboard_data_contract.md (§2b + preview-only artifacts).
     """
     print("\nValidating runtime-correction preview artifacts")
     events_doc, events = _check_runtime_events(d, r)
@@ -481,7 +481,7 @@ def main() -> int:
                     help="opt-in: also validate runtime correction preview artifacts "
                          "(runtime_events.json + correction_proposal.json + "
                          "correction_guard_decision.json). Default mode never requires them. "
-                         "See docs/runtime_correction_preview_validation.md.")
+                         "See docs/dashboard_data_contract.md.")
     args = ap.parse_args()
 
     d = Path(args.dir)
