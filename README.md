@@ -269,15 +269,23 @@ The recommendation is sent to the Algorithm Guard before execution.
 
 ### 4.2 Running
 
-#### 4.2.1 Runtime Correction Proposer *(Partial / Future Work)*
+#### 4.2.1 Runtime Correction Proposer & host-side apply loop *(implemented)*
 
-> This subsection describes the **planned** closed-loop runtime
-> correction design — the **target**, not what ships today. On
-> current main only `tools/event_detector.py` exists. The proposer,
-> the LLM call, the guard re-check on a correction, the apply step
-> in xv6, and the `CORRECTION_APPLIED` trace event the dashboard
-> would render are all Future Work. See the §11.1 Implementation
-> Status row.
+> **What is implemented today:** `tools/event_detector.py` (runtime event
+> detection), `tools/correction_proposer.py` (correction proposal),
+> `tools/correction_guard.py` (correction re-check), and the **host-side
+> post-evaluation correction apply loop** in `scripts/orchestrator.py`
+> (`_run_correction_apply_loop`). When the selected algorithm is judged FAIL
+> (or starves), the loop re-runs the real xv6 kernel on the **same** workload
+> with a corrected, Guard-approved algorithm/params, compares before/after, and
+> records `correction_applied.json` (`applied=true`).
+>
+> **What is intentionally NOT implemented:** there is no LLM inside the kernel,
+> no tick-level online correction, no kernel hot-path correction, and no
+> websocket live streaming. Runtime correction is a host-side closed loop
+> applied AFTER a run is evaluated — never live kernel control. On the
+> simulator backend the apply loop is an intentional no-op (it re-runs the real
+> kernel, which the simulator is not). See §11.1.
 
 During execution, the Trace Monitor watches the Scheduling Trace Log.
 
@@ -315,15 +323,26 @@ Possible correction types:
 - aging threshold adjustment
 - time quantum adjustment
 
-The correction would be re-checked by the Algorithm Guard.
+The correction is re-checked by the Correction Guard before it is applied.
 
-In the design target, the correction would be applied at the next scheduling point, not by interrupting every timer tick with an LLM call. **Today this apply step is still Future Work** (see §11.1).
+The correction is applied as a host-side **post-evaluation** step: after the
+original run is fully evaluated, the orchestrator launches a second ordinary xv6
+run with the corrected, Guard-approved algorithm/params and records the
+before/after comparison in `correction_applied.json`. It is **not** applied by
+interrupting every timer tick with an LLM call, and the LLM never runs inside
+the kernel (see §11.1).
 
 ---
 
 ### 4.3 After Running
 
-#### 4.3.1 Trace Explainer
+#### 4.3.1 Trace Explainer *(implemented, wired into the pipeline)*
+
+> `tools/trace_explainer.py` runs as orchestrator step **[8]**. Every run
+> produces a fresh `trace_explanation.json` for that run, or an explicit
+> `available: false` placeholder when the LLM is unavailable (no
+> `UPSTAGE_API_KEY`). The dashboard's Evaluation tab renders it and never shows
+> a stale explanation from an older run.
 
 After execution, the system summarizes:
 
@@ -352,12 +371,15 @@ Example output:
 
 The Trace Explainer helps users understand not only what happened, but why it happened.
 
-#### 4.3.2 Feedback Rule Generator *(Partial / Future Work)*
+#### 4.3.2 Feedback Rule Generator *(implemented, FAIL-only)*
 
-> Design target, not shipped today. No production feedback-rule
-> generator exists in `tools/`. The example below is the **planned**
-> JSON shape, included so the design is visible to readers. See
-> §11.1.
+> `tools/llm_advisor.py --mode feedback` runs as orchestrator step **[9]** and
+> fires **only** when the run's judgment is FAIL (or starvation occurred);
+> SUCCESS / NEAR-SUCCESS skip honestly. New non-duplicate rules are appended to
+> `feedback_rules.md` (FIFO-capped, deduped) and fed into future advise prompts.
+> Feedback is **never faked**: with no `UPSTAGE_API_KEY` the step logs an
+> explicit skip rather than substituting fixture rules. Generated rules affect
+> FUTURE recommendations, not the just-finished run.
 
 If the LLM recommendation was poor, the system asks the LLM to generate a feedback rule.
 
@@ -494,14 +516,18 @@ The GUI shows (as `dashboard_live`, the primary React/Vite UI on
 - before/after metrics (Algorithm Comparison + Metric
   Visualization).
 - Evaluation Result (judgment + regret).
-- Trace Explainer result (LLM Explanation card).
-- Header status bar with backend badge (**`XV6 TRACE`** /
-  `SIMULATOR FALLBACK` / `FALLBACK`), snapshot selector, snapshot
-  pill (e.g. `SNAPSHOT: cpu_bound`), manifest version, last
-  updated timestamp.
+- Trace Explainer result — the post-run **LLM Explanation (post-run)** card on
+  the Evaluation tab renders `trace_explanation.json`, or a clear
+  *NOT AVAILABLE* state when the explanation could not be generated.
+- Header **data-source badge** derived from the live-data manifest
+  (**`XV6 TRACE`** / `SIMULATOR` / `FALLBACK` / `SNAPSHOT` / `UNKNOWN SOURCE`)
+  so simulator output is never mistaken for a real xv6 run, plus the
+  phase-aware RUN button and run-state pill.
 
-> Runtime-correction events and Feedback Rule output are **not**
-> rendered today — they are Partial / Future Work (see §11.1).
+> The runtime-correction **apply loop** runs in the pipeline and writes
+> `correction_applied.json`; the **feedback rules** (FAIL-only) are written to
+> `feedback_rules.md`. Both are produced by the orchestrator today, but are not
+> yet surfaced as dedicated dashboard cards (the explanation card is). See §11.1.
 
 Main dashboard message:
 
@@ -516,12 +542,15 @@ Main dashboard message:
 > same seed + profile) → Metrics Evaluator → snapshot tour across
 > the four curated xv6 profiles.
 >
-> The scenario below is the **target narrative for closed-loop
-> runtime correction** — it is Partial / Future Work today
-> (only event detection ships). Read it as the planned story, not
-> as what the demo currently performs.
+> The scenario below illustrates the **host-side closed-loop runtime
+> correction** that ships today: event detection → correction proposal →
+> correction guard → a second, ordinary xv6 run with the corrected
+> Guard-approved algorithm/params → before/after comparison in
+> `correction_applied.json`. The one nuance: the correction is applied as a
+> **post-evaluation** re-run on the host, NOT "from the next scheduling point"
+> inside the kernel — the LLM never runs in the kernel hot path.
 
-### Scenario: Starvation under Priority Scheduling *(Future Work)*
+### Scenario: Starvation under Priority Scheduling
 
 1. User goal:
    - interactive jobs should respond quickly
@@ -540,15 +569,17 @@ Main dashboard message:
    - reduce aging threshold
    - or change Scheduling Algorithm to MLFQ
 
-6. Algorithm Guard:
-   - validates the correction
+6. Correction Guard:
+   - validates the proposed correction
 
-7. xv6:
-   - applies correction from the next scheduling point
+7. xv6 (host-side apply loop):
+   - the orchestrator launches a second xv6 run with the corrected
+     algorithm/params on the same workload (post-evaluation, not tick-level)
 
 8. Metrics Evaluator:
    - max waiting time decreases
    - starvation disappears
+   - before/after recorded in correction_applied.json
 
 9. GUI:
    - shows before/after Gantt chart
@@ -586,13 +617,15 @@ dashboard_live/public/live-data/snapshots/mixed/…
 dashboard_live/public/live-data/snapshots/priority_sensitive/…
 ```
 
-Planned but **not shipped** today (Partial / Future Work, see
-§11.1):
+After-running artifacts the pipeline writes today (host-side; see §11.1):
 
 ```text
-outputs/runtime_events.json   # event_detector output (only event detection ships)
-outputs/correction.json       # the proposer / guard re-check loop is not wired
-outputs/feedback_rules.md     # no production feedback-rule generator
+outputs/live/runtime_events.json          # event_detector output (observational)
+outputs/live/correction_proposal.json     # correction_proposer (preview_only)
+outputs/live/correction_guard_decision.json # correction_guard re-check (preview)
+outputs/live/correction_applied.json      # host-side apply loop result (applied=true/false)
+outputs/live/trace_explanation.json       # trace_explainer step [8] (fresh per run, or available:false)
+outputs/live/feedback_rules.md            # llm_advisor --mode feedback step [9] (FAIL-only)
 ```
 
 ---
@@ -797,7 +830,10 @@ Concise current status:
 | `.github/workflows/ci.yml` (lightweight CI) | **Implemented** | py_compile + strict validator on committed live-data + dashboard_live build. **No QEMU/xv6 in CI** — local orchestrator run remains authoritative |
 | `trace_parser.py` real-log support + lenient `RUN_BEGIN` recovery | **Implemented** | survives kernel/user printf interleave |
 | LLM Advisor (Solar Pro 3) + Algorithm Guard | **Implemented** | Runtime backend is Upstage Solar Pro 3. The orchestrator is **strict by default**: missing/invalid `UPSTAGE_API_KEY` or any advisor failure exits with a clear error. Pass `--offline-fixture` (or `--allow-fallback`) to opt in to the committed `outputs/_demo_fixtures/` fixtures; that path stamps `manifest.metadata_source = "demo_fallback"`. |
-| Runtime correction loop (detect → propose → LLM → guard → apply → `CORRECTION_APPLIED`) | **Partial / Future Work** | only event detection exists today |
+| Runtime correction — host-side post-evaluation apply loop (detect → propose → correction-guard → re-run xv6 → before/after → `correction_applied.json`) | **Implemented** | `scripts/orchestrator.py` step [7]. NOT kernel hot-path / not tick-level / no in-kernel LLM. Simulator backend = intentional no-op. |
+| Trace Explainer (`tools/trace_explainer.py`, orchestrator step [8]) | **Implemented** | fresh `trace_explanation.json` per run or explicit `available:false`; rendered on the Evaluation tab |
+| Feedback Rule Generator (`llm_advisor --mode feedback`, orchestrator step [9]) | **Implemented (FAIL-only)** | fires only on FAIL/starvation; never faked when no API key; FIFO-capped + deduped in `feedback_rules.md` |
+| Core unit tests (`tests/`, pytest) + CI step | **Implemented** | guard / metrics / trace_parser / workloads; offline, no API key |
 | Live streaming | **Polling only** | no websocket; `manifest.json` poll |
 
 > **LLM suggests. Algorithm Guard checks. xv6 executes. Metrics verify. GUI explains.**
