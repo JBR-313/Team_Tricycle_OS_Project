@@ -473,10 +473,9 @@ export default function App() {
   function renderLLMTab() {
     if (demoPhase === DemoPhase.IDLE) {
       return (
-        <div className="page1-layout">
-          <div className="page1-left">
+        <div className="llm-idle-layout">
+          <div className="llm-idle-main">
             <div className="llm-idle-hero">
-              <div className="llm-idle-badge">LLM Scheduling Advisor</div>
               <h2 className="llm-idle-title">Ready to analyze workload</h2>
               <p className="llm-idle-sub">
                 Press <strong>RUN ANALYSIS</strong> to let the LLM read the workload
@@ -489,9 +488,12 @@ export default function App() {
               </div>
             </div>
           </div>
-          <div className="page1-right">
+          <aside className="llm-idle-aside">
             <WorkloadSummary workloadSummary={workloadSummary} />
-          </div>
+            <p className="llm-idle-note">
+              This is the input profile only. Analysis results appear after you press RUN.
+            </p>
+          </aside>
         </div>
       )
     }
@@ -575,6 +577,7 @@ export default function App() {
         runDisabled={runDisabled}
         runPill={runPill}
         onRunClick={handlePrimaryRun}
+        minimal={demoPhase === DemoPhase.IDLE}
       />
       <div className="dashboard-main tab-main">
         {tab === 'LLM' && renderLLMTab()}

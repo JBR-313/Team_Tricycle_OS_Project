@@ -1,7 +1,7 @@
 {
   "scheduling_algorithm": "SJF",
   "params": {
-    "alpha_percent": 50,
+    "alpha_percent": 20,
     "initial": 10,
     "min": 1,
     "max": 100000
