@@ -191,7 +191,6 @@ import MainGantt           from './components/MainGantt.jsx'
 import ProcessState        from './components/ProcessState.jsx'
 import TraceStack          from './components/TraceStack.jsx'
 import ProcessLanes        from './components/ProcessLanes.jsx'
-import WorkloadSummary     from './components/WorkloadSummary.jsx'
 import AlgorithmComparison from './components/AlgorithmComparison.jsx'
 import MetricVisualization from './components/MetricVisualization.jsx'
 import MLFQQueuePanel      from './components/MLFQQueuePanel.jsx'
@@ -474,26 +473,18 @@ export default function App() {
     if (demoPhase === DemoPhase.IDLE) {
       return (
         <div className="llm-idle-layout">
-          <div className="llm-idle-main">
-            <div className="llm-idle-hero">
-              <h2 className="llm-idle-title">Ready to analyze workload</h2>
-              <p className="llm-idle-sub">
-                Press <strong>RUN ANALYSIS</strong> to let the LLM read the workload
-                and recommend a scheduling algorithm.
-              </p>
-              <div className="llm-idle-steps">
-                <span className="llm-idle-step">1 · Analyze workload</span>
-                <span className="llm-idle-step">2 · Recommend algorithm</span>
-                <span className="llm-idle-step">3 · Validate &amp; explain</span>
-              </div>
+          <div className="llm-idle-hero">
+            <h2 className="llm-idle-title">Ready to analyze workload</h2>
+            <p className="llm-idle-sub">
+              Press <strong>RUN ANALYSIS</strong> to let the LLM read the workload
+              and recommend a scheduling algorithm.
+            </p>
+            <div className="llm-idle-steps">
+              <span className="llm-idle-step">1 · Analyze workload</span>
+              <span className="llm-idle-step">2 · Recommend algorithm</span>
+              <span className="llm-idle-step">3 · Validate &amp; explain</span>
             </div>
           </div>
-          <aside className="llm-idle-aside">
-            <WorkloadSummary workloadSummary={workloadSummary} />
-            <p className="llm-idle-note">
-              This is the input profile only. Analysis results appear after you press RUN.
-            </p>
-          </aside>
         </div>
       )
     }
