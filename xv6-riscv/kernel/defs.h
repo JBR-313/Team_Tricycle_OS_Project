@@ -111,6 +111,15 @@ int             get_predicted_burst(int);
 int             set_burst_hint(int, int);
 void            sched_trace(int, const char*, int, const char*, int, int, const char*);
 void            sched_trace_queue(int, int, int, int, const char*);
+int             get_rr_quantum(void);
+int             set_rr_quantum(int);
+int             get_priority_aging_threshold(void);
+int             set_priority_aging_threshold(int);
+int             get_mlfq_queues(void);
+int             get_mlfq_quantum(int);
+int             get_mlfq_boost_interval(void);
+int             set_mlfq_params(int, int, int, int, int, int);
+int             set_mlfq_boost(int);
 
 // swtch.S
 void            swtch(struct context*, struct context*);

@@ -44,6 +44,146 @@ NEAR_SUCCESS_REGRET = 0.25
 # Only these algorithms produce a meaningful burst prediction error.
 PREDICTIVE_ALGORITHMS = ("SJF", "SRTF")
 
+# ── Fixed xv6 kernel scheduler constants ──────────────────────────────────────
+# These mirror the compile-time constants the xv6 backend actually runs with
+# (xv6-riscv/kernel/proc.c + trap.c). They are the single source of truth for
+# the *applied_params* honesty distinction: RR and MLFQ do NOT consume dynamic
+# LLM/Guard parameters, and Priority aging is a fixed threshold, so whatever the
+# LLM recommended is recorded separately under recommended_params while these
+# values are reported as what xv6 actually applied.
+KERNEL_RR_QUANTUM = 1                 # trap.c preempts RR every timer tick
+KERNEL_AGE_THRESHOLD = 10             # proc.c AGE_THRESHOLD (Priority aging)
+KERNEL_MLFQ_QUEUES = 3                # proc.c sched_mlfq: 3 queues (0..2)
+KERNEL_MLFQ_QUANTUM = [2, 4, 8]       # trap.c mlfq_quanta[3]
+KERNEL_MLFQ_BOOST_THRESHOLD = 20      # proc.c MLFQ_BOOST_THRESHOLD
+
+
+def _parse_csv_ints(val):
+    """Coerce a CSV string (or bare int) of ints into a list of ints.
+
+    The xv6 MLFQ_PARAMS trace emits ``quantum=2,4,8`` as a single token, which
+    the trace parser leaves as the string "2,4,8" (a lone int stays int).
+    """
+    if isinstance(val, bool):
+        return []
+    if isinstance(val, int):
+        return [val]
+    if isinstance(val, str):
+        out = []
+        for tok in val.split(","):
+            tok = tok.strip()
+            if tok.lstrip("-").isdigit():
+                out.append(int(tok))
+        return out
+    return []
+
+
+def derive_applied_params(algorithm, events):
+    """Return the parameters the xv6 backend ACTUALLY applied for this run.
+
+    This is the honest counterpart to the LLM/Guard *recommended_params*. The
+    xv6 backend now applies dynamic RR/Priority/MLFQ parameters per run
+    (setrrquantum / setpriorityaging / setmlfqparams), so when the matching
+    ``*_PARAMS`` trace event is present the value really did reach and was
+    accepted by the kernel and is labelled ``llm_guard``. When no such event is
+    present (a comparison run that the orchestrator launched on kernel defaults)
+    the compile-time default is reported with source ``xv6_default``. For
+    SJF/SRTF the predictor params and per-process burst priors are read from the
+    PREDICTOR_PARAMS / BURST_HINT_APPLIED events. FCFS has no parameters.
+
+    Returns a dict (possibly empty). Never invents values it cannot observe.
+    """
+    algo = (algorithm or "").upper()
+
+    if algo == "FCFS":
+        return {}
+    if algo == "RR":
+        for ev in events:
+            if ev.get("event") == "RR_PARAMS" and isinstance(ev.get("quantum"), int):
+                return {"quantum": ev["quantum"], "source": "llm_guard"}
+        return {"quantum": KERNEL_RR_QUANTUM, "source": "xv6_default"}
+    if algo == "PRIORITY":
+        for ev in events:
+            if (ev.get("event") == "PRIORITY_PARAMS"
+                    and isinstance(ev.get("aging_threshold"), int)):
+                return {
+                    "aging_threshold": ev["aging_threshold"],
+                    "priority_source": "schedtest_profile",
+                    "source": "llm_guard",
+                }
+        return {
+            "aging_threshold": KERNEL_AGE_THRESHOLD,
+            "priority_source": "schedtest_profile",
+            "source": "xv6_default",
+        }
+    if algo == "MLFQ":
+        for ev in events:
+            if ev.get("event") == "MLFQ_PARAMS":
+                applied = {"source": "llm_guard"}
+                if isinstance(ev.get("queues"), int):
+                    applied["queues"] = ev["queues"]
+                q = _parse_csv_ints(ev.get("quantum"))
+                if q:
+                    applied["quantum"] = q
+                if isinstance(ev.get("boost_interval"), int):
+                    applied["boost_interval"] = ev["boost_interval"]
+                # Fill any field a truncated serial line dropped with the
+                # kernel default so the record is always complete.
+                applied.setdefault("queues", KERNEL_MLFQ_QUEUES)
+                applied.setdefault("quantum", list(KERNEL_MLFQ_QUANTUM))
+                applied.setdefault("boost_interval", KERNEL_MLFQ_BOOST_THRESHOLD)
+                return applied
+        return {
+            "queues": KERNEL_MLFQ_QUEUES,
+            "quantum": list(KERNEL_MLFQ_QUANTUM),
+            "boost_interval": KERNEL_MLFQ_BOOST_THRESHOLD,
+            "source": "xv6_default",
+        }
+    if algo in PREDICTIVE_ALGORITHMS:
+        applied = {"source": "llm_guard"}
+        # Predictor EMA params, as accepted by the kernel (PREDICTOR_PARAMS).
+        for ev in events:
+            if ev.get("event") == "PREDICTOR_PARAMS":
+                for src, dst in (("alpha", "alpha_percent"), ("initial", "initial"),
+                                 ("min", "min"), ("max", "max")):
+                    if isinstance(ev.get(src), int):
+                        applied[dst] = ev[src]
+                break
+        # Per-process initial priors the kernel actually accepted, in fork order.
+        hints = []
+        for ev in events:
+            if ev.get("event") == "BURST_HINT_APPLIED":
+                idx = ev.get("index")
+                pb = ev.get("predicted_burst")
+                if isinstance(idx, int) and isinstance(pb, int):
+                    hints.append((idx, pb))
+        if hints:
+            hints.sort(key=lambda x: x[0])
+            applied["burst_hints"] = [pb for _idx, pb in hints]
+        return applied
+
+    return {}
+
+
+def param_application_status(algorithm, applied):
+    """Classify how the applied params relate to the recommendation.
+
+    - ``not_applicable`` : algorithm has no tunable params (FCFS).
+    - ``fully_applied``  : LLM/Guard params actually reached xv6 (source
+                           ``llm_guard``).
+    - ``fixed_default``  : the run used the kernel's compile-time default
+                           (source ``xv6_default``), i.e. no dynamic param was
+                           passed for this algorithm on this run.
+    """
+    algo = (algorithm or "").upper()
+    if algo == "FCFS":
+        return "not_applicable"
+    src = (applied or {}).get("source")
+    if src == "llm_guard":
+        return "fully_applied"
+    return "fixed_default"
+
+
 # Higher is better for these metrics; everything else is lower-is-better.
 HIGHER_IS_BETTER = ("throughput",)
 
@@ -651,6 +791,7 @@ def compute_metrics(events, recommendation=None):
     metrics = {
         "scheduling_algorithm": scheduling_algorithm,
         "params": infer_params(events),
+        "applied_params": derive_applied_params(scheduling_algorithm, events),
         "process_count": process_count,
         "completed_count": completed_count,
         "total_execution_time": total_execution_time,

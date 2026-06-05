@@ -224,6 +224,30 @@ Example output:
 
 The recommendation is sent to the Algorithm Guard before execution.
 
+> **Recommended vs applied (xv6 backend honesty).** The xv6 backend now applies
+> the LLM/Guard-validated parameters of the **selected algorithm** to the real
+> kernel before the workload runs, via dedicated syscalls:
+> RR `quantum` (`setrrquantum`), Priority `aging_threshold` (`setpriorityaging`),
+> MLFQ `queues`/`quantum`/`boost_interval` (`setmlfqparams`/`setmlfqboost`), and
+> the SJF/SRTF predictor params + per-process burst priors
+> (`setpredictor`/`setbursthint`). Each is proven by a `[SCHEDTEST] event=*_PARAMS`
+> trace line. The Guard validates params only for the **selection**, so the other
+> algorithms in the comparison sweep honestly run on xv6's compile-time defaults.
+> `metrics.json` records, per algorithm, `recommended_params` (what the LLM/Guard
+> asked for), `applied_params` (what xv6 actually used, tagged `llm_guard` or
+> `xv6_default`), and `param_application_status`
+> (`fully_applied` / `fixed_default` / `not_applicable`).
+> See `docs/dashboard_data_contract.md`.
+
+> **Runtime correction (host-side closed loop).** After a run, if the selected
+> algorithm is judged FAIL (or starves), a guarded post-evaluation correction
+> loop re-runs xv6 on the **same** workload with a corrected, Guard-approved
+> algorithm/params, compares before/after, and records `correction_applied.json`
+> (`applied=true`, with `original_*`/`corrected_*` metrics). This is NOT kernel
+> hot-path LLM control — the LLM never runs in the kernel and never picks the
+> next process; the correction is decided on the host and applied by launching a
+> second ordinary xv6 run.
+
 ---
 
 ### 4.2 Running

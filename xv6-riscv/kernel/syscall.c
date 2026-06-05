@@ -108,6 +108,10 @@ extern uint64 sys_getpriority(void);
 extern uint64 sys_setpredictor(void);
 extern uint64 sys_getpredictor(void);
 extern uint64 sys_setbursthint(void);
+extern uint64 sys_setrrquantum(void);
+extern uint64 sys_setpriorityaging(void);
+extern uint64 sys_setmlfqparams(void);
+extern uint64 sys_setmlfqboost(void);
 
 // An array mapping syscall numbers from syscall.h
 // to the function that handles the system call.
@@ -140,6 +144,10 @@ static uint64 (*syscalls[])(void) = {
 [SYS_setpredictor] sys_setpredictor,
 [SYS_getpredictor] sys_getpredictor,
 [SYS_setbursthint] sys_setbursthint,
+[SYS_setrrquantum]     sys_setrrquantum,
+[SYS_setpriorityaging] sys_setpriorityaging,
+[SYS_setmlfqparams]    sys_setmlfqparams,
+[SYS_setmlfqboost]     sys_setmlfqboost,
 };
 
 void

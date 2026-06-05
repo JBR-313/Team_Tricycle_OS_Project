@@ -44,6 +44,26 @@ struct predictor_params {
 };
 struct predictor_params pred = {50, 10, 1, 100};
 
+// ── Dynamic scheduler parameters (RR / Priority / MLFQ) ─────────────────────
+// The LLM recommends these before execution; Algorithm Guard validates/clamps
+// them; user/schedtest.c applies them via syscalls BEFORE the workload starts.
+// Unlike the burst predictor they steer real dispatch decisions, but they are
+// still plain configuration applied once per run — the LLM never runs in the
+// scheduler hot path and never picks the next process. Written under sched_lock,
+// read locklessly (CPUS=1 convention, same as sched_mode above).
+int rr_quantum = 1;                 // RR: timer ticks per round (1..100)
+int priority_aging_threshold = 10;  // Priority: rounds waiting before aging
+
+#define MLFQ_MAX_QUEUES 5
+struct mlfq_config {
+  int queues;                       // active queue count (2..MLFQ_MAX_QUEUES)
+  int quantum[MLFQ_MAX_QUEUES];     // per-level time slice in ticks
+  int boost_interval;               // rounds waiting before promotion to Q0
+};
+// Default preserves the historical fixed behavior exactly: 3 queues, quanta
+// {2,4,8}, boost every 20 rounds.  Unused high slots stay valid (>=1).
+struct mlfq_config mlfq_cfg = {3, {2, 4, 8, 8, 8}, 20};
+
 // Allocate a page for each process's kernel stack.
 // Map it high in memory, followed by an invalid
 // guard page.
@@ -483,6 +503,99 @@ set_sched_mode(int mode)
   release(&sched_lock);
 }
 
+// ── Dynamic scheduler-parameter API (RR / Priority / MLFQ) ──────────────────
+// All setters validate ranges (mirroring Algorithm Guard) and return 0 on
+// success, -1 on rejection.  Getters read locklessly (CPUS=1 convention).
+
+int
+get_rr_quantum(void)
+{
+  return rr_quantum;
+}
+
+int
+set_rr_quantum(int quantum)
+{
+  if(quantum < 1 || quantum > 100)
+    return -1;
+  acquire(&sched_lock);
+  rr_quantum = quantum;
+  release(&sched_lock);
+  return 0;
+}
+
+int
+get_priority_aging_threshold(void)
+{
+  return priority_aging_threshold;
+}
+
+int
+set_priority_aging_threshold(int threshold)
+{
+  if(threshold < 1 || threshold > 10000)
+    return -1;
+  acquire(&sched_lock);
+  priority_aging_threshold = threshold;
+  release(&sched_lock);
+  return 0;
+}
+
+int
+get_mlfq_queues(void)
+{
+  return mlfq_cfg.queues;
+}
+
+// Quantum for a given queue level; clamps out-of-range levels to the lowest
+// active queue so trap.c can call it without bounds-checking first.
+int
+get_mlfq_quantum(int level)
+{
+  if(level < 0)
+    level = 0;
+  if(level >= mlfq_cfg.queues)
+    level = mlfq_cfg.queues - 1;
+  return mlfq_cfg.quantum[level];
+}
+
+int
+get_mlfq_boost_interval(void)
+{
+  return mlfq_cfg.boost_interval;
+}
+
+// Configure the MLFQ queue structure.  Up to MLFQ_MAX_QUEUES (5) levels are
+// supported with one int per quantum so the syscall stays within xv6's 6-arg
+// limit.  Only the first `queues` quanta are used; the rest are kept valid.
+int
+set_mlfq_params(int queues, int q0, int q1, int q2, int q3, int q4)
+{
+  if(queues < 2 || queues > MLFQ_MAX_QUEUES)
+    return -1;
+  int q[MLFQ_MAX_QUEUES] = {q0, q1, q2, q3, q4};
+  for(int i = 0; i < queues; i++)
+    if(q[i] < 1 || q[i] > 100)
+      return -1;
+  acquire(&sched_lock);
+  mlfq_cfg.queues = queues;
+  for(int i = 0; i < MLFQ_MAX_QUEUES; i++)
+    mlfq_cfg.quantum[i] = (i < queues) ? q[i] : q[queues - 1];
+  release(&sched_lock);
+  return 0;
+}
+
+int
+set_mlfq_boost(int boost_interval)
+{
+  if(boost_interval < 1 || boost_interval > 10000)
+    return -1;
+  acquire(&sched_lock);
+  mlfq_cfg.boost_interval = boost_interval;
+  release(&sched_lock);
+  return 0;
+}
+
 int
 get_proc_priority(int pid)
 {
@@ -624,8 +737,10 @@ update_burst_prediction(struct proc *p)
 
 // ── Scheduling helpers ────────────────────────────────────────────────────────
 
-#define AGE_THRESHOLD        10   // Priority: rounds without CPU before aging
-#define MLFQ_BOOST_THRESHOLD 20   // MLFQ: rounds without CPU before promotion
+// Priority aging and MLFQ boost thresholds are now DYNAMIC configuration
+// (proc.c globals priority_aging_threshold / mlfq_cfg.boost_interval), applied
+// per run via setpriorityaging() / setmlfqboost().  Their defaults (10 and 20)
+// preserve the historical fixed behavior when no LLM/Guard value is supplied.
 
 static const char * const sched_algo_name[] = {
   "RR", "FCFS", "PRIORITY", "MLFQ", "SJF", "SRTF"
@@ -680,6 +795,10 @@ sched_rr(struct cpu *c)
     if(p->state == RUNNABLE){
       p->state = RUNNING;
       p->wait_ticks = 0;
+      // Reset the per-dispatch quantum counter so trap.c counts RR ticks from
+      // zero for this slice (ticks_in_level is reused for the RR quantum here;
+      // RR and MLFQ never run at the same time, so there is no conflict).
+      p->ticks_in_level = 0;
       c->proc = p;
       sched_debug(p, SCHED_RR);
       swtch(&c->context, &p->context);
@@ -746,7 +865,7 @@ sched_priority(struct cpu *c)
     acquire(&p->lock);
     if(p->state == RUNNABLE){
       p->wait_ticks++;
-      if(p->wait_ticks >= AGE_THRESHOLD && p->priority > 0){
+      if(p->wait_ticks >= priority_aging_threshold && p->priority > 0){
         p->priority--;
         p->wait_ticks = 0;
       }
@@ -789,14 +908,17 @@ static int
 sched_mlfq(struct cpu *c)
 {
   struct proc *p, *chosen = 0;
-  int best_level = 4, best_ctime = 0, best_pid = 0;
+  // best_level must start above the highest possible queue index
+  // (MLFQ_MAX_QUEUES-1), so a process sitting in the lowest active queue is
+  // still selectable when it is the only RUNNABLE one.
+  int best_level = MLFQ_MAX_QUEUES + 1, best_ctime = 0, best_pid = 0;
 
   // Phase 1: scan, boost stale processes, select best.
   for(p = proc; p < &proc[NPROC]; p++){
     acquire(&p->lock);
     if(p->state == RUNNABLE){
       p->wait_ticks++;
-      if(p->wait_ticks >= MLFQ_BOOST_THRESHOLD && p->queue_level > 0){
+      if(p->wait_ticks >= mlfq_cfg.boost_interval && p->queue_level > 0){
         int from_q = p->queue_level;
         p->queue_level    = 0;
         p->ticks_in_level = 0;

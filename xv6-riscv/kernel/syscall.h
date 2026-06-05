@@ -27,3 +27,7 @@
 #define SYS_setpredictor 26
 #define SYS_getpredictor 27
 #define SYS_setbursthint 28
+#define SYS_setrrquantum     29
+#define SYS_setpriorityaging 30
+#define SYS_setmlfqparams    31
+#define SYS_setmlfqboost     32

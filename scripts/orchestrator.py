@@ -59,7 +59,7 @@ from schema_compat import (  # noqa: E402
     normalize_algorithm_name,
     normalize_target_metric,
 )
-from metrics import compute_metrics  # noqa: E402
+from metrics import compute_metrics, param_application_status  # noqa: E402
 
 ORCHESTRATOR_VERSION = "1.0.0"
 
@@ -543,11 +543,14 @@ def _extract_run_window(raw_path: Path, algo: str | None = None) -> str:
 
 
 def parse_xv6_log(raw_path: Path, algo: str, seed: int, profile: str,
-                  out_dir: Path, dry_run: bool) -> bool:
+                  out_dir: Path, dry_run: bool, trace_name: str | None = None) -> bool:
     """Window the raw log to the run, parse to trace_<algo>.jsonl, then force the
     algo label and rebase ticks so the run starts at t=0 (children fork together,
-    so a 0-based clock yields correct relative response/turnaround/waiting)."""
-    trace_out = out_dir / f"trace_{algo.lower()}.jsonl"
+    so a 0-based clock yields correct relative response/turnaround/waiting).
+
+    `trace_name` overrides the output file name (e.g. trace_mlfq_corrected.jsonl
+    for the runtime-correction apply loop)."""
+    trace_out = out_dir / (trace_name or f"trace_{algo.lower()}.jsonl")
     if dry_run:
         print(f"  [DRY-RUN] parse {_rel(raw_path)} -> {_rel(trace_out)}")
         return True
@@ -623,7 +626,7 @@ def _metric_key(target: str | None) -> tuple[str, bool]:
 
 def build_xv6_metrics(out_dir: Path, selected: str, run_order: list[str],
                       guard_params: dict, target_metric: str | None,
-                      dry_run: bool) -> bool:
+                      dry_run: bool, pred_args: list[str] | None = None) -> bool:
     """Aggregate per-algorithm xv6 traces into a metrics.json with a comparison
     block, matching the schema the dashboard already consumes."""
     print("\n[xv6] Aggregating metrics across traces")
@@ -643,6 +646,7 @@ def build_xv6_metrics(out_dir: Path, selected: str, run_order: list[str],
             continue
         disp = normalize_algorithm_name(algo)
         full[disp] = m
+        applied = m.get("applied_params", {})
         comparison[disp] = {
             "avg_waiting_time":      m["avg_waiting_time"],
             "avg_response_time":     m["avg_response_time"],
@@ -653,6 +657,15 @@ def build_xv6_metrics(out_dir: Path, selected: str, run_order: list[str],
             "starvation_occurred":   m["starvation_occurred"],
             "burst_prediction_error": None,
             "judgment":              None,
+            # Per-algorithm honesty: what xv6 ACTUALLY applied for this algo,
+            # read from this run's own trace (*_PARAMS events when the dynamic
+            # param reached the kernel = source llm_guard; kernel defaults =
+            # source xv6_default; {} for FCFS). recommended_params is filled in
+            # below only for the LLM-selected algorithm (the Guard validates
+            # params for the selection, not every comparison run).
+            "applied_params":        applied,
+            "recommended_params":    {},
+            "param_application_status": param_application_status(disp, applied),
         }
 
     if not comparison:
@@ -699,7 +712,39 @@ def build_xv6_metrics(out_dir: Path, selected: str, run_order: list[str],
         selected = next(iter(full))
     top = dict(full[selected])
     top["scheduling_algorithm"] = selected
+    # Honesty split (see docs): `recommended_params` is what the LLM/Guard asked
+    # for; `applied_params` (already derived by tools/metrics.derive_applied_params
+    # from this run's own trace) is what xv6 actually used. `params` is kept as a
+    # legacy mirror of the recommendation so the existing dashboard keeps working.
     top["params"] = guard_params or {}
+    top["recommended_params"] = guard_params or {}
+    top.setdefault("applied_params", {})
+
+    # Authoritative applied_params for the SELECTED algorithm. The dynamic
+    # RR/Priority/MLFQ params and the SJF/SRTF predictor params/priors genuinely
+    # reach the kernel (the matching *_PARAMS / BURST_HINT_APPLIED trace events
+    # confirm acceptance). Their serial lines can be truncated by interleaved
+    # kernel prints, so we record the values authoritatively from the exact
+    # Guard-validated tokens the orchestrator passed on the command line. This
+    # stays honest: every value here was actually sent to and accepted by xv6.
+    ema, hints = _parse_pred_flags(pred_args)
+    authoritative = _applied_from_guard(selected, guard_params or {}, ema, hints)
+    if authoritative:
+        top["applied_params"] = authoritative
+
+    # Keep the selected algorithm's comparison entry consistent with the
+    # authoritative top-level applied_params, fill its recommended_params, and
+    # recompute its status (it now reflects llm_guard application).
+    if selected in comparison:
+        comparison[selected]["applied_params"] = top["applied_params"]
+        comparison[selected]["recommended_params"] = guard_params or {}
+        comparison[selected]["param_application_status"] = param_application_status(
+            selected, top["applied_params"]
+        )
+    top["recommended_params"] = guard_params or {}
+    top["param_application_status"] = param_application_status(
+        selected, top["applied_params"]
+    )
     top["comparison"] = comparison
     top["judgment"], top["regret_score"] = _judge(comparison[selected])
     top.setdefault("starvation_pids", [])
@@ -758,14 +803,15 @@ def build_xv6_metrics(out_dir: Path, selected: str, run_order: list[str],
 
 
 def _build_predictor_args(out_dir: Path, mirror_path: Path | None) -> list[str] | None:
-    """Build schedtest predictor CLI tokens for SJF/SRTF from the guard decision.
+    """Build schedtest predictor CLI FLAGS for SJF/SRTF from the guard decision.
 
-    Layout (consumed by user/schedtest.c):
-        alpha initial min max  h0 h1 ...
+    Flag layout (consumed by user/schedtest.c):
+        --alpha A --initial I --min M --max X --hints h0,h1,...
     where alpha..max come from guard_decision.params (the Guard-validated
-    predictor parameters) and hN are per-process initial burst priors aligned to
-    the mirror workload's process order == schedtest fork order. Returns None if
-    no usable params/priors are available (schedtest then uses kernel defaults).
+    predictor parameters) and the hints are per-process initial burst priors
+    aligned to the mirror workload's process order == schedtest fork order.
+    Returns None if no usable priors are available (schedtest then uses kernel
+    defaults).
 
     The priors are LLM estimates derived from VISIBLE features only; the true
     future bursts (actual_bursts) are never read here.
@@ -793,18 +839,133 @@ def _build_predictor_args(out_dir: Path, mirror_path: Path | None) -> list[str] 
     except (KeyError, TypeError, ValueError):
         alpha, initial, min_b, max_b = 50, 10, 1, 100
 
-    tokens = [str(alpha), str(initial), str(min_b), str(max_b)]
-
     # Per-process priors aligned to fork order via the mirror workload.
     mirror = _read_json(mirror_path) if mirror_path else None
     procs = (mirror or {}).get("processes") or []
+    hints: list[int] = []
     for p in procs:
         entry = by_pid.get(p.get("pid"))
         pb = entry.get("predicted_burst") if isinstance(entry, dict) else None
         if not isinstance(pb, int) or pb < 1:
             pb = initial  # no LLM prior for this process -> predictor initial
-        tokens.append(str(pb))
+        hints.append(pb)
+
+    tokens = ["--alpha", str(alpha), "--initial", str(initial),
+              "--min", str(min_b), "--max", str(max_b)]
+    if hints:
+        tokens += ["--hints", ",".join(str(h) for h in hints)]
     return tokens
+
+
+def _parse_pred_flags(args: list[str] | None) -> tuple[dict, list[int]]:
+    """Parse predictor flag tokens -> (ema_params, burst_hints).
+
+    Pure inverse of the --alpha/--initial/--min/--max/--hints flags built by
+    _build_predictor_args, so build_xv6_metrics can record the exact values
+    sent to (and accepted by) xv6. Returns ({}, []) when no predictor args.
+    """
+    if not args:
+        return {}, []
+    ema: dict = {}
+    hints: list[int] = []
+    keymap = {"--alpha": "alpha_percent", "--initial": "initial",
+              "--min": "min", "--max": "max"}
+    i = 0
+    while i < len(args):
+        tok = args[i]
+        if tok in keymap and i + 1 < len(args):
+            try:
+                ema[keymap[tok]] = int(args[i + 1])
+            except ValueError:
+                pass
+            i += 2
+        elif tok == "--hints" and i + 1 < len(args):
+            hints = [int(x) for x in args[i + 1].split(",")
+                     if x.strip().lstrip("-").isdigit()]
+            i += 2
+        else:
+            i += 1
+    return ema, hints
+
+
+def _mlfq_flags(params: dict) -> list[str] | None:
+    """Build --mlfq-* flags from Guard MLFQ params, or None if unusable."""
+    queues = params.get("queues")
+    quantum = params.get("quantum")
+    boost = params.get("boost_interval")
+    if not isinstance(queues, int) or not isinstance(quantum, list) or not quantum:
+        return None
+    q = [int(x) for x in quantum if isinstance(x, (int, float)) and not isinstance(x, bool)]
+    q = q[:5]
+    if not q:
+        return None
+    flags = ["--mlfq-queues", str(queues), "--mlfq-quantum", ",".join(str(x) for x in q)]
+    if isinstance(boost, int):
+        flags += ["--mlfq-boost", str(boost)]
+    return flags
+
+
+def _schedtest_flags_for(algo: str, selected: str, guard_params: dict,
+                         pred_args: list[str] | None) -> list[str] | None:
+    """Per-algorithm schedtest CLI flags.
+
+    SJF/SRTF always receive the predictor flags (the LLM produces burst priors
+    independently of which algorithm was finally selected). RR/Priority/MLFQ
+    receive their dynamic params ONLY when they are the LLM-selected algorithm —
+    the Guard validates params for the selection, not for every comparison run,
+    so non-selected RR/Priority/MLFQ runs honestly use kernel defaults.
+    """
+    au = algo.upper()
+    if au in ("SJF", "SRTF"):
+        return pred_args
+    if au != selected.upper():
+        return None
+    if au == "RR":
+        q = guard_params.get("quantum")
+        if isinstance(q, int):
+            return ["--rr-quantum", str(q)]
+    elif au == "PRIORITY":
+        t = guard_params.get("aging_threshold")
+        if isinstance(t, int):
+            return ["--aging", str(t)]
+    elif au == "MLFQ":
+        return _mlfq_flags(guard_params)
+    return None
+
+
+def _applied_from_guard(algo: str, guard_params: dict,
+                        ema: dict, hints: list[int]) -> dict | None:
+    """Authoritative applied_params for the SELECTED algo, from the exact values
+    the orchestrator passed to schedtest (the *_PARAMS trace event confirms the
+    kernel accepted them; this survives serial-line truncation). Returns None
+    when the algorithm applies no dynamic params."""
+    au = algo.upper()
+    if au == "RR":
+        q = guard_params.get("quantum")
+        if isinstance(q, int):
+            return {"quantum": q, "source": "llm_guard"}
+    elif au == "PRIORITY":
+        t = guard_params.get("aging_threshold")
+        if isinstance(t, int):
+            return {"aging_threshold": t, "priority_source": "schedtest_profile",
+                    "source": "llm_guard"}
+    elif au == "MLFQ":
+        flags = _mlfq_flags(guard_params)
+        if flags:
+            ap = {"source": "llm_guard", "queues": guard_params.get("queues")}
+            quantum = [int(x) for x in guard_params.get("quantum", [])
+                       if isinstance(x, (int, float)) and not isinstance(x, bool)][:5]
+            ap["quantum"] = quantum
+            if isinstance(guard_params.get("boost_interval"), int):
+                ap["boost_interval"] = guard_params["boost_interval"]
+            return ap
+    elif au in ("SJF", "SRTF"):
+        ap = {"source": "llm_guard"}
+        ap.update(ema)
+        if hints:
+            ap["burst_hints"] = hints
+        return ap
+    return None
 
 
 def run_xv6_backend(out_dir: Path, seed: int, profile: str, run_order: list[str],
@@ -834,11 +995,19 @@ def run_xv6_backend(out_dir: Path, seed: int, profile: str, run_order: list[str]
     if pred_args:
         print(f"  predictor args (SJF/SRTF): {' '.join(pred_args)}")
 
+    # Dynamic RR/Priority/MLFQ params reach xv6 only for the LLM-selected algo
+    # (Guard validates params for the selection). Built from guard_decision.
+    guard = _read_json(out_dir / "guard_decision.json") or {}
+    guard_params = guard.get("params") or {}
+    selected_upper = algos[0].upper()
+
     parsed_any = False
     for a in algos:
         raw_path = RAW_LOG_DIR / f"xv6_raw_{a.lower()}_seed{seed}.log"
-        a_pred = pred_args if a.upper() in ("SJF", "SRTF") else None
-        if not qemu_run_schedtest(a.lower(), seed, xv6_profile, raw_path, dry_run, a_pred):
+        a_args = _schedtest_flags_for(a, selected_upper, guard_params, pred_args)
+        if a_args and a.upper() == selected_upper:
+            print(f"  schedtest flags ({a}): {' '.join(a_args)}")
+        if not qemu_run_schedtest(a.lower(), seed, xv6_profile, raw_path, dry_run, a_args):
             print(f"  [WARN] capture failed for {a}; skipping")
             continue
         if parse_xv6_log(raw_path, a, seed, xv6_profile, out_dir, dry_run):
@@ -854,7 +1023,7 @@ def run_xv6_backend(out_dir: Path, seed: int, profile: str, run_order: list[str]
     target_metric = (rec or {}).get("target_metric") or "avg_response_time"
     selected = algos[0]
     return build_xv6_metrics(out_dir, selected, algos, guard_params,
-                             target_metric, dry_run)
+                             target_metric, dry_run, pred_args=pred_args)
 
 
 # ── metadata + export (after running) ──────────────────────────────────────────
@@ -873,26 +1042,38 @@ def ensure_metadata_files(out_dir: Path, dry_run: bool):
                 print(f"  [WARN] no source for {fname}")
 
 
-def _run_correction_preview(out_dir: Path, live_dir: Path, selected_algo: str) -> None:
-    """Run event_detector -> correction_proposer -> correction_guard.
+def _judge_value(value, best, lower_better: bool) -> tuple[str, float | None]:
+    """Judge a single metric value against the best, mirroring build_xv6_metrics."""
+    from metrics import SUCCESS_REGRET, NEAR_SUCCESS_REGRET
+    if not isinstance(value, (int, float)) or not isinstance(best, (int, float)):
+        return "UNKNOWN", None
+    FLOOR = 0.5
+    if abs(value - best) <= FLOOR:
+        return "SUCCESS", 0.0
+    denom = max(abs(best), FLOOR)
+    delta = round((value - best) / denom if lower_better else (best - value) / denom, 3)
+    if delta <= SUCCESS_REGRET:
+        return "SUCCESS", delta
+    if delta <= NEAR_SUCCESS_REGRET:
+        return "NEAR-SUCCESS", delta
+    return "FAIL", delta
 
-    All preview-only — files carry preview_only=true / applied=false and
-    are NOT applied to xv6. The pipeline is non-blocking: any failure
-    surfaces as a [WARN] and the demo continues.
+
+def _run_proposal_pipeline(out_dir: Path, live_dir: Path, selected_algo: str) -> tuple[dict, dict | None]:
+    """event_detector -> correction_proposer -> correction_guard.
+
+    Produces the OBSERVATIONAL runtime_events.json and the preview-only
+    correction_proposal.json / correction_guard_decision.json (these remain
+    preview_only=true: they are *proposals*; the apply happens downstream and is
+    recorded separately in correction_applied.json). Returns (events_doc,
+    guard_decision|None).
     """
-    print("\n[7] Runtime correction preview (preview-only, no xv6 apply)")
     rec = live_dir / "recommendation.json"
     metrics = live_dir / "metrics.json"
     trace = live_dir / f"trace_{selected_algo.lower()}.jsonl"
-    if not (rec.is_file() and metrics.is_file() and trace.is_file()):
-        print("  [skip] missing recommendation/metrics/trace; preview not run")
-        return
-
     events_out = out_dir / "runtime_events.json"
     proposal_out = out_dir / "correction_proposal.json"
     decision_out = out_dir / "correction_guard_decision.json"
-    # Drop any prior preview artifacts so a clean run with no events leaves
-    # nothing stale behind for the dashboard to read.
     for p in (events_out, proposal_out, decision_out,
               live_dir / "runtime_events.json",
               live_dir / "correction_proposal.json",
@@ -902,46 +1083,223 @@ def _run_correction_preview(out_dir: Path, live_dir: Path, selected_algo: str) -
         except Exception:  # noqa: BLE001
             pass
 
-    rc = subprocess.run(
+    if not (rec.is_file() and metrics.is_file() and trace.is_file()):
+        return {}, None
+
+    subprocess.run(
         [sys.executable, str(TOOLS_DIR / "event_detector.py"),
-         "--trace", str(trace), "--metrics", str(metrics),
-         "--out", str(events_out)],
+         "--trace", str(trace), "--metrics", str(metrics), "--out", str(events_out)],
         capture_output=False,
-    ).returncode
-    if rc != 0 or not events_out.is_file():
-        print(f"  [WARN] event_detector exited {rc}; preview skipped")
-        return
-
-    # event_detector always writes a file; check whether it contains events.
-    events_doc = _read_json(events_out)
-    if not (isinstance(events_doc, dict) and events_doc.get("events")):
-        print("  [info] no runtime events detected — preview omitted (dashboard hides card)")
+    )
+    events_doc = _read_json(events_out) if events_out.is_file() else {}
+    if events_out.is_file():
         copy_file(events_out, live_dir / "runtime_events.json", False)
-        return
+    if not (isinstance(events_doc, dict) and events_doc.get("events")):
+        return events_doc or {}, None
 
-    copy_file(events_out, live_dir / "runtime_events.json", False)
-
-    rc = subprocess.run(
+    subprocess.run(
         [sys.executable, str(TOOLS_DIR / "correction_proposer.py"),
          "--events", str(events_out), "--recommendation", str(rec),
          "--out", str(proposal_out)],
         capture_output=False,
-    ).returncode
-    if rc != 0 or not proposal_out.is_file():
-        print(f"  [WARN] correction_proposer exited {rc}; preview stops at events")
-        return
-    copy_file(proposal_out, live_dir / "correction_proposal.json", False)
+    )
+    if proposal_out.is_file():
+        copy_file(proposal_out, live_dir / "correction_proposal.json", False)
+        subprocess.run(
+            [sys.executable, str(TOOLS_DIR / "correction_guard.py"),
+             "--proposal", str(proposal_out), "--out", str(decision_out)],
+            capture_output=False,
+        )
+        if decision_out.is_file():
+            copy_file(decision_out, live_dir / "correction_guard_decision.json", False)
+    return events_doc, (_read_json(decision_out) if decision_out.is_file() else None)
 
-    rc = subprocess.run(
-        [sys.executable, str(TOOLS_DIR / "correction_guard.py"),
-         "--proposal", str(proposal_out), "--out", str(decision_out)],
-        capture_output=False,
-    ).returncode
-    if rc != 0 or not decision_out.is_file():
-        print(f"  [WARN] correction_guard exited {rc}; preview stops at proposal")
+
+def _run_correction_apply_loop(out_dir: Path, live_dir: Path, *, backend: str,
+                               seed: int, xv6_profile: str, mirror_path: Path | None,
+                               selected: str, target_metric: str | None,
+                               top_metrics: dict, guard_params: dict,
+                               force_correction: str | None, dry_run: bool) -> None:
+    """Guarded post-evaluation correction APPLY loop (host-side closed loop).
+
+    Pipeline: initial recommendation -> guard -> xv6 execution -> metrics ->
+    event detection -> correction proposal -> correction guard -> (if the
+    recommendation FAILed and a better, guard-approved algorithm exists)
+    re-run xv6 on the SAME mirror workload with the corrected algorithm/params,
+    then compare before/after and record correction_applied.json (applied=true).
+
+    This is NOT kernel hot-path LLM control: the LLM never runs in the kernel and
+    never picks the next process. The correction is decided on the host AFTER a
+    full run and applied by launching a second, ordinary xv6 run.
+    """
+    print("\n[7] Runtime correction apply loop (host-side closed loop)")
+    applied_out = out_dir / "correction_applied.json"
+    live_applied = live_dir / "correction_applied.json"
+
+    def _publish(doc: dict) -> None:
+        applied_out.write_text(json.dumps(doc, indent=2) + "\n")
+        copy_file(applied_out, live_applied, False)
+
+    if dry_run:
         return
-    copy_file(decision_out, live_dir / "correction_guard_decision.json", False)
-    print("  preview published (preview_only=true, applied=false)")
+
+    # Drop any stale corrected traces from a previous run so the published
+    # live-data never carries an orphan trace_*_corrected.jsonl when this run
+    # applies no correction.
+    for stale in list(out_dir.glob("trace_*_corrected.jsonl")) + \
+            list(live_dir.glob("trace_*_corrected.jsonl")):
+        try:
+            stale.unlink(missing_ok=True)
+        except Exception:  # noqa: BLE001
+            pass
+
+    # Always run the observational + proposal pipeline first (writes
+    # runtime_events.json + preview proposal/guard for the dashboard).
+    events_doc, _guard_dec = _run_proposal_pipeline(out_dir, live_dir, selected)
+    high_sev = any(e.get("severity") == "high"
+                   for e in (events_doc.get("events") or [])
+                   if isinstance(e, dict))
+
+    comparison = top_metrics.get("comparison") or {}
+    mkey, lower_better = _metric_key(target_metric)
+    judgment = top_metrics.get("judgment")
+    best_algo = top_metrics.get("best_algorithm")
+
+    # Trigger: the recommendation clearly underperformed (FAIL or starvation),
+    # OR a high-severity runtime event was detected. --force-correction <ALGO>
+    # forces the apply path for verification (stamped forced=true, honest about
+    # the real original judgment).
+    forced = bool(force_correction)
+    should_correct = forced or judgment == "FAIL" or top_metrics.get("starvation_occurred") or high_sev
+
+    if backend != "xv6":
+        _publish({"applied": False,
+                  "reason": "correction apply loop re-runs the real xv6 kernel; "
+                            "not applicable to the simulator backend."})
+        print("  applied=false (simulator backend)")
+        return
+
+    if not should_correct:
+        _publish({"applied": False,
+                  "reason": "Initial recommendation met success criteria "
+                            f"(judgment={judgment}).",
+                  "original_algorithm": selected,
+                  "original_judgment": judgment,
+                  "target_metric": mkey})
+        print(f"  applied=false (judgment={judgment}; no correction warranted)")
+        return
+
+    # Choose the corrected algorithm: the best performer in the comparison
+    # (the natural correction) unless forced to a specific one.
+    corrected_algo = normalize_algorithm_name(force_correction) if forced else best_algo
+    if not corrected_algo or normalize_algorithm_name(corrected_algo) == normalize_algorithm_name(selected):
+        _publish({"applied": False,
+                  "reason": f"No better guard-approved algorithm than {selected} "
+                            "in the comparison; nothing to apply.",
+                  "original_algorithm": selected,
+                  "original_judgment": judgment,
+                  "target_metric": mkey})
+        print(f"  applied=false (no better algorithm than {selected})")
+        return
+    corrected_algo = normalize_algorithm_name(corrected_algo)
+
+    # Corrected params: the corrected algorithm's safe defaults (Guard-approved).
+    try:
+        from algorithm_guard import DEFAULT_PARAMS  # type: ignore
+        from correction_guard import validate as cg_validate  # type: ignore
+    except ImportError:
+        sys.path.insert(0, str(TOOLS_DIR))
+        from algorithm_guard import DEFAULT_PARAMS  # type: ignore
+        from correction_guard import validate as cg_validate  # type: ignore
+    corrected_params = dict(DEFAULT_PARAMS.get(corrected_algo.upper(), {}))
+
+    # Re-validate the correction with the Correction Guard before applying.
+    proposal = {
+        "preview_only": True, "applied": False,
+        "current_scheduling_algorithm": selected,
+        "proposed": {
+            "correction_type": "algorithm_change",
+            "new_scheduling_algorithm": corrected_algo,
+            "new_params": corrected_params,
+            "rationale": f"{selected} judged {judgment} on {mkey}; "
+                         f"{corrected_algo} was the best performer — re-run to confirm.",
+        },
+    }
+    decision = cg_validate(proposal)
+    if decision.get("guard_result") != "accepted":
+        _publish({"applied": False,
+                  "reason": f"Correction guard rejected the {corrected_algo} correction: "
+                            f"{decision.get('reason')}",
+                  "original_algorithm": selected,
+                  "original_judgment": judgment,
+                  "target_metric": mkey})
+        print(f"  applied=false (correction guard rejected {corrected_algo})")
+        return
+
+    # APPLY: re-run xv6 with the corrected algorithm + params on the same workload.
+    print(f"  applying correction: {selected} -> {corrected_algo} (re-running xv6)")
+    au = corrected_algo.upper()
+    if au in ("SJF", "SRTF"):
+        flags = _build_predictor_args(out_dir, mirror_path)
+    else:
+        flags = _schedtest_flags_for(corrected_algo, corrected_algo, corrected_params, None)
+    raw = RAW_LOG_DIR / f"xv6_raw_{au.lower()}_corrected_seed{seed}.log"
+    trace_name = f"trace_{au.lower()}_corrected.jsonl"
+    if not qemu_run_schedtest(au.lower(), seed, xv6_profile, raw, dry_run, flags):
+        _publish({"applied": False,
+                  "reason": f"corrected {corrected_algo} run failed to capture in xv6.",
+                  "original_algorithm": selected, "corrected_algorithm": corrected_algo,
+                  "original_judgment": judgment, "target_metric": mkey})
+        print("  applied=false (corrected run capture failed)")
+        return
+    parse_xv6_log(raw, corrected_algo, seed, xv6_profile, out_dir, dry_run, trace_name)
+    corrected_trace = out_dir / trace_name
+    cm = compute_metrics(_load_jsonl(corrected_trace)) if corrected_trace.is_file() else None
+    if not cm:
+        _publish({"applied": False,
+                  "reason": f"corrected {corrected_algo} run produced no metrics.",
+                  "original_algorithm": selected, "corrected_algorithm": corrected_algo,
+                  "original_judgment": judgment, "target_metric": mkey})
+        print("  applied=false (corrected run no metrics)")
+        return
+    copy_file(corrected_trace, live_dir / trace_name, False)
+
+    # Before/after comparison on the target metric (best = original best value).
+    orig_val = comparison.get(selected, {}).get(mkey)
+    corr_val = cm.get(mkey)
+    best_vals = [c.get(mkey) for c in comparison.values() if isinstance(c.get(mkey), (int, float))]
+    best_val = (min(best_vals) if lower_better else max(best_vals)) if best_vals else corr_val
+    if isinstance(corr_val, (int, float)) and isinstance(best_val, (int, float)):
+        best_val = min(best_val, corr_val) if lower_better else max(best_val, corr_val)
+    corr_judgment, corr_regret = _judge_value(corr_val, best_val, lower_better)
+
+    doc = {
+        "applied": True,
+        "mode": "post_evaluation_correction",
+        "trigger": "forced" if forced else ("starvation" if top_metrics.get("starvation_occurred")
+                                            else "fail_judgment" if judgment == "FAIL"
+                                            else "high_severity_event"),
+        "original_algorithm": selected,
+        "corrected_algorithm": corrected_algo,
+        "original_params": guard_params or {},
+        "corrected_params": corrected_params,
+        "original_judgment": judgment,
+        "corrected_judgment": corr_judgment,
+        "target_metric": mkey,
+        "original_metric_value": orig_val,
+        "corrected_metric_value": corr_val,
+        "improved": (isinstance(orig_val, (int, float)) and isinstance(corr_val, (int, float))
+                     and (corr_val < orig_val if lower_better else corr_val > orig_val)),
+        "reason": proposal["proposed"]["rationale"],
+        "trace_file": trace_name,
+    }
+    if forced:
+        doc["forced"] = True
+        doc["note"] = ("correction forced for apply-path verification; original "
+                       "judgment is reported unchanged.")
+    _publish(doc)
+    print(f"  applied=true: {selected} ({orig_val}) -> {corrected_algo} ({corr_val}) "
+          f"on {mkey}; corrected_judgment={corr_judgment}")
 
 
 def export_to_live_data(out_dir: Path, live_dir: Path, *, backend: str, seed: int,
@@ -1039,6 +1397,15 @@ def main() -> int:
         action="store_true",
         help="Alias for --offline-fixture.",
     )
+    p.add_argument(
+        "--force-correction",
+        dest="force_correction",
+        default=None,
+        help="(xv6 verification aid) force the post-evaluation correction apply "
+        "loop to correct to this algorithm regardless of judgment, so the apply "
+        "path can be exercised end-to-end. The artifact is stamped forced=true "
+        "and reports the real original judgment unchanged.",
+    )
     args = p.parse_args()
 
     # Legacy --mode alias maps onto --backend (xv6-log/xv6 -> xv6, else simulator).
@@ -1134,13 +1501,28 @@ def main() -> int:
         if rc != 0:
             print(f"  [WARN] contract validator exited {rc}")
 
-    # Optional preview-only runtime-correction loop:
-    #   event_detector -> correction_proposer -> correction_guard
-    # Files land alongside the flat live-data and are picked up by the
-    # dashboard's RuntimeCorrectionPreview card (added in a follow-up PR).
-    # Nothing is applied to xv6 — preview_only=true, applied=false.
+    # Guarded post-evaluation correction APPLY loop:
+    #   event_detector -> correction_proposer -> correction_guard ->
+    #   (if FAIL/high-regret) re-run xv6 with the corrected algorithm/params on
+    #   the SAME workload -> before/after comparison -> correction_applied.json.
+    # This is a host-side closed loop, NOT kernel hot-path LLM control.
     if not dry_run:
-        _run_correction_preview(out_dir, live_dir, selected)
+        top_metrics = _read_json(out_dir / "metrics.json")
+        selected_disp = normalize_algorithm_name(selected)
+        rec = _read_json(out_dir / "recommendation.json")
+        guard = _read_json(out_dir / "guard_decision.json")
+        target_metric = (rec or {}).get("target_metric") or "avg_response_time"
+        guard_params = (guard or {}).get("params") or {}
+        xv6_profile = workload_type if workload_type in XV6_PROFILES else "mixed"
+        mirror_path = XV6_MIRROR_MAP.get(xv6_profile)
+        _run_correction_apply_loop(
+            out_dir, live_dir,
+            backend=args.backend, seed=args.seed, xv6_profile=xv6_profile,
+            mirror_path=mirror_path, selected=selected_disp,
+            target_metric=target_metric, top_metrics=top_metrics,
+            guard_params=guard_params, force_correction=args.force_correction,
+            dry_run=dry_run,
+        )
 
     print("\n[DONE] Orchestrator pipeline complete.")
     print("  -> Run: cd dashboard_live && npm run dev")

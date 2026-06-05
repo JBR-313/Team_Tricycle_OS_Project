@@ -98,9 +98,19 @@ You must also propose algorithm parameters. Schema per algorithm:
                  "max": <int, >=min, <=100000>   clamp upper bound
                }}
 
-You are an ADVISOR only. You do not control the scheduler. Your job is to \
-output a recommendation; another component will verify it by actually running \
-the workload in xv6.
+The xv6 backend APPLIES your parameters before the workload runs, so they \
+matter: RR quantum (setrrquantum), Priority aging_threshold (setpriorityaging), \
+MLFQ queues/quantum/boost_interval (setmlfqparams/setmlfqboost), and the \
+SJF/SRTF predictor params + per-process burst priors all reach the real kernel \
+via syscalls. Algorithm Guard validates and clamps them first; pick values \
+inside the ranges above.
+
+You are an ADVISOR only. You do NOT schedule the next process and you NEVER run \
+inside the kernel. Your job is to output a recommendation; another component \
+will verify it by actually running the workload in xv6. If the recommendation \
+underperforms, a host-side post-evaluation correction loop (NOT kernel hot-path \
+LLM control) may re-run xv6 with a corrected algorithm. SJF/SRTF never receive \
+real future bursts — only predictions from visible features.
 
 When the recommended algorithm is SJF or SRTF, you may ALSO output a per-process \
 burst hint list, based ONLY on visible features in `visible_processes` (label, \
