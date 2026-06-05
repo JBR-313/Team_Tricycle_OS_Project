@@ -61,6 +61,8 @@ One JSON object per line, sorted by `tick` ascending.
 {
   "scheduling_algorithm": "MLFQ",
   "params": { "queues": 3, "quantum": [2, 4, 8], "aging_threshold": 30, "boost_interval": 100 },
+  "recommended_params": { "queues": 3, "quantum": [2, 4, 8], "aging_threshold": 30, "boost_interval": 100 },
+  "applied_params": { "queues": 3, "quantum": [2, 4, 8], "boost_interval": 20, "source": "xv6_fixed_default" },
   "process_count": 5,
   "completed_count": 5,
   "total_execution_time": 56,
@@ -92,6 +94,64 @@ One JSON object per line, sorted by `tick` ascending.
   "workload_file": "workloads/interactive_heavy.json"
 }
 ```
+
+**`params` vs `recommended_params` vs `applied_params` vs
+`param_application_status` (xv6 backend honesty).**
+`recommended_params` is what the LLM/Guard asked for; `applied_params` is what
+the xv6 kernel *actually* used. The xv6 backend applies dynamic parameters for
+the **selected** algorithm via syscalls (`setrrquantum`, `setpriorityaging`,
+`setmlfqparams`/`setmlfqboost`, `setpredictor`/`setbursthint`) before the
+workload runs, so for the selected algorithm `applied_params.source` is
+`llm_guard` and carries the values that reached the kernel — RR
+(`{quantum, source: llm_guard}`), Priority (`{aging_threshold, priority_source:
+schedtest_profile, source: llm_guard}`), MLFQ (`{queues, quantum, boost_interval,
+source: llm_guard}`), SJF/SRTF (`{alpha_percent, initial, min, max, burst_hints,
+source: llm_guard}`). The Guard validates params only for the **selection**, so
+the other algorithms in the comparison sweep run on xv6's compile-time defaults
+and report `source: xv6_default`. FCFS has no algorithm-specific parameters
+(`{}`). Each `*_PARAMS` trace event proves the value reached and was accepted by
+xv6. `param_application_status` classifies the relationship:
+`fully_applied` (source `llm_guard`), `fixed_default` (source `xv6_default`), or
+`not_applicable` (FCFS). `params` is kept as a legacy mirror of the
+recommendation so the existing dashboard keeps working. All fields are additive;
+loaders that only read `params` are unaffected. The same per-algorithm
+`applied_params` / `recommended_params` / `param_application_status` also appear
+on each `comparison` entry.
+
+## 2b. `correction_applied.json` (runtime correction apply loop)
+
+Written by the guarded post-evaluation correction APPLY loop in
+`scripts/orchestrator.py` (xv6 backend). When the selected algorithm is judged
+`FAIL` (or starves), the loop re-runs xv6 on the **same** mirror workload with a
+corrected, Guard-approved algorithm/params, compares before/after, and records:
+
+```json
+{
+  "applied": true,
+  "mode": "post_evaluation_correction",
+  "trigger": "fail_judgment",
+  "original_algorithm": "SRTF",
+  "corrected_algorithm": "MLFQ",
+  "original_params": { "alpha_percent": 50, "initial": 10, "min": 1, "max": 100000 },
+  "corrected_params": { "queues": 3, "quantum": [2, 4, 8], "aging_threshold": 100, "boost_interval": 100 },
+  "original_judgment": "FAIL",
+  "corrected_judgment": "SUCCESS",
+  "target_metric": "avg_response_time",
+  "original_metric_value": 0.67,
+  "corrected_metric_value": 0.0,
+  "improved": true,
+  "reason": "SRTF judged FAIL on avg_response_time; MLFQ was the best performer — re-run to confirm.",
+  "trace_file": "trace_mlfq_corrected.jsonl"
+}
+```
+
+When no correction is warranted (the recommendation met the success criteria, or
+the simulator backend is used), the file is `{"applied": false, "reason": ...}`.
+This is an **applied** artifact (it may carry `applied=true`), distinct from the
+preview-only `correction_proposal.json` / `correction_guard_decision.json`, which
+remain `preview_only=true`. The corrected run's trace is published alongside the
+six per-algorithm traces under the name in `trace_file`. This is a host-side
+closed loop, NOT kernel hot-path LLM control: the LLM never runs in the kernel.
 
 Metric definitions:
 

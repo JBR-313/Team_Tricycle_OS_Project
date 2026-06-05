@@ -33,9 +33,10 @@ Emitted by the xv6 kernel scheduler.
 ```
 
 Events emitted today: `DISPATCH`, `PREEMPT`, `EXIT`, `QUEUE_CHANGE`,
-`ARRIVE`, `SLEEP`, `WAKEUP`. The simulator additionally emits `PRED_UPDATE`
-(SJF/SRTF EMA refresh). Tokens are generic `key=value` pairs; not every
-token is present on every line.
+`ARRIVE`, `SLEEP`, `WAKEUP`. `PRED_UPDATE` (SJF/SRTF EMA refresh) is emitted
+by **both** the simulator and the real xv6 kernel (`proc.c`
+`update_burst_prediction`, gated to SJF/SRTF). Tokens are generic `key=value`
+pairs; not every token is present on every line.
 
 **Per-event optional fields (loaders MUST tolerate missing keys):**
 
@@ -47,7 +48,7 @@ token is present on every line.
 | `EXIT` | `tick`, `pid` | `state`, `queue`, `turnaround`, `waiting`, `response` |
 | `QUEUE_CHANGE` | `tick`, `pid`, `from_queue`, `to_queue` | `reason` (`demotion` / `aging_promotion` / `promotion`) |
 | `SLEEP` / `WAKEUP` | `tick`, `pid` | `state` |
-| `PRED_UPDATE` (simulator) | `tick`, `pid`, `observed`, `predicted_prev`, `predicted_next` | `source` (`ema` or `llm`) |
+| `PRED_UPDATE` (simulator + xv6, SJF/SRTF) | `tick`, `pid`, `observed`, `predicted_prev`, `predicted_next` | `alpha`, `source` (`ema` or `llm`) |
 
 > The spec-suggested discrete events `QUEUE_ENTER` / `QUEUE_LEAVE` /
 > `DEMOTE` / `PROMOTE` are **expressed** in this project as
@@ -76,19 +77,44 @@ that the kernel scheduler does not know.
 
 ```text
 [SCHEDTEST] event=RUN_BEGIN|PROC_DEF|CHILD_START|CHILD_EXIT|RUN_END key=value ...
+[SCHEDTEST] event=PRIORITY_APPLIED|BURST_HINT_APPLIED|PREDICTOR_PARAMS key=value ...
+[SCHEDTEST] event=RR_PARAMS|PRIORITY_PARAMS|MLFQ_PARAMS key=value ...
 ```
 
 ```text
-[SCHEDTEST] event=RUN_BEGIN algo=MLFQ seed=42 profile=interactive
+[SCHEDTEST] event=RUN_BEGIN algo=MLFQ seed=42 profile=interactive nproc=5
+[SCHEDTEST] event=RR_PARAMS algo=RR quantum=4 source=llm_guard
+[SCHEDTEST] event=PRIORITY_PARAMS algo=PRIORITY aging_threshold=50 source=llm_guard
+[SCHEDTEST] event=MLFQ_PARAMS algo=MLFQ queues=3 quantum=2,4,8 boost_interval=20 source=llm_guard
+[SCHEDTEST] event=PRIORITY_APPLIED pid=4 index=0 priority=8 source=schedtest_profile
+[SCHEDTEST] event=PREDICTOR_PARAMS algo=SRTF alpha=50 initial=10 min=1 max=100000
+[SCHEDTEST] event=BURST_HINT_APPLIED pid=4 index=0 predicted_burst=10
 [SCHEDTEST] event=PROC_DEF pid=3 arrival=0 cpu_burst=5 priority=2 label=interactive
 [SCHEDTEST] event=CHILD_START pid=3 priority=2
 [SCHEDTEST] event=CHILD_EXIT pid=3
 [SCHEDTEST] event=RUN_END algo=MLFQ seed=42 profile=interactive
 ```
 
-> Status note: `schedtest.c` currently takes only `schedtest <algo>`. The
-> planned `schedtest <algorithm> <seed> <profile>` form, and the `[SCHEDTEST]`
-> metadata emission, are PLANNED / in-progress, not done.
+> `schedtest` takes `schedtest <algorithm> <seed> <profile> [flags...]`, where
+> the flags carry the Guard-validated dynamic scheduler parameters as
+> low-arg-count options (CSV lists collapse multi-value params into one token):
+> `--rr-quantum`, `--aging`, `--mlfq-queues`/`--mlfq-quantum`/`--mlfq-boost`,
+> and `--alpha`/`--initial`/`--min`/`--max`/`--hints` for the SJF/SRTF predictor.
+> Each algorithm reads only its own flags and applies them to the real kernel
+> once per run (`setrrquantum` / `setpriorityaging` / `setmlfqparams` /
+> `setmlfqboost` / `setpredictor` / `setbursthint`) BEFORE any child forks, so
+> the whole workload is scheduled under them. The matching `*_PARAMS` event is
+> the trace proof that the value reached and was accepted by xv6
+> (`source=llm_guard`); a `*_PARAMS_REJECTED` event means the kernel rejected an
+> out-of-range value and kept its default.
+>
+> The parent forks each child behind a one-byte pipe **start barrier**: it
+> applies the child's per-process metadata first — `PRIORITY_APPLIED` (Priority)
+> and/or `BURST_HINT_APPLIED` (SJF/SRTF, the Guard-validated predictor priors via
+> `setbursthint`) — and only then releases the child to print `CHILD_START` and
+> run its CPU burst. This guarantees metadata is in place before any child
+> consumes CPU. The predictor priors are LLM estimates from visible features
+> only; true future bursts are never supplied.
 
 ### Parser CLI
 

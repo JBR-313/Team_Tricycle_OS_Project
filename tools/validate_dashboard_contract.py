@@ -365,6 +365,40 @@ def _check_preview(d: Path, r: Report) -> None:
             r.good("preview not present (no preview files in this directory)")
 
 
+def check_correction_applied(d: Path, r: Report) -> None:
+    """Validate correction_applied.json — the record of the host-side
+    post-evaluation correction APPLY loop. Unlike the preview proposal/guard
+    files, this artifact MAY carry applied=true (a real second xv6 run was
+    executed). Absent file is fine (the loop only writes it on the xv6 backend).
+    """
+    p = d / "correction_applied.json"
+    if not p.is_file():
+        return
+    doc = _load(p)
+    applied = doc.get("applied")
+    if not isinstance(applied, bool):
+        r.warn_("correction_applied.json: 'applied' missing or not a bool")
+        return
+    if applied:
+        required = ["mode", "original_algorithm", "corrected_algorithm",
+                    "target_metric", "trace_file"]
+        missing = [k for k in required if not doc.get(k)]
+        if missing:
+            r.warn_(f"correction_applied.json applied=true missing: {missing}")
+        else:
+            r.good(f"correction_applied.json: applied {doc.get('original_algorithm')} "
+                   f"-> {doc.get('corrected_algorithm')} "
+                   f"({doc.get('original_judgment')} -> {doc.get('corrected_judgment')})")
+        tf = doc.get("trace_file")
+        if tf and not (d / tf).is_file():
+            r.warn_(f"correction_applied.json references missing trace_file {tf!r}")
+    else:
+        if not doc.get("reason"):
+            r.warn_("correction_applied.json applied=false lacks a 'reason'")
+        else:
+            r.good("correction_applied.json: applied=false (no correction warranted)")
+
+
 def cross_check(manifest: dict, rec: dict, guard: dict, r: Report) -> None:
     """Surface any disagreement between manifest, recommendation, and guard."""
     if not (manifest and rec and guard):
@@ -396,6 +430,7 @@ def _check_dir(d: Path, r: Report) -> None:
     guard = check_guard(d, r)
     check_metrics(d, r)
     check_traces(d, r)
+    check_correction_applied(d, r)
     cross_check(manifest, rec, guard, r)
 
 

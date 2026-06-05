@@ -33,7 +33,6 @@ trapinit(void)
 void
 timer_yield_or_tick(struct proc *p)
 {
-  static const int mlfq_quanta[3] = {2, 4, 8};
   int mode = get_sched_mode();
 
   // Track observed CPU usage for the running process.  This records only
@@ -47,13 +46,31 @@ timer_yield_or_tick(struct proc *p)
     return;
   }
 
-  if(mode == SCHED_MLFQ){
+  if(mode == SCHED_RR){
+    // RR: preempt only after the configured quantum expires.  The quantum is
+    // dynamic config (proc.c rr_quantum) applied per run via setrrquantum();
+    // ticks_in_level counts ticks in the current slice and is reset on dispatch
+    // in sched_rr().  A quantum of 1 reproduces the original every-tick RR.
     p->ticks_in_level++;
-    int ql = p->queue_level < 3 ? p->queue_level : 2;
-    if(p->ticks_in_level >= mlfq_quanta[ql]){
+    if(p->ticks_in_level >= get_rr_quantum()){
+      p->ticks_in_level = 0;
+      sched_trace(SCHED_RR, "PREEMPT", p->pid, "RUNNABLE",
+                  p->queue_level, p->priority, "quantum_expired");
+      yield();
+    }
+    return;
+  }
+
+  if(mode == SCHED_MLFQ){
+    // MLFQ quanta and queue count are dynamic config (proc.c mlfq_cfg) applied
+    // per run via setmlfqparams().  Demote at most to the lowest active queue.
+    p->ticks_in_level++;
+    int maxq = get_mlfq_queues() - 1;
+    int ql = p->queue_level < maxq ? p->queue_level : maxq;
+    if(p->ticks_in_level >= get_mlfq_quantum(ql)){
       // Quantum exhausted: demote if not already at the lowest level.
       int from_q = p->queue_level;
-      if(p->queue_level < 2)
+      if(p->queue_level < maxq)
         p->queue_level++;
       p->ticks_in_level = 0;
       if(p->queue_level != from_q)
@@ -66,12 +83,11 @@ timer_yield_or_tick(struct proc *p)
     return;
   }
 
-  // SCHED_RR, SCHED_PRIORITY, SCHED_SRTF: preempt on every timer tick.
+  // SCHED_PRIORITY, SCHED_SRTF: preempt on every timer tick.
   // For SRTF every timer tick is a scheduling point, so the scheduler
   // re-selects the smallest predicted_remaining process each tick.
   sched_trace(mode, "PREEMPT", p->pid, "RUNNABLE",
-              p->queue_level, p->priority,
-              mode == SCHED_RR ? "quantum_expired" : "timer_tick");
+              p->queue_level, p->priority, "timer_tick");
   yield();
 }
 

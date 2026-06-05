@@ -49,3 +49,7 @@ entry("getpriority");
 entry("setpredictor");
 entry("getpredictor");
 entry("setbursthint");
+entry("setrrquantum");
+entry("setpriorityaging");
+entry("setmlfqparams");
+entry("setmlfqboost");

@@ -199,3 +199,49 @@ sys_setbursthint(void)
     return -1;
   return set_burst_hint(pid, predicted_burst);
 }
+
+// Set the RR time quantum (timer ticks per round).  Validated to [1,100]
+// (mirrors Algorithm Guard's RR.quantum range).  Returns 0 / -1.
+uint64
+sys_setrrquantum(void)
+{
+  int quantum;
+  argint(0, &quantum);
+  return set_rr_quantum(quantum);
+}
+
+// Set the Priority aging threshold (rounds waiting before a process ages up).
+// Validated to [1,10000].  Returns 0 / -1.
+uint64
+sys_setpriorityaging(void)
+{
+  int threshold;
+  argint(0, &threshold);
+  return set_priority_aging_threshold(threshold);
+}
+
+// Configure the MLFQ queue structure.  Up to 5 queue quanta are passed as
+// separate ints to stay within xv6's 6-argument syscall limit; only the first
+// `queues` are used.  Validated in set_mlfq_params().  Returns 0 / -1.
+uint64
+sys_setmlfqparams(void)
+{
+  int queues, q0, q1, q2, q3, q4;
+  argint(0, &queues);
+  argint(1, &q0);
+  argint(2, &q1);
+  argint(3, &q2);
+  argint(4, &q3);
+  argint(5, &q4);
+  return set_mlfq_params(queues, q0, q1, q2, q3, q4);
+}
+
+// Set the MLFQ boost interval (rounds waiting before promotion to Q0).
+// Validated to [1,10000].  Returns 0 / -1.
+uint64
+sys_setmlfqboost(void)
+{
+  int boost_interval;
+  argint(0, &boost_interval);
+  return set_mlfq_boost(boost_interval);
+}

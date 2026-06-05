@@ -71,6 +71,37 @@ static int g_alpha = -1, g_initial = -1, g_min = -1, g_max = -1;
 static int g_hints[MAXPROC];
 static int g_nhints = 0;
 
+// LLM/Guard-validated DYNAMIC scheduler parameters (RR / Priority / MLFQ),
+// also supplied on the command line.  A value of -1 (or a zero count) means
+// "not supplied" and the kernel keeps its compile-time default for that
+// algorithm.  These steer real dispatch decisions but are applied once per run
+// — schedtest never runs the scheduler and the LLM never picks a process.
+static int g_rr_quantum = -1;        // RR: ticks per round
+static int g_aging      = -1;        // Priority: rounds before aging
+static int g_mlfq_queues = -1;       // MLFQ: queue count
+static int g_mlfq_quantum[5];        // MLFQ: per-level quanta
+static int g_mlfq_nquantum = 0;
+static int g_mlfq_boost = -1;        // MLFQ: boost interval
+
+// Parse a comma-separated list of non-negative ints into out[], up to max.
+// Returns the count parsed.  Tolerates a trailing comma and stray spaces.
+static int
+parse_int_csv(const char *s, int *out, int max)
+{
+  int n = 0, val = 0, have = 0;
+  for(; *s && n < max; s++){
+    if(*s >= '0' && *s <= '9'){
+      val = val * 10 + (*s - '0');
+      have = 1;
+    } else if(*s == ','){
+      if(have){ out[n++] = val; val = 0; have = 0; }
+    }
+  }
+  if(have && n < max)
+    out[n++] = val;
+  return n;
+}
+
 static int
 algo_mode(const char *s)
 {
@@ -132,6 +163,51 @@ run_one(const char *algo, int mode, int seed, struct workload *wl)
              algo, g_alpha, g_initial, g_min, g_max);
   }
 
+  // Apply the LLM/Guard-validated DYNAMIC scheduler parameters for this run,
+  // once, before any child is forked, so the whole workload is scheduled under
+  // them.  Each block is a no-op unless its flag was supplied on the command
+  // line; the matching [SCHEDTEST] event=*_PARAMS line is the trace evidence
+  // that the value actually reached and was accepted by xv6.
+  if(mode == SCHED_RR && g_rr_quantum > 0){
+    if(setrrquantum(g_rr_quantum) == 0)
+      printf("[SCHEDTEST] event=RR_PARAMS algo=%s quantum=%d source=llm_guard\n",
+             algo, g_rr_quantum);
+    else
+      printf("[SCHEDTEST] event=RR_PARAMS_REJECTED algo=%s quantum=%d\n",
+             algo, g_rr_quantum);
+  }
+  if(mode == SCHED_PRIORITY && g_aging > 0){
+    if(setpriorityaging(g_aging) == 0)
+      printf("[SCHEDTEST] event=PRIORITY_PARAMS algo=%s aging_threshold=%d source=llm_guard\n",
+             algo, g_aging);
+    else
+      printf("[SCHEDTEST] event=PRIORITY_PARAMS_REJECTED algo=%s aging_threshold=%d\n",
+             algo, g_aging);
+  }
+  if(mode == SCHED_MLFQ && g_mlfq_queues > 0 && g_mlfq_nquantum > 0){
+    // Pad the quantum list to 5 slots (kernel uses only the first `queues`).
+    int q[5];
+    for(int k = 0; k < 5; k++)
+      q[k] = (k < g_mlfq_nquantum) ? g_mlfq_quantum[k]
+                                   : g_mlfq_quantum[g_mlfq_nquantum - 1];
+    if(setmlfqparams(g_mlfq_queues, q[0], q[1], q[2], q[3], q[4]) == 0){
+      int boost_ok = (g_mlfq_boost > 0 && setmlfqboost(g_mlfq_boost) == 0);
+      // Emit one MLFQ_PARAMS line carrying the applied queues, quantum list,
+      // and (when supplied) boost interval.  quantum is a single comma-joined
+      // token so the host parser keeps it intact.
+      printf("[SCHEDTEST] event=MLFQ_PARAMS algo=%s queues=%d quantum=",
+             algo, g_mlfq_queues);
+      for(int k = 0; k < g_mlfq_queues; k++)
+        printf("%s%d", k ? "," : "", q[k]);
+      if(boost_ok)
+        printf(" boost_interval=%d", g_mlfq_boost);
+      printf(" source=llm_guard\n");
+    } else {
+      printf("[SCHEDTEST] event=MLFQ_PARAMS_REJECTED algo=%s queues=%d\n",
+             algo, g_mlfq_queues);
+    }
+  }
+
   // Reference tick captured before any fork. The parent gates fork() itself
   // on planned arrival so each child is *first made RUNNABLE* exactly at its
   // declared arrival. (A previous attempt slept in the child after fork, but
@@ -146,15 +222,34 @@ run_one(const char *algo, int mode, int seed, struct workload *wl)
     if(need > 0)
       pause(need);
 
+    // Start barrier: a one-byte pipe the child blocks on immediately after fork.
+    // The parent applies all scheduling metadata (priority and/or SJF/SRTF burst
+    // hint) to the child's runtime pid, THEN releases it.  This makes the
+    // "metadata is in place before the child runs any CPU workload" ordering
+    // race-free: without it a timer tick could dispatch the child between fork()
+    // and the parent's setpriority()/setbursthint(), letting one quantum run
+    // under stale defaults (and, for PRIORITY, letting the first dispatch be
+    // chosen on the wrong priority).
+    int gate[2];
+    if(pipe(gate) < 0){
+      printf("schedtest: pipe failed\n");
+      break;
+    }
+
     int pid = fork();
     if(pid < 0){
       printf("schedtest: fork failed\n");
+      close(gate[0]);
+      close(gate[1]);
       break;
     }
     if(pid == 0){
+      // Child: wait at the barrier until the parent has applied our metadata.
+      close(gate[1]);
+      char b;
+      read(gate[0], &b, 1);
+      close(gate[0]);
       int mypid = getpid();
-      if(mode == SCHED_PRIORITY)
-        setpriority(mypid, d->priority);
       printf("[SCHEDTEST] event=PROC_DEF pid=%d arrival=%d cpu_burst=%d priority=%d label=%s\n",
              mypid, d->arrival, d->cpu_burst, getpriority(mypid), d->label);
       printf("[SCHEDTEST] event=CHILD_START pid=%d priority=%d\n",
@@ -164,15 +259,31 @@ run_one(const char *algo, int mode, int seed, struct workload *wl)
       exit(0);
     }
 
-    // Parent: seed this child's SJF/SRTF prediction with the LLM-generated
-    // initial prior (aligned to fork order).  Done before the parent pauses for
-    // the next arrival, so the prior lands before the child is heavily
-    // scheduled.  The kernel later refines it via EMA from observed CPU only.
+    // Parent: apply this child's scheduling metadata to its runtime pid BEFORE
+    // releasing it through the barrier.
+    close(gate[0]);
+
+    // Priority is applied from the PARENT (not the child) so it is in place
+    // before the child is ever schedulable for real work.  Emitting the runtime
+    // pid + logical index makes the apply auditable in the raw log.
+    if(mode == SCHED_PRIORITY){
+      setpriority(pid, d->priority);
+      printf("[SCHEDTEST] event=PRIORITY_APPLIED pid=%d index=%d priority=%d source=schedtest_profile\n",
+             pid, i, d->priority);
+    }
+
+    // Seed this child's SJF/SRTF prediction with the LLM-generated initial prior
+    // (aligned to fork order).  The kernel later refines it via EMA from observed
+    // CPU only; the true future burst is never supplied here.
     if((mode == SCHED_SJF || mode == SCHED_SRTF) && i < g_nhints && g_hints[i] > 0){
       if(setbursthint(pid, g_hints[i]) == 0)
         printf("[SCHEDTEST] event=BURST_HINT_APPLIED pid=%d index=%d predicted_burst=%d\n",
                pid, i, g_hints[i]);
     }
+
+    // Release the child: it now runs CHILD_START + run_burst with metadata set.
+    write(gate[1], "x", 1);
+    close(gate[1]);
   }
 
   for(int i = 0; i < wl->n; i++)
@@ -189,30 +300,53 @@ int
 main(int argc, char *argv[])
 {
   if(argc < 2){
-    printf("usage: schedtest <algorithm> <seed> <profile> [alpha initial min max] [hint0 hint1 ...]\n");
+    printf("usage: schedtest <algorithm> <seed> <profile> [flags...]\n");
     printf("  algorithm : rr|fcfs|priority|mlfq|sjf|srtf | all\n");
     printf("  seed      : integer (default 1)\n");
     printf("  profile   : interactive|cpu_bound|mixed|priority_sensitive (default mixed)\n");
-    printf("  alpha..max: predictor params (SJF/SRTF); LLM/Guard validated\n");
-    printf("  hintN     : per-process initial burst priors, aligned to fork order\n");
+    printf("  flags (all LLM/Guard validated; each algorithm reads only its own):\n");
+    printf("    --rr-quantum <int>            RR ticks per round\n");
+    printf("    --aging <int>                 Priority aging threshold\n");
+    printf("    --mlfq-queues <int>           MLFQ queue count (2-5)\n");
+    printf("    --mlfq-quantum <c,s,v>        MLFQ per-level quanta (CSV)\n");
+    printf("    --mlfq-boost <int>            MLFQ boost interval\n");
+    printf("    --alpha/--initial/--min/--max <int>   SJF/SRTF predictor params\n");
+    printf("    --hints <c,s,v>               SJF/SRTF per-process burst priors (CSV, fork order)\n");
     exit(1);
   }
 
   int seed = (argc >= 3) ? atoi(argv[2]) : 1;
   const char *profile = (argc >= 4) ? argv[3] : "mixed";
 
-  // Optional predictor configuration for SJF/SRTF (ignored by other algos):
-  //   argv[4..7] = alpha initial min max  (Guard-validated predictor params)
-  //   argv[8..]  = per-process initial burst priors, aligned to fork order.
-  // These come from the LLM via the Orchestrator and never carry true future
-  // bursts; the kernel re-clamps them and refines via EMA on observed CPU.
-  if(argc >= 8){
-    g_alpha   = atoi(argv[4]);
-    g_initial = atoi(argv[5]);
-    g_min     = atoi(argv[6]);
-    g_max     = atoi(argv[7]);
-    for(int i = 8; i < argc && g_nhints < MAXPROC; i++)
-      g_hints[g_nhints++] = atoi(argv[i]);
+  // Flag-style options (argv[4..]).  Flags keep the argument count low (CSV
+  // lists collapse multi-value params into one token), so MLFQ's full config
+  // fits comfortably under the xv6 shell argument limit.  Each algorithm only
+  // consults the flags relevant to it; the values come from the LLM via the
+  // Orchestrator (Algorithm Guard validated) and never carry true future
+  // bursts.  Unknown flags are ignored.
+  for(int i = 4; i < argc; i++){
+    if(strcmp(argv[i], "--rr-quantum") == 0 && i + 1 < argc){
+      g_rr_quantum = atoi(argv[++i]);
+    } else if(strcmp(argv[i], "--aging") == 0 && i + 1 < argc){
+      g_aging = atoi(argv[++i]);
+    } else if(strcmp(argv[i], "--mlfq-queues") == 0 && i + 1 < argc){
+      g_mlfq_queues = atoi(argv[++i]);
+    } else if(strcmp(argv[i], "--mlfq-quantum") == 0 && i + 1 < argc){
+      g_mlfq_nquantum = parse_int_csv(argv[++i], g_mlfq_quantum, 5);
+    } else if(strcmp(argv[i], "--mlfq-boost") == 0 && i + 1 < argc){
+      g_mlfq_boost = atoi(argv[++i]);
+    } else if(strcmp(argv[i], "--alpha") == 0 && i + 1 < argc){
+      g_alpha = atoi(argv[++i]);
+    } else if(strcmp(argv[i], "--initial") == 0 && i + 1 < argc){
+      g_initial = atoi(argv[++i]);
+    } else if(strcmp(argv[i], "--min") == 0 && i + 1 < argc){
+      g_min = atoi(argv[++i]);
+    } else if(strcmp(argv[i], "--max") == 0 && i + 1 < argc){
+      g_max = atoi(argv[++i]);
+    } else if(strcmp(argv[i], "--hints") == 0 && i + 1 < argc){
+      g_nhints = parse_int_csv(argv[++i], g_hints, MAXPROC);
+    }
+    // else: unknown token ignored (keeps forward/backward compat tolerant)
   }
 
   struct workload *wl = find_workload(profile);

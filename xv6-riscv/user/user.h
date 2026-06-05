@@ -31,6 +31,10 @@ int getpriority(int pid);
 int setpredictor(int alpha_percent, int initial, int min_burst, int max_burst);
 int getpredictor(int pid);
 int setbursthint(int pid, int predicted_burst);
+int setrrquantum(int quantum);
+int setpriorityaging(int threshold);
+int setmlfqparams(int queues, int q0, int q1, int q2, int q3, int q4);
+int setmlfqboost(int boost_interval);
 
 // ulib.c
 int stat(const char*, struct stat*);
