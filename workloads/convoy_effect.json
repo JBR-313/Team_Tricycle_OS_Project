@@ -1,0 +1,193 @@
+{
+  "id": "convoy_effect",
+  "description": "One long CPU-bound job arrives first; many short jobs queue behind it. Classic FCFS convoy.",
+  "target_metric": "avg_waiting_time",
+  "expected_best_algorithm": "SRTF",
+  "expected_behavior": "FCFS suffers a convoy (short jobs wait behind the long one). SJF/SRTF and MLFQ avoid it; RR is competitive. FCFS should be clearly worst on avg waiting time.",
+  "schema_version": 2,
+  "processes": [
+    {
+      "pid": 1,
+      "arrival_time": 0,
+      "cpu_bursts": [
+        20
+      ],
+      "io_bursts": [],
+      "priority": 2,
+      "label": "cpu_bound",
+      "actual_bursts": [
+        20
+      ]
+    },
+    {
+      "pid": 2,
+      "arrival_time": 1,
+      "cpu_bursts": [
+        1,
+        1
+      ],
+      "io_bursts": [
+        2
+      ],
+      "priority": 2,
+      "label": "interactive",
+      "actual_bursts": [
+        1,
+        1
+      ]
+    },
+    {
+      "pid": 3,
+      "arrival_time": 2,
+      "cpu_bursts": [
+        1,
+        1
+      ],
+      "io_bursts": [
+        2
+      ],
+      "priority": 2,
+      "label": "interactive",
+      "actual_bursts": [
+        1,
+        1
+      ]
+    },
+    {
+      "pid": 4,
+      "arrival_time": 3,
+      "cpu_bursts": [
+        1,
+        1
+      ],
+      "io_bursts": [
+        2
+      ],
+      "priority": 2,
+      "label": "interactive",
+      "actual_bursts": [
+        1,
+        1
+      ]
+    },
+    {
+      "pid": 5,
+      "arrival_time": 4,
+      "cpu_bursts": [
+        1,
+        1
+      ],
+      "io_bursts": [
+        2
+      ],
+      "priority": 2,
+      "label": "interactive",
+      "actual_bursts": [
+        1,
+        1
+      ]
+    },
+    {
+      "pid": 6,
+      "arrival_time": 5,
+      "cpu_bursts": [
+        1,
+        1
+      ],
+      "io_bursts": [
+        2
+      ],
+      "priority": 2,
+      "label": "interactive",
+      "actual_bursts": [
+        1,
+        1
+      ]
+    },
+    {
+      "pid": 7,
+      "arrival_time": 6,
+      "cpu_bursts": [
+        1,
+        1
+      ],
+      "io_bursts": [
+        2
+      ],
+      "priority": 2,
+      "label": "interactive",
+      "actual_bursts": [
+        1,
+        1
+      ]
+    },
+    {
+      "pid": 8,
+      "arrival_time": 7,
+      "cpu_bursts": [
+        1,
+        1
+      ],
+      "io_bursts": [
+        2
+      ],
+      "priority": 2,
+      "label": "interactive",
+      "actual_bursts": [
+        1,
+        1
+      ]
+    },
+    {
+      "pid": 9,
+      "arrival_time": 8,
+      "cpu_bursts": [
+        1,
+        1
+      ],
+      "io_bursts": [
+        2
+      ],
+      "priority": 2,
+      "label": "interactive",
+      "actual_bursts": [
+        1,
+        1
+      ]
+    },
+    {
+      "pid": 10,
+      "arrival_time": 9,
+      "cpu_bursts": [
+        1,
+        1
+      ],
+      "io_bursts": [
+        2
+      ],
+      "priority": 2,
+      "label": "interactive",
+      "actual_bursts": [
+        1,
+        1
+      ]
+    },
+    {
+      "pid": 11,
+      "arrival_time": 10,
+      "cpu_bursts": [
+        1,
+        1
+      ],
+      "io_bursts": [
+        2
+      ],
+      "priority": 2,
+      "label": "interactive",
+      "actual_bursts": [
+        1,
+        1
+      ]
+    }
+  ]
+}

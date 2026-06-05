@@ -1,0 +1,139 @@
+{
+  "id": "burst_prediction_demo",
+  "description": "Jobs with clearly bimodal bursts (very short vs long), repeated, so an EMA burst predictor can learn and SJF/SRTF separate them.",
+  "target_metric": "avg_waiting_time",
+  "expected_best_algorithm": "SJF",
+  "expected_behavior": "Once the EMA predictor stabilizes, SJF/SRTF run the predictably-short jobs first -> lowest avg waiting time. FCFS ignores burst length and is worst; RR is middling.",
+  "schema_version": 2,
+  "processes": [
+    {
+      "pid": 1,
+      "arrival_time": 0,
+      "cpu_bursts": [
+        2,
+        2,
+        2
+      ],
+      "io_bursts": [
+        2,
+        2
+      ],
+      "priority": 2,
+      "label": "predictably_short",
+      "actual_bursts": [
+        2,
+        2,
+        2
+      ]
+    },
+    {
+      "pid": 2,
+      "arrival_time": 0,
+      "cpu_bursts": [
+        12
+      ],
+      "io_bursts": [],
+      "priority": 2,
+      "label": "predictably_long",
+      "actual_bursts": [
+        12
+      ]
+    },
+    {
+      "pid": 3,
+      "arrival_time": 1,
+      "cpu_bursts": [
+        2,
+        2,
+        2
+      ],
+      "io_bursts": [
+        2,
+        2
+      ],
+      "priority": 2,
+      "label": "predictably_short",
+      "actual_bursts": [
+        2,
+        2,
+        2
+      ]
+    },
+    {
+      "pid": 4,
+      "arrival_time": 1,
+      "cpu_bursts": [
+        12
+      ],
+      "io_bursts": [],
+      "priority": 2,
+      "label": "predictably_long",
+      "actual_bursts": [
+        12
+      ]
+    },
+    {
+      "pid": 5,
+      "arrival_time": 2,
+      "cpu_bursts": [
+        2,
+        2
+      ],
+      "io_bursts": [
+        2
+      ],
+      "priority": 2,
+      "label": "predictably_short",
+      "actual_bursts": [
+        2,
+        2
+      ]
+    },
+    {
+      "pid": 6,
+      "arrival_time": 2,
+      "cpu_bursts": [
+        10
+      ],
+      "io_bursts": [],
+      "priority": 2,
+      "label": "predictably_long",
+      "actual_bursts": [
+        10
+      ]
+    },
+    {
+      "pid": 7,
+      "arrival_time": 3,
+      "cpu_bursts": [
+        2,
+        2,
+        2
+      ],
+      "io_bursts": [
+        2,
+        2
+      ],
+      "priority": 2,
+      "label": "predictably_short",
+      "actual_bursts": [
+        2,
+        2,
+        2
+      ]
+    },
+    {
+      "pid": 8,
+      "arrival_time": 4,
+      "cpu_bursts": [
+        11
+      ],
+      "io_bursts": [],
+      "priority": 2,
+      "label": "predictably_long",
+      "actual_bursts": [
+        11
+      ]
+    }
+  ]
+}

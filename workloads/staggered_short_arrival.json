@@ -1,0 +1,114 @@
+{
+  "id": "staggered_short_arrival",
+  "description": "A medium job runs, then short jobs arrive staggered while it executes; SRTF should preempt.",
+  "target_metric": "avg_response_time",
+  "expected_best_algorithm": "SRTF",
+  "expected_behavior": "SRTF preempts the medium job when shorter jobs arrive -> best response time, and PREEMPT events are visible. SJF (non-preemptive) is worse; FCFS worst.",
+  "schema_version": 2,
+  "processes": [
+    {
+      "pid": 1,
+      "arrival_time": 0,
+      "cpu_bursts": [
+        10
+      ],
+      "io_bursts": [],
+      "priority": 2,
+      "label": "cpu_bound",
+      "actual_bursts": [
+        10
+      ]
+    },
+    {
+      "pid": 2,
+      "arrival_time": 2,
+      "cpu_bursts": [
+        2
+      ],
+      "io_bursts": [],
+      "priority": 2,
+      "label": "interactive",
+      "actual_bursts": [
+        2
+      ]
+    },
+    {
+      "pid": 3,
+      "arrival_time": 4,
+      "cpu_bursts": [
+        2
+      ],
+      "io_bursts": [],
+      "priority": 2,
+      "label": "interactive",
+      "actual_bursts": [
+        2
+      ]
+    },
+    {
+      "pid": 4,
+      "arrival_time": 6,
+      "cpu_bursts": [
+        2
+      ],
+      "io_bursts": [],
+      "priority": 2,
+      "label": "interactive",
+      "actual_bursts": [
+        2
+      ]
+    },
+    {
+      "pid": 5,
+      "arrival_time": 8,
+      "cpu_bursts": [
+        2
+      ],
+      "io_bursts": [],
+      "priority": 2,
+      "label": "interactive",
+      "actual_bursts": [
+        2
+      ]
+    },
+    {
+      "pid": 6,
+      "arrival_time": 10,
+      "cpu_bursts": [
+        2
+      ],
+      "io_bursts": [],
+      "priority": 2,
+      "label": "interactive",
+      "actual_bursts": [
+        2
+      ]
+    },
+    {
+      "pid": 7,
+      "arrival_time": 12,
+      "cpu_bursts": [
+        2
+      ],
+      "io_bursts": [],
+      "priority": 2,
+      "label": "interactive",
+      "actual_bursts": [
+        2
+      ]
+    },
+    {
+      "pid": 8,
+      "arrival_time": 14,
+      "cpu_bursts": [
+        2
+      ],
+      "io_bursts": [],
+      "priority": 2,
+      "label": "interactive",
+      "actual_bursts": [
+        2
+      ]
+    }
+  ]
+}
