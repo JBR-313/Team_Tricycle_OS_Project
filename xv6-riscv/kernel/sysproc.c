@@ -184,3 +184,18 @@ sys_getpredictor(void)
   argint(0, &pid);
   return get_predicted_burst(pid);
 }
+
+// Apply an LLM-generated INITIAL burst prior to one process (SJF/SRTF).
+// args: pid, predicted_burst.  predicted_burst is an estimate derived from
+// visible workload features (NOT a true future burst); the kernel clamps it
+// into the predictor's [min,max].  Returns 0 on success, -1 on failure.
+uint64
+sys_setbursthint(void)
+{
+  int pid, predicted_burst;
+  argint(0, &pid);
+  argint(1, &predicted_burst);
+  if(predicted_burst < 1)
+    return -1;
+  return set_burst_hint(pid, predicted_burst);
+}

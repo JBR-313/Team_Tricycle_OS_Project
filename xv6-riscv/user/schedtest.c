@@ -62,6 +62,15 @@ static struct workload WORKLOADS[] = {
 };
 #define NWORKLOADS (sizeof(WORKLOADS) / sizeof(WORKLOADS[0]))
 
+// LLM-generated predictor configuration, supplied on the command line by the
+// Orchestrator (already validated/clamped by Algorithm Guard).  These are
+// predictor *parameters* and *initial burst priors* derived from visible
+// workload features — never true future bursts.  g_alpha < 0 means "not
+// supplied"; the kernel then keeps its built-in predictor defaults.
+static int g_alpha = -1, g_initial = -1, g_min = -1, g_max = -1;
+static int g_hints[MAXPROC];
+static int g_nhints = 0;
+
 static int
 algo_mode(const char *s)
 {
@@ -112,6 +121,17 @@ run_one(const char *algo, int mode, int seed, struct workload *wl)
     exit(1);
   }
 
+  // Apply the LLM/Guard predictor parameters once per run.  Only SJF/SRTF
+  // consult the burst predictor, so this is a no-op for the other algorithms.
+  if((mode == SCHED_SJF || mode == SCHED_SRTF) && g_alpha >= 0){
+    if(setpredictor(g_alpha, g_initial, g_min, g_max) == 0)
+      printf("[SCHEDTEST] event=PREDICTOR_PARAMS algo=%s alpha=%d initial=%d min=%d max=%d\n",
+             algo, g_alpha, g_initial, g_min, g_max);
+    else
+      printf("[SCHEDTEST] event=PREDICTOR_PARAMS_REJECTED algo=%s alpha=%d initial=%d min=%d max=%d\n",
+             algo, g_alpha, g_initial, g_min, g_max);
+  }
+
   // Reference tick captured before any fork. The parent gates fork() itself
   // on planned arrival so each child is *first made RUNNABLE* exactly at its
   // declared arrival. (A previous attempt slept in the child after fork, but
@@ -143,6 +163,16 @@ run_one(const char *algo, int mode, int seed, struct workload *wl)
       printf("[SCHEDTEST] event=CHILD_EXIT pid=%d\n", mypid);
       exit(0);
     }
+
+    // Parent: seed this child's SJF/SRTF prediction with the LLM-generated
+    // initial prior (aligned to fork order).  Done before the parent pauses for
+    // the next arrival, so the prior lands before the child is heavily
+    // scheduled.  The kernel later refines it via EMA from observed CPU only.
+    if((mode == SCHED_SJF || mode == SCHED_SRTF) && i < g_nhints && g_hints[i] > 0){
+      if(setbursthint(pid, g_hints[i]) == 0)
+        printf("[SCHEDTEST] event=BURST_HINT_APPLIED pid=%d index=%d predicted_burst=%d\n",
+               pid, i, g_hints[i]);
+    }
   }
 
   for(int i = 0; i < wl->n; i++)
@@ -159,15 +189,31 @@ int
 main(int argc, char *argv[])
 {
   if(argc < 2){
-    printf("usage: schedtest <algorithm> <seed> <profile>\n");
+    printf("usage: schedtest <algorithm> <seed> <profile> [alpha initial min max] [hint0 hint1 ...]\n");
     printf("  algorithm : rr|fcfs|priority|mlfq|sjf|srtf | all\n");
     printf("  seed      : integer (default 1)\n");
     printf("  profile   : interactive|cpu_bound|mixed|priority_sensitive (default mixed)\n");
+    printf("  alpha..max: predictor params (SJF/SRTF); LLM/Guard validated\n");
+    printf("  hintN     : per-process initial burst priors, aligned to fork order\n");
     exit(1);
   }
 
   int seed = (argc >= 3) ? atoi(argv[2]) : 1;
   const char *profile = (argc >= 4) ? argv[3] : "mixed";
+
+  // Optional predictor configuration for SJF/SRTF (ignored by other algos):
+  //   argv[4..7] = alpha initial min max  (Guard-validated predictor params)
+  //   argv[8..]  = per-process initial burst priors, aligned to fork order.
+  // These come from the LLM via the Orchestrator and never carry true future
+  // bursts; the kernel re-clamps them and refines via EMA on observed CPU.
+  if(argc >= 8){
+    g_alpha   = atoi(argv[4]);
+    g_initial = atoi(argv[5]);
+    g_min     = atoi(argv[6]);
+    g_max     = atoi(argv[7]);
+    for(int i = 8; i < argc && g_nhints < MAXPROC; i++)
+      g_hints[g_nhints++] = atoi(argv[i]);
+  }
 
   struct workload *wl = find_workload(profile);
   if(wl == 0){

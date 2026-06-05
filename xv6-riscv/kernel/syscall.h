@@ -26,3 +26,4 @@
 #define SYS_getpriority  25
 #define SYS_setpredictor 26
 #define SYS_getpredictor 27
+#define SYS_setbursthint 28

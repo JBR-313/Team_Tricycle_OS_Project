@@ -100,6 +100,17 @@ PROFILE_MAP = {
     "bursty_long_tail":       ROOT / "workloads" / "bursty_long_tail.json",
 }
 
+# For the xv6 backend, the LLM pipeline must analyze the EXACT processes that
+# schedtest forks, so burst priors align by fork index.  Each curated xv6
+# profile maps to a mirror workload JSON whose process order == the schedtest.c
+# WORKLOADS table order.  Used only when backend == xv6.
+XV6_MIRROR_MAP = {
+    "interactive":        ROOT / "workloads" / "xv6_interactive.json",
+    "cpu_bound":          ROOT / "workloads" / "xv6_cpu_bound.json",
+    "mixed":              ROOT / "workloads" / "xv6_mixed.json",
+    "priority_sensitive": ROOT / "workloads" / "xv6_priority_sensitive.json",
+}
+
 # Trace files written by the simulator (lowercase canonical names).
 TRACE_ALGOS = [a.lower() for a in CANONICAL_ALGOS]
 
@@ -407,14 +418,18 @@ def ensure_xv6_built(dry_run: bool) -> bool:
 
 
 def qemu_run_schedtest(algo_lower: str, seed: int, profile: str, raw_path: Path,
-                       dry_run: bool) -> bool:
+                       dry_run: bool, pred_args: list[str] | None = None) -> bool:
     """Boot xv6 under QEMU, run one schedtest, capture the console to raw_path.
 
-    Waits for the shell, types `schedtest <algo> <seed> <profile>`, then waits for
-    the RUN_END marker (or a timeout) and quits QEMU via Ctrl-A x.  Returns True
-    if a RUN_END for this run was captured.
+    Waits for the shell, types `schedtest <algo> <seed> <profile> [pred_args...]`,
+    then waits for the RUN_END marker (or a timeout) and quits QEMU via Ctrl-A x.
+    `pred_args` carries the Guard-validated predictor params + per-process burst
+    priors (SJF/SRTF only); they are appended verbatim to the command line.
+    Returns True if a RUN_END for this run was captured.
     """
     cmd = f"schedtest {algo_lower} {seed} {profile}"
+    if pred_args:
+        cmd += " " + " ".join(pred_args)
     print(f"  [qemu] {cmd}  -> {_rel(raw_path)}")
     if dry_run:
         print("  [DRY-RUN] skipped")
@@ -742,6 +757,56 @@ def build_xv6_metrics(out_dir: Path, selected: str, run_order: list[str],
     return True
 
 
+def _build_predictor_args(out_dir: Path, mirror_path: Path | None) -> list[str] | None:
+    """Build schedtest predictor CLI tokens for SJF/SRTF from the guard decision.
+
+    Layout (consumed by user/schedtest.c):
+        alpha initial min max  h0 h1 ...
+    where alpha..max come from guard_decision.params (the Guard-validated
+    predictor parameters) and hN are per-process initial burst priors aligned to
+    the mirror workload's process order == schedtest fork order. Returns None if
+    no usable params/priors are available (schedtest then uses kernel defaults).
+
+    The priors are LLM estimates derived from VISIBLE features only; the true
+    future bursts (actual_bursts) are never read here.
+    """
+    guard = _read_json(out_dir / "guard_decision.json") or {}
+
+    # Per-process priors are produced by the LLM independently of which algorithm
+    # was finally selected, so the SJF/SRTF comparison runs can use them even
+    # when the LLM picked a different algorithm. If there are none, fall back to
+    # the kernel's built-in predictor (no args).
+    pb_list = guard.get("predicted_bursts") or []
+    by_pid = {it.get("pid"): it for it in pb_list if isinstance(it, dict)}
+    if not by_pid:
+        return None
+
+    # Predictor params land in guard_decision.params only when SJF/SRTF was the
+    # selected algorithm; otherwise reuse the predictor defaults (mirror of
+    # proc.c struct predictor_params {50, 10, 1, 100}).
+    params = guard.get("params") or {}
+    try:
+        alpha = int(params["alpha_percent"])
+        initial = int(params["initial"])
+        min_b = int(params["min"])
+        max_b = int(params["max"])
+    except (KeyError, TypeError, ValueError):
+        alpha, initial, min_b, max_b = 50, 10, 1, 100
+
+    tokens = [str(alpha), str(initial), str(min_b), str(max_b)]
+
+    # Per-process priors aligned to fork order via the mirror workload.
+    mirror = _read_json(mirror_path) if mirror_path else None
+    procs = (mirror or {}).get("processes") or []
+    for p in procs:
+        entry = by_pid.get(p.get("pid"))
+        pb = entry.get("predicted_burst") if isinstance(entry, dict) else None
+        if not isinstance(pb, int) or pb < 1:
+            pb = initial  # no LLM prior for this process -> predictor initial
+        tokens.append(str(pb))
+    return tokens
+
+
 def run_xv6_backend(out_dir: Path, seed: int, profile: str, run_order: list[str],
                     algo: str | None, dry_run: bool) -> bool:
     """Execute the workload on the real xv6 kernel under QEMU and parse the result.
@@ -762,10 +827,18 @@ def run_xv6_backend(out_dir: Path, seed: int, profile: str, run_order: list[str]
     if not ensure_xv6_built(dry_run):
         return False
 
+    # Predictor params + per-process burst priors for SJF/SRTF, built once from
+    # the guard decision and the curated mirror workload (fork-order aligned).
+    mirror_path = XV6_MIRROR_MAP.get(xv6_profile)
+    pred_args = _build_predictor_args(out_dir, mirror_path)
+    if pred_args:
+        print(f"  predictor args (SJF/SRTF): {' '.join(pred_args)}")
+
     parsed_any = False
     for a in algos:
         raw_path = RAW_LOG_DIR / f"xv6_raw_{a.lower()}_seed{seed}.log"
-        if not qemu_run_schedtest(a.lower(), seed, xv6_profile, raw_path, dry_run):
+        a_pred = pred_args if a.upper() in ("SJF", "SRTF") else None
+        if not qemu_run_schedtest(a.lower(), seed, xv6_profile, raw_path, dry_run, a_pred):
             print(f"  [WARN] capture failed for {a}; skipping")
             continue
         if parse_xv6_log(raw_path, a, seed, xv6_profile, out_dir, dry_run):
@@ -977,6 +1050,21 @@ def main() -> int:
     dry_run = args.dry_run
 
     workload_type, workload_path = resolve_workload(args.workload)
+
+    # xv6 backend: schedtest only runs the curated profiles, so collapse the
+    # requested workload to one of them and analyze its MIRROR JSON instead of
+    # the original v2 workload. This keeps the LLM burst priors aligned to the
+    # exact processes xv6 forks (process order == fork order). The simulator
+    # backend keeps using the full v2 workload unchanged.
+    if args.backend == "xv6":
+        xv6_profile = workload_type if workload_type in XV6_PROFILES else "mixed"
+        mirror = XV6_MIRROR_MAP.get(xv6_profile)
+        if mirror and mirror.is_file():
+            if xv6_profile != workload_type or workload_path != mirror:
+                print(f"[orchestrator] xv6 backend: analyzing mirror workload "
+                      f"{_rel(mirror)} for profile {xv6_profile!r}")
+            workload_type, workload_path = xv6_profile, mirror
+
     workload_stem = workload_path.stem
 
     print("=" * 64)

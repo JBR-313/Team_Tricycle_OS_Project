@@ -108,6 +108,7 @@ int             get_proc_priority(int);
 int             set_proc_priority(int, int);
 int             set_predictor_params(int, int, int, int);
 int             get_predicted_burst(int);
+int             set_burst_hint(int, int);
 void            sched_trace(int, const char*, int, const char*, int, int, const char*);
 void            sched_trace_queue(int, int, int, int, const char*);
 

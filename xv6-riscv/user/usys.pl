@@ -48,3 +48,4 @@ entry("setpriority");
 entry("getpriority");
 entry("setpredictor");
 entry("getpredictor");
+entry("setbursthint");

@@ -30,6 +30,7 @@ int setpriority(int pid, int priority);
 int getpriority(int pid);
 int setpredictor(int alpha_percent, int initial, int min_burst, int max_burst);
 int getpredictor(int pid);
+int setbursthint(int pid, int predicted_burst);
 
 // ulib.c
 int stat(const char*, struct stat*);

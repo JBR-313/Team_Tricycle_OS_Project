@@ -11,7 +11,11 @@
 #define LIST  4
 #define BACK  5
 
-#define MAXARGS 10
+// schedtest takes the algo/seed/profile plus optional predictor params and up
+// to MAXPROC per-process burst priors, so the shell must parse a longer line
+// (e.g. `schedtest sjf 1 mixed 50 10 1 100 h0 h1 ... h7`). Still well under the
+// kernel's MAXARG (32).
+#define MAXARGS 24
 
 struct cmd {
   int type;
