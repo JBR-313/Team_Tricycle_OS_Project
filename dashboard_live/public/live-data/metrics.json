@@ -1,155 +1,152 @@
 {
-  "scheduling_algorithm": "MLFQ",
+  "scheduling_algorithm": "SJF",
   "params": {
-    "queues": 2,
-    "quantum": [
-      10,
-      1
-    ],
-    "aging_threshold": 500,
-    "boost_interval": 100
+    "alpha_percent": 50,
+    "initial": 10,
+    "min": 1,
+    "max": 100000
   },
   "process_count": 6,
-  "completed_count": 5,
-  "total_execution_time": 16,
-  "avg_response_time": 0.0,
-  "avg_turnaround_time": 2.4,
-  "avg_waiting_time": 0.2,
-  "throughput": 0.312,
-  "max_waiting_time": 1,
+  "completed_count": 6,
+  "total_execution_time": 24,
+  "avg_response_time": 9.17,
+  "avg_turnaround_time": 12.33,
+  "avg_waiting_time": 8.33,
+  "throughput": 0.25,
+  "max_waiting_time": 15,
+  "preemption_count": 0,
   "starvation_occurred": false,
   "starvation_pids": [],
-  "preemption_count": 3,
   "per_process": [
     {
+      "pid": 1,
+      "arrival_time": 0,
+      "first_run_time": 0,
+      "finish_time": 7,
+      "response_time": 0,
+      "turnaround_time": 7,
+      "waiting_time": 0
+    },
+    {
+      "pid": 2,
+      "arrival_time": 1,
+      "first_run_time": 8,
+      "finish_time": 9,
+      "response_time": 7,
+      "turnaround_time": 8,
+      "waiting_time": 6
+    },
+    {
       "pid": 3,
-      "arrival_time": null,
-      "first_run_time": 2,
-      "finish_time": null,
-      "response_time": null,
-      "turnaround_time": null,
-      "waiting_time": null
+      "arrival_time": 2,
+      "first_run_time": 10,
+      "finish_time": 14,
+      "response_time": 8,
+      "turnaround_time": 12,
+      "waiting_time": 7
     },
     {
       "pid": 4,
-      "arrival_time": 0,
-      "first_run_time": 0,
-      "finish_time": 4,
-      "response_time": 0,
-      "turnaround_time": 4,
-      "waiting_time": 1
+      "arrival_time": 3,
+      "first_run_time": 15,
+      "finish_time": 15,
+      "response_time": 12,
+      "turnaround_time": 12,
+      "waiting_time": 11
     },
     {
       "pid": 5,
-      "arrival_time": 2,
-      "first_run_time": 2,
-      "finish_time": 3,
-      "response_time": 0,
-      "turnaround_time": 1,
-      "waiting_time": 0
+      "arrival_time": 4,
+      "first_run_time": 16,
+      "finish_time": 21,
+      "response_time": 12,
+      "turnaround_time": 17,
+      "waiting_time": 11
     },
     {
       "pid": 6,
-      "arrival_time": 5,
-      "first_run_time": 5,
-      "finish_time": 7,
-      "response_time": 0,
-      "turnaround_time": 2,
-      "waiting_time": 0
-    },
-    {
-      "pid": 7,
-      "arrival_time": 10,
-      "first_run_time": 10,
-      "finish_time": 14,
-      "response_time": 0,
-      "turnaround_time": 4,
-      "waiting_time": 0
-    },
-    {
-      "pid": 8,
-      "arrival_time": 15,
-      "first_run_time": 15,
-      "finish_time": 16,
-      "response_time": 0,
-      "turnaround_time": 1,
-      "waiting_time": 0
+      "arrival_time": 6,
+      "first_run_time": 22,
+      "finish_time": 24,
+      "response_time": 16,
+      "turnaround_time": 18,
+      "waiting_time": 15
     }
   ],
-  "judgment": "SUCCESS",
-  "regret_score": 0.0,
-  "best_algorithm": "MLFQ",
-  "workload_file": null,
+  "prediction_source": "ema",
   "comparison": {
-    "MLFQ": {
-      "avg_waiting_time": 0.2,
-      "avg_response_time": 0.0,
-      "avg_turnaround_time": 2.4,
-      "throughput": 0.312,
-      "max_waiting_time": 1,
-      "preemption_count": 3,
-      "starvation_occurred": false,
-      "burst_prediction_error": null,
-      "judgment": "SUCCESS"
-    },
     "RR": {
-      "avg_waiting_time": 0.4,
-      "avg_response_time": 0.2,
-      "avg_turnaround_time": 2.6,
-      "throughput": 0.312,
-      "max_waiting_time": 1,
-      "preemption_count": 12,
+      "avg_waiting_time": 9.5,
+      "avg_response_time": 4.67,
+      "avg_turnaround_time": 13.67,
+      "throughput": 0.25,
+      "max_waiting_time": 15,
+      "preemption_count": 6,
       "starvation_occurred": false,
       "burst_prediction_error": null,
-      "judgment": "SUCCESS"
+      "judgment": "FAIL"
     },
     "FCFS": {
-      "avg_waiting_time": 0.4,
-      "avg_response_time": 0.4,
-      "avg_turnaround_time": 2.8,
-      "throughput": 0.312,
-      "max_waiting_time": 2,
+      "avg_waiting_time": 8.33,
+      "avg_response_time": 9.17,
+      "avg_turnaround_time": 12.33,
+      "throughput": 0.25,
+      "max_waiting_time": 15,
       "preemption_count": 0,
       "starvation_occurred": false,
       "burst_prediction_error": null,
-      "judgment": "SUCCESS"
+      "judgment": "FAIL"
     },
     "Priority": {
-      "avg_waiting_time": 0.4,
-      "avg_response_time": 0.4,
-      "avg_turnaround_time": 2.8,
-      "throughput": 0.312,
-      "max_waiting_time": 2,
-      "preemption_count": 13,
+      "avg_waiting_time": 4.83,
+      "avg_response_time": 4.0,
+      "avg_turnaround_time": 9.0,
+      "throughput": 0.25,
+      "max_waiting_time": 14,
+      "preemption_count": 1,
       "starvation_occurred": false,
       "burst_prediction_error": null,
       "judgment": "SUCCESS"
     },
+    "MLFQ": {
+      "avg_waiting_time": 7.17,
+      "avg_response_time": 2.0,
+      "avg_turnaround_time": 11.33,
+      "throughput": 0.25,
+      "max_waiting_time": 16,
+      "preemption_count": 4,
+      "starvation_occurred": false,
+      "burst_prediction_error": null,
+      "judgment": "FAIL"
+    },
     "SJF": {
-      "avg_waiting_time": 0.4,
-      "avg_response_time": 0.4,
-      "avg_turnaround_time": 2.8,
-      "throughput": 0.312,
-      "max_waiting_time": 2,
+      "avg_waiting_time": 8.33,
+      "avg_response_time": 9.17,
+      "avg_turnaround_time": 12.33,
+      "throughput": 0.25,
+      "max_waiting_time": 15,
       "preemption_count": 0,
       "starvation_occurred": false,
       "burst_prediction_error": null,
-      "judgment": "SUCCESS"
+      "judgment": "FAIL"
     },
     "SRTF": {
-      "avg_waiting_time": 0.4,
-      "avg_response_time": 0.4,
-      "avg_turnaround_time": 2.8,
-      "throughput": 0.312,
-      "max_waiting_time": 2,
-      "preemption_count": 12,
+      "avg_waiting_time": 8.33,
+      "avg_response_time": 9.17,
+      "avg_turnaround_time": 12.33,
+      "throughput": 0.25,
+      "max_waiting_time": 15,
+      "preemption_count": 0,
       "starvation_occurred": false,
       "burst_prediction_error": null,
-      "judgment": "SUCCESS"
+      "judgment": "FAIL"
     }
   },
-  "target_metric": "avg_response_time",
-  "selected_metric_value": 0.0,
-  "best_metric_value": 0.0,
-  "explanation": "SUCCESS: MLFQ on avg_response_time = 0.0 vs best (MLFQ) = 0.0; regret = 0.0% (<= 10%)."
+  "judgment": "FAIL",
+  "regret_score": 0.725,
+  "target_metric": "avg_waiting_time",
+  "selected_metric_value": 8.33,
+  "best_algorithm": "Priority",
+  "best_metric_value": 4.83,
+  "explanation": "FAIL: SJF on avg_waiting_time = 8.33 vs best (Priority) = 4.83; regret = 72.5% (> 25%)."
 }

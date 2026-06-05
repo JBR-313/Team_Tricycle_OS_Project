@@ -1,4 +1,5 @@
 import Card from './Card.jsx'
+import Typewriter from './Typewriter.jsx'
 
 /**
  * LLMRecommendation — Page 1 §2 (pre-execution).
@@ -31,7 +32,21 @@ function formatParams(params) {
     .join(' · ')
 }
 
-export default function LLMRecommendation({ recommendation: rec }) {
+export default function LLMRecommendation({ recommendation: rec, show = true, typing = false }) {
+  // Pre-reveal placeholder: the LLM is still "thinking". Content is withheld
+  // until the reveal sequence reaches this card so the demo does not look
+  // pre-generated.
+  if (!show) {
+    return (
+      <Card label="LLM Recommendation" className="card-rec page1-card page1-card-rec">
+        <div className="llm-placeholder">
+          <span className="llm-placeholder-dots"><i /><i /><i /></span>
+          <span className="llm-placeholder-text">Selecting a scheduling algorithm…</span>
+        </div>
+      </Card>
+    )
+  }
+
   if (!rec) {
     return (
       <Card label="LLM Recommendation" className="card-rec page1-card page1-card-rec">
@@ -43,6 +58,9 @@ export default function LLMRecommendation({ recommendation: rec }) {
   const algo = rec.recommended_scheduling_algorithm || rec.algorithm || '—'
   const paragraphs = splitReason(rec.reason)
   const paramStr = formatParams(rec.params)
+  // When typing, animate the reason as one continuous typewriter block;
+  // otherwise render the pre-split paragraphs statically.
+  const reasonText = paragraphs.join(' ')
 
   return (
     <Card label="LLM Recommendation" className="card-rec page1-card page1-card-rec">
@@ -56,11 +74,19 @@ export default function LLMRecommendation({ recommendation: rec }) {
       </div>
 
       {paragraphs.length > 0 ? (
-        <div className="page1-reason">
-          {paragraphs.map((p, i) => (
-            <p key={i} className="page1-reason-line">{p}</p>
-          ))}
-        </div>
+        typing ? (
+          <div className="page1-reason">
+            <p className="page1-reason-line">
+              <Typewriter text={reasonText} start speed={14} />
+            </p>
+          </div>
+        ) : (
+          <div className="page1-reason">
+            {paragraphs.map((p, i) => (
+              <p key={i} className="page1-reason-line">{p}</p>
+            ))}
+          </div>
+        )
       ) : (
         <p className="page1-body page1-muted">No recommendation reason provided.</p>
       )}

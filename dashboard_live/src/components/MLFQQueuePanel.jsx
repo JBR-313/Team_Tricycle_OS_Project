@@ -108,8 +108,8 @@ export default function MLFQQueuePanel({ events, currentTick, algo }) {
 
   return (
     <Card label="MLFQ · Queue State" className="card-mlfq-queue">
-      {/* A. Lanes */}
-      <div className="mlfq-lanes">
+      {/* A. Lanes — large 2x2 queue cards (Q0|Q1 / Q2|Q3) for projector reading. */}
+      <div className="mlfq-lanes mlfq-lanes-2x2">
         {queueLanes.map(q => (
           <div key={q} className="mlfq-lane">
             <div className="mlfq-lane-head">

@@ -72,7 +72,7 @@ export default function MainGantt({ events, currentTick, maxTick, algo }) {
         ))}
         <div className="gantt-legend-item" style={{ marginLeft: 4 }}>
           <div className="gantt-legend-dot" style={{ background: 'rgba(99,102,241,0.70)', width: 2, height: 8, borderRadius: 1 }} />
-          <span>{tickToMs(currentTick)} ms (simulated)</span>
+          <span>{tickToMs(currentTick)} ms elapsed</span>
         </div>
       </div>
     </Card>

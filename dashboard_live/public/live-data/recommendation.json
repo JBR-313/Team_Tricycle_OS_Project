@@ -1,23 +1,57 @@
 {
-  "algorithm": "MLFQ",
+  "algorithm": "SJF",
   "params": {
-    "queues": 2,
-    "quantum": [
-      10,
-      1
-    ],
-    "aging_threshold": 500,
-    "boost_interval": 100
+    "alpha_percent": 50,
+    "initial": 10,
+    "min": 1,
+    "max": 100000
   },
-  "reason": "This workload consists of 25 short interactive jobs with arrival gaps of 1 tick. MLFQ with 2 queues (high quantum for CPU-bound, low quantum for interactive) and aging ensures low average response time by prioritizing short bursts and preventing starvation. The small quantum in the second queue gives good response time for interactive jobs.",
-  "target_metric": "avg_response_time",
+  "reason": "The workload has a low CPU-bound ratio (0.33) and short average burst count (1.33), making SJF's prediction-based approach effective for minimizing average waiting time. With no starvation risk and moderate priority variance, SJF provides the best trade-off for the target metric of avg_waiting_time.",
+  "target_metric": "avg_waiting_time",
   "confidence": 0.95,
-  "predicted_bursts": [],
-  "recommended_scheduling_algorithm": "MLFQ",
+  "predicted_bursts": [
+    {
+      "pid": 1,
+      "predicted_burst": 10,
+      "confidence": 0.85,
+      "basis": "cpu_bound label suggests longer CPU bursts, but burst_count=1 and no io_count indicate moderate length"
+    },
+    {
+      "pid": 2,
+      "predicted_burst": 5,
+      "confidence": 0.9,
+      "basis": "interactive label with burst_count=1 and no io_count implies short CPU burst"
+    },
+    {
+      "pid": 3,
+      "predicted_burst": 8,
+      "confidence": 0.8,
+      "basis": "mixed label with burst_count=2 and io_count=1 suggests moderate CPU burst length"
+    },
+    {
+      "pid": 4,
+      "predicted_burst": 4,
+      "confidence": 0.92,
+      "basis": "interactive label with burst_count=1 and no io_count indicates short CPU burst"
+    },
+    {
+      "pid": 5,
+      "predicted_burst": 12,
+      "confidence": 0.78,
+      "basis": "cpu_bound label with burst_count=1 and no io_count suggests longer CPU burst"
+    },
+    {
+      "pid": 6,
+      "predicted_burst": 9,
+      "confidence": 0.82,
+      "basis": "mixed label with burst_count=2 and io_count=1 suggests moderate CPU burst length"
+    }
+  ],
+  "recommended_scheduling_algorithm": "SJF",
   "_meta": {
     "source": "tools/llm_advisor.py",
     "model": "solar-pro3",
-    "generated_at": "2026-06-03T07:04:53.988342+00:00",
+    "generated_at": "2026-06-05T16:47:31.217698+00:00",
     "workload_summary": "/home/seonguk/projects/Team_Tricycle_OS_Project/outputs/live/workload_summary.json"
   }
 }

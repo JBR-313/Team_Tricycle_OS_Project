@@ -1,26 +1,23 @@
 /**
- * Header — minimal title + tabs + compact RUN.
+ * Header — minimal title + tabs + phase-aware primary RUN button.
  *
- * Per Page 1 second-revision goal §3 & §9:
- *   visible: title | tabs | RUN | small status pill
- *   removed: backend / profile / seed / offline form, algo selector,
- *            backend/workload/llm/algos/seed/events badges.
- *
- * The full run form is gone; the header RUN uses hardcoded demo-safe
- * defaults via the shared `useRun` hook so the existing run-server
- * pipeline keeps working.
+ * Presentational only: the staged-demo phase machine and the run pipeline live
+ * in App. App passes the resolved button label / disabled state / status pill
+ * and a single onRunClick handler that does the right thing for the current
+ * phase (RUN ANALYSIS -> RUN VISUALIZATION -> VIEW EVALUATION).
  */
-import { useRun } from '../data/useRun.js'
-
-export default function Header({ tab, onTabChange, onRunComplete }) {
-  const { available, state, inFlight, error, startRun } = useRun(onRunComplete)
-
+export default function Header({
+  tab, onTabChange,
+  runAvailable, runLabel, runDisabled, runPill, onRunClick,
+}) {
   const TABS = ['LLM', 'Visualization', 'Evaluation']
 
   const pillClass = {
     IDLE: 'run-pill-idle', DONE: 'run-pill-ok', ERROR: 'run-pill-err',
+    READY: 'run-pill-ok',
+    ANALYZING: 'run-pill-run', REPLAYING: 'run-pill-run',
     RUNNING: 'run-pill-run', PARSING: 'run-pill-run', EVALUATING: 'run-pill-run',
-  }[state] || 'run-pill-idle'
+  }[runPill] || 'run-pill-idle'
 
   return (
     <div className="header-bar">
@@ -40,24 +37,20 @@ export default function Header({ tab, onTabChange, onRunComplete }) {
 
       <div className="header-spacer" />
 
-      {available === false && (
-        <span className="run-pill run-pill-idle" title="Run server offline; start scripts/run_server.py">
+      {runAvailable === false && (
+        <span className="run-pill run-pill-idle" title="Run server offline — analysis uses bundled data">
           server offline
         </span>
       )}
-      {available !== false && (
-        <>
-          <span className={`run-pill ${pillClass}`} title={error || state}>{state}</span>
-          <button
-            className="header-run-button"
-            onClick={() => startRun()}
-            disabled={inFlight || available === null}
-            title="Trigger a new experiment (uses demo-safe defaults)"
-          >
-            RUN
-          </button>
-        </>
-      )}
+      <span className={`run-pill ${pillClass}`} title={runPill}>{runPill}</span>
+      <button
+        className="header-run-button"
+        onClick={onRunClick}
+        disabled={runDisabled}
+        title="Staged demo: analysis → visualization → evaluation"
+      >
+        {runLabel}
+      </button>
     </div>
   )
 }

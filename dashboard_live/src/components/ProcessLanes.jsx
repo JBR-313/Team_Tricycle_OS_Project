@@ -39,18 +39,26 @@ export default function ProcessLanes({ events, currentTick, maxTick, algo }) {
             <div key={pid} className="lane-row">
               <span className="lane-label">P{pid}</span>
               <div className="lane-track">
-                {pidSegs.map((s, i) => (
-                  <div
-                    key={i}
-                    className="lane-seg"
-                    style={{
-                      left:  `${(s.start / span) * 100}%`,
-                      width: `${((s.end - s.start) / span) * 100}%`,
-                      background: PROC_COLORS[s.pid] || '#94a3b8',
-                    }}
-                    title={`P${s.pid}: ${tickToMs(s.start)} ms → ${tickToMs(s.end)} ms`}
-                  />
-                ))}
+                {pidSegs.map((s, i) => {
+                  const w = ((s.end - s.start) / span) * 100
+                  // Label inside the bar when it is wide enough; otherwise the
+                  // tooltip carries the timing (very short slices stay readable).
+                  const inLabel = w >= 8 ? `${tickToMs(s.start)}–${tickToMs(s.end)} ms` : ''
+                  return (
+                    <div
+                      key={i}
+                      className="lane-seg"
+                      style={{
+                        left:  `${(s.start / span) * 100}%`,
+                        width: `${w}%`,
+                        background: PROC_COLORS[s.pid] || '#94a3b8',
+                      }}
+                      title={`P${s.pid}: ${tickToMs(s.start)} ms → ${tickToMs(s.end)} ms`}
+                    >
+                      {inLabel && <span className="lane-seg-label">{inLabel}</span>}
+                    </div>
+                  )
+                })}
                 {gridTicks.map(t => (
                   <div key={t} className="gantt-grid-line" style={{ left: `${(t / span) * 100}%` }} />
                 ))}

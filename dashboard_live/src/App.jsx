@@ -8,7 +8,8 @@ import {
   getLiveDataBase,
   loadRuntimeEvents, loadCorrectionProposal, loadCorrectionGuardDecision,
 } from './data/liveDataClient.js'
-import { tickToMs, SIM_TIME_CAPTION } from './components/constants.js'
+import { tickToMs } from './components/constants.js'
+import { useRun } from './data/useRun.js'
 
 // Resolve the LLM/Guard-recommended algorithm robustly (case-insensitive),
 // preferring a candidate that actually has trace events. Mirrors the goal's
@@ -39,10 +40,51 @@ function resolveRecommendedAlgo(recommendation, guardDecision, manifest, traces)
   return anyWithEvents || 'MLFQ'
 }
 
-// Speed labels (human-friendly) -> replay rate in trace ticks per second.
-// "Instant" is special-cased: it jumps straight to the end of the trace.
-export const REPLAY_SPEEDS = { Slow: 2, Normal: 6, Fast: 12, Instant: null }
-const SPEED_ORDER = ['Slow', 'Normal', 'Fast', 'Instant']
+// ── Staged-demo phase machine ────────────────────────────────────────────────
+// Drives the RUN button behaviour and the LLM-tab reveal. The dashboard opens
+// idle; the first RUN reveals the LLM analysis like a chatbot answer; the
+// second RUN starts the (frontend-only) visualization replay; once the replay
+// finishes the same button offers to jump to Evaluation.
+const DemoPhase = {
+  IDLE:               'idle',
+  ANALYZING_LLM:      'analyzing_llm',
+  READY_TO_VISUALIZE: 'ready_to_visualize',
+  VISUALIZING:        'visualizing',
+  REPLAY_DONE:        'replay_done',
+}
+
+const RUN_LABEL = {
+  [DemoPhase.IDLE]:               'RUN ANALYSIS',
+  [DemoPhase.ANALYZING_LLM]:      'ANALYZING…',
+  [DemoPhase.READY_TO_VISUALIZE]: 'RUN VISUALIZATION',
+  [DemoPhase.VISUALIZING]:        'REPLAYING…',
+  [DemoPhase.REPLAY_DONE]:        'VIEW EVALUATION',
+}
+
+// Presentation-friendly replay speeds, expressed as milliseconds of wall-clock
+// time per trace tick. Default is "Slow" — slow enough to follow process-state
+// transitions on a projector. The goal is readability, not physical accuracy.
+export const REPLAY_SPEEDS = {
+  'Super Slow': 500,
+  'Slow':       175,
+  'Real Time':  40,
+}
+const SPEED_ORDER = ['Super Slow', 'Slow', 'Real Time']
+
+// Reveal timeline (ms from the start of the reveal). Each step advances one
+// reveal stage; LLM cards render placeholder -> typing -> done based on it.
+//   stage 1: analysis status messages
+//   stage 2: recommendation (typewriter)
+//   stage 3: algorithm guard
+//   stage 4: explanation (typewriter)
+//   stage 5: done -> READY_TO_VISUALIZE
+const REVEAL_SCHEDULE = [
+  { stage: 1, delay: 0 },
+  { stage: 2, delay: 2600 },
+  { stage: 3, delay: 5400 },
+  { stage: 4, delay: 6600 },
+  { stage: 5, delay: 9600 },
+]
 
 // Presentation toolbar for the Visualization tab. The primary path is the
 // RUN -> autoplay flow; the draggable scrubber is demoted behind a "Manual
@@ -76,7 +118,7 @@ function VizToolbar({
         <button
           className="viz-toolbar-resetbtn"
           onClick={onReset}
-          title="Reset to 0 ms"
+          title="Restart from 0 ms"
         >
           ⏮
         </button>
@@ -87,9 +129,7 @@ function VizToolbar({
               key={s}
               className={`viz-toolbar-speed ${speedLabel === s ? 'active' : ''}`}
               onClick={() => onSpeedChange(s)}
-              title={REPLAY_SPEEDS[s] == null
-                ? 'Jump to the end immediately'
-                : `${REPLAY_SPEEDS[s]} trace ticks per second`}
+              title={`${REPLAY_SPEEDS[s]} ms per step`}
             >
               {s}
             </button>
@@ -98,8 +138,8 @@ function VizToolbar({
 
         <div className="viz-toolbar-spacer" />
 
-        <span className="viz-toolbar-time" title={SIM_TIME_CAPTION}>
-          <span className="viz-toolbar-time-label">Replay time</span>
+        <span className="viz-toolbar-time">
+          <span className="viz-toolbar-time-label">Elapsed</span>
           <span className="viz-toolbar-time-val">{tickToMs(currentTick)} ms</span>
           <span className="viz-toolbar-time-max">/ {tickToMs(maxTick)} ms</span>
         </span>
@@ -146,6 +186,7 @@ import LLMRecommendation   from './components/LLMRecommendation.jsx'
 import AlgorithmGuard      from './components/AlgorithmGuard.jsx'
 import EvaluationResult    from './components/EvaluationResult.jsx'
 import LLMExplanation      from './components/LLMExplanation.jsx'
+import AnalyzingStatus     from './components/AnalyzingStatus.jsx'
 import MainGantt           from './components/MainGantt.jsx'
 import ProcessState        from './components/ProcessState.jsx'
 import TraceStack          from './components/TraceStack.jsx'
@@ -153,19 +194,7 @@ import ProcessLanes        from './components/ProcessLanes.jsx'
 import WorkloadSummary     from './components/WorkloadSummary.jsx'
 import AlgorithmComparison from './components/AlgorithmComparison.jsx'
 import MetricVisualization from './components/MetricVisualization.jsx'
-// NOTE: RecommendationEvidence (WHY THIS ALGORITHM?) removed per
-// dashboard_page1_pre_execution_revision_goal.md §1/§3 — its content merged
-// into LLMRecommendation's description area.
-// NOTE: CounterfactualMetricView ("Best Algorithm by Metric") and
-// RuntimeCorrectionPreview were removed from Page 3 per the final-cleanup
-// goal — runtime correction is not a working dashboard feature, only a
-// talking point. The component files remain on disk for future use but
-// are no longer rendered.
-import MLFQQueuePanel from './components/MLFQQueuePanel.jsx'
-// NOTE: RunControls / WorkloadSummary intentionally NOT rendered on Page 1
-// per dashboard_page1_second_revision_goal.md §2 & §4. RUN moved into
-// Header; WorkloadSummary still available for Page 2/3 use later but is
-// imported by reference only.
+import MLFQQueuePanel      from './components/MLFQQueuePanel.jsx'
 
 const POLL_INTERVAL_MS = 1500
 
@@ -181,8 +210,18 @@ export default function App() {
   const [tick, setTick] = useState(0)
   const [selectedMetric, setSelectedMetric] = useState('avg_response_time')
   const [isPlaying, setIsPlaying] = useState(false)
-  const [speedLabel, setSpeedLabel] = useState('Normal')  // Slow | Normal | Fast | Instant
+  const [speedLabel, setSpeedLabel] = useState('Slow')  // Super Slow | Slow | Real Time
   const [manualScrub, setManualScrub] = useState(false)
+
+  // ── Staged-demo state ────────────────────────────────────────────────────
+  const [demoPhase,   setDemoPhase]   = useState(DemoPhase.IDLE)
+  const [revealStage, setRevealStage] = useState(0)
+  const revealTimersRef = useRef([])
+  // True only between a user-initiated backend RUN and its completion, so the
+  // reveal fires for a real click and NOT for the spurious DONE that useRun
+  // detects on mount when a previous run is already finished (keeps the LLM
+  // tab idle until the user presses RUN — goal §1).
+  const runInitiatedRef = useRef(false)
 
   const [traces,          setTraces]          = useState(fallbackTraces)
   const [recommendation,  setRecommendation]  = useState(null)
@@ -283,13 +322,11 @@ export default function App() {
   const maxTick  = useMemo(() => Math.max(...events.map(e => e.tick), 1), [events])
 
   // Pseudo-live replay: while isPlaying, advance simulated time one trace tick
-  // per interval at the selected speed (trace ticks per second). Stops at the
-  // end of the trace (no looping — feels like a real run completing).
+  // per interval at the selected speed (ms per tick). Stops at the end of the
+  // trace (no looping — feels like a real run completing).
   useEffect(() => {
     if (!isPlaying) return
-    const ticksPerSec = REPLAY_SPEEDS[speedLabel]
-    if (!ticksPerSec) return  // 'Instant' is handled in handleSpeedChange
-    const intervalMs = Math.max(16, Math.round(1000 / ticksPerSec))
+    const intervalMs = REPLAY_SPEEDS[speedLabel] || REPLAY_SPEEDS['Slow']
     const id = setInterval(() => {
       setTick(t => {
         if (t >= maxTick) { setIsPlaying(false); return t }
@@ -299,13 +336,108 @@ export default function App() {
     return () => clearInterval(id)
   }, [isPlaying, speedLabel, maxTick])
 
-  const totalTraceEvents = useMemo(
-    () => Object.values(traces).reduce((sum, evs) => sum + (evs?.length || 0), 0),
-    [traces],
-  )
+  // When an autoplay replay reaches the end, advance the demo phase so the RUN
+  // button becomes "VIEW EVALUATION". We do NOT auto-switch tabs — the
+  // presenter may want to keep explaining the finished visualization.
+  useEffect(() => {
+    if (demoPhase === DemoPhase.VISUALIZING && maxTick > 0 && tick >= maxTick) {
+      setDemoPhase(DemoPhase.REPLAY_DONE)
+    }
+  }, [tick, maxTick, demoPhase])
 
-  // Manual algorithm change: reset replay to the start and pause, so the user
-  // can re-watch this algorithm from 0 ms with the play button.
+  // ── Reveal sequence ───────────────────────────────────────────────────────
+  const clearRevealTimers = useCallback(() => {
+    revealTimersRef.current.forEach(clearTimeout)
+    revealTimersRef.current = []
+  }, [])
+
+  const startReveal = useCallback(() => {
+    clearRevealTimers()
+    setDemoPhase(DemoPhase.ANALYZING_LLM)
+    setRevealStage(0)
+    setTab('LLM')
+    REVEAL_SCHEDULE.forEach(({ stage, delay }) => {
+      const id = setTimeout(() => {
+        setRevealStage(stage)
+        if (stage >= 5) setDemoPhase(DemoPhase.READY_TO_VISUALIZE)
+      }, delay)
+      revealTimersRef.current.push(id)
+    })
+  }, [clearRevealTimers])
+
+  useEffect(() => () => clearRevealTimers(), [clearRevealTimers])
+
+  // ── Run pipeline (lifted here so the header RUN button is phase-aware) ──────
+  // When the backend run completes, refresh data and start the LLM reveal.
+  const onBackendComplete = useCallback(() => {
+    loadAll().then(() => {
+      if (runInitiatedRef.current) {
+        runInitiatedRef.current = false
+        startReveal()
+      }
+    })
+  }, [loadAll, startReveal])
+
+  const { available: runAvailable, state: runState, inFlight: runInFlight, startRun } =
+    useRun(onBackendComplete)
+
+  // If the backend run errors while we are waiting, fall back to revealing the
+  // already-loaded (or fallback) data so the demo never gets stuck.
+  useEffect(() => {
+    if (demoPhase === DemoPhase.ANALYZING_LLM && runState === 'ERROR') {
+      startReveal()
+    }
+  }, [demoPhase, runState, startReveal])
+
+  function startVisualization() {
+    setTab('Visualization')
+    setAlgo(recommendedAlgoRef.current)
+    setTick(0)
+    setSpeedLabel('Slow')
+    setManualScrub(false)
+    setDemoPhase(DemoPhase.VISUALIZING)
+    setIsPlaying(true)
+  }
+
+  // Phase-aware primary action for the header RUN button.
+  const handlePrimaryRun = useCallback(() => {
+    if (demoPhase === DemoPhase.IDLE) {
+      if (runAvailable) {
+        // Kick off the real backend run; reveal starts on completion.
+        runInitiatedRef.current = true
+        startRun()
+        setDemoPhase(DemoPhase.ANALYZING_LLM)
+        setRevealStage(0)
+      } else {
+        // Run-server offline → reveal the bundled/fallback analysis directly.
+        startReveal()
+      }
+    } else if (demoPhase === DemoPhase.READY_TO_VISUALIZE) {
+      startVisualization()
+    } else if (demoPhase === DemoPhase.REPLAY_DONE) {
+      setTab('Evaluation')
+    }
+    // ANALYZING_LLM / VISUALIZING: button disabled, nothing to do.
+  }, [demoPhase, runAvailable, startRun, startReveal])
+
+  const runDisabled =
+    demoPhase === DemoPhase.ANALYZING_LLM ||
+    demoPhase === DemoPhase.VISUALIZING ||
+    (demoPhase === DemoPhase.IDLE && runAvailable === null)
+
+  const runLabel = RUN_LABEL[demoPhase] || 'RUN'
+
+  // Pill text mirrors the backend run state while it is meaningful; otherwise
+  // it reflects the demo phase.
+  const runPill =
+    demoPhase === DemoPhase.ANALYZING_LLM ? (runInFlight ? runState : 'ANALYZING')
+    : demoPhase === DemoPhase.VISUALIZING ? 'REPLAYING'
+    : demoPhase === DemoPhase.READY_TO_VISUALIZE ? 'READY'
+    : demoPhase === DemoPhase.REPLAY_DONE ? 'DONE'
+    : 'IDLE'
+
+  // ── Visualization controls ────────────────────────────────────────────────
+  // Manual algorithm change: reset replay to the start and pause.
   function handleAlgoChange(newAlgo) {
     setAlgo(newAlgo)
     setIsPlaying(false)
@@ -313,14 +445,7 @@ export default function App() {
   }
 
   function handleSpeedChange(label) {
-    if (label === 'Instant') {
-      // Jump straight to the end of the trace.
-      setIsPlaying(false)
-      setTick(maxTick)
-      return
-    }
     setSpeedLabel(label)
-    // Choosing a play speed starts/continues playback (unless already at end).
     setIsPlaying(p => (p ? p : tick < maxTick))
   }
 
@@ -342,41 +467,55 @@ export default function App() {
     setTick(0)
   }
 
-  // After a RUN completes (new traces arrive): switch to the Visualization tab,
-  // select the LLM/Guard-recommended algorithm, reset replay time to 0, and
-  // auto-play so the user watches the scheduler execution unfold from the start.
-  const onRunComplete = useCallback(() => {
-    loadAll().then(() => {
-      setTab('Visualization')
-      setAlgo(recommendedAlgoRef.current)
-      setTick(0)
-      setSpeedLabel('Normal')
-      setIsPlaying(true)
-    })
-  }, [loadAll])
-
-  const dataStatus = {
-    mode: dataMode, updatedAt, manifestVersion,
-    error: loadError,
-  }
-
   // ── Tab content rendering ─────────────────────────────────────────────────
-  // Page 1 = LLM **pre-execution** decision page.
-  // Two-column layout: left column stacks LLM RECOMMENDATION (top) +
-  // ALGORITHM GUARD (bottom); right column holds LLM EXPLANATION at full
-  // card height. traceExplanation is INTENTIONALLY NOT passed here because
-  // it is post-execution content (Page 2/3).
+  // Page 1 = LLM pre-execution decision page. Staged reveal: idle hero until
+  // the first RUN, then placeholder -> typewriter -> completed content.
   function renderLLMTab() {
+    if (demoPhase === DemoPhase.IDLE) {
+      return (
+        <div className="page1-layout">
+          <div className="page1-left">
+            <div className="llm-idle-hero">
+              <div className="llm-idle-badge">LLM Scheduling Advisor</div>
+              <h2 className="llm-idle-title">Ready to analyze workload</h2>
+              <p className="llm-idle-sub">
+                Press <strong>RUN ANALYSIS</strong> to let the LLM read the workload
+                and recommend a scheduling algorithm.
+              </p>
+              <div className="llm-idle-steps">
+                <span className="llm-idle-step">1 · Analyze workload</span>
+                <span className="llm-idle-step">2 · Recommend algorithm</span>
+                <span className="llm-idle-step">3 · Validate &amp; explain</span>
+              </div>
+            </div>
+          </div>
+          <div className="page1-right">
+            <WorkloadSummary workloadSummary={workloadSummary} />
+          </div>
+        </div>
+      )
+    }
+
+    const showRec   = revealStage >= 2
+    const typingRec = revealStage === 2
+    const showGuard = revealStage >= 3
+    const showExpl  = revealStage >= 4
+    const typingExpl = revealStage === 4
+    const analyzing = revealStage <= 1
+
     return (
       <div className="page1-layout">
         <div className="page1-left">
-          <LLMRecommendation recommendation={recommendation} />
-          <AlgorithmGuard    guardDecision={guardDecision} />
+          <AnalyzingStatus active={analyzing} />
+          <LLMRecommendation recommendation={recommendation} show={showRec} typing={typingRec} />
+          <AlgorithmGuard    guardDecision={guardDecision} show={showGuard} />
         </div>
         <div className="page1-right">
           <LLMExplanation
             recommendation={recommendation}
             workloadSummary={workloadSummary}
+            show={showExpl}
+            typing={typingExpl}
           />
         </div>
       </div>
@@ -384,22 +523,8 @@ export default function App() {
   }
 
   function renderVisualizationTab() {
-    const backendLabel = dataMode === 'xv6-log' || dataMode === 'xv6'
-      ? 'actual xv6 scheduler trace'
-      : dataMode === 'fallback'
-        ? 'bundled sample trace'
-        : 'actual scheduler trace'
     return (
       <div className="viz-page">
-        <div className="viz-replay-status" title={SIM_TIME_CAPTION}>
-          <span className="viz-replay-dot" />
-          <span className="viz-replay-text">
-            Pseudo-live replay · {backendLabel} · simulated time
-          </span>
-          <span className="viz-replay-sub">
-            Replaying the already-generated trace with time dilation — not live kernel control.
-          </span>
-        </div>
         <VizToolbar
           algo={algo} onAlgoChange={handleAlgoChange}
           currentTick={tick} maxTick={maxTick} onTickChange={handleTickChange}
@@ -408,7 +533,7 @@ export default function App() {
           speedLabel={speedLabel} onSpeedChange={handleSpeedChange}
           manualScrub={manualScrub} onToggleManual={() => setManualScrub(m => !m)}
         />
-        <div className="tab-grid viz-grid">
+        <div className={`tab-grid viz-grid ${algo === 'MLFQ' ? 'viz-grid-mlfq' : ''}`}>
           <div className="tab-col viz-col-left">
             <MainGantt    events={events} currentTick={tick} maxTick={maxTick} algo={algo} />
             <ProcessState events={events} currentTick={tick} />
@@ -445,7 +570,11 @@ export default function App() {
     <div className="dashboard-shell">
       <Header
         tab={tab} onTabChange={setTab}
-        onRunComplete={onRunComplete}
+        runAvailable={runAvailable}
+        runLabel={runLabel}
+        runDisabled={runDisabled}
+        runPill={runPill}
+        onRunClick={handlePrimaryRun}
       />
       <div className="dashboard-main tab-main">
         {tab === 'LLM' && renderLLMTab()}

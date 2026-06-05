@@ -1,0 +1,4 @@
+{
+  "applied": false,
+  "reason": "correction apply loop re-runs the real xv6 kernel; not applicable to the simulator backend."
+}
