@@ -1,5 +1,5 @@
 import Card from './Card.jsx'
-import { PROC_COLORS } from './constants.js'
+import { PROC_COLORS, tickToMs } from './constants.js'
 
 function buildSegments(events, capTick) {
   const dispatched = {}
@@ -48,7 +48,7 @@ export default function ProcessLanes({ events, currentTick, maxTick, algo }) {
                       width: `${((s.end - s.start) / span) * 100}%`,
                       background: PROC_COLORS[s.pid] || '#94a3b8',
                     }}
-                    title={`P${s.pid}: ${s.start}→${s.end}`}
+                    title={`P${s.pid}: ${tickToMs(s.start)} ms → ${tickToMs(s.end)} ms`}
                   />
                 ))}
                 {gridTicks.map(t => (
@@ -62,7 +62,7 @@ export default function ProcessLanes({ events, currentTick, maxTick, algo }) {
         <div className="lanes-tick-axis">
           <div className="lanes-tick-offset">
             {axisTicks.map(t => (
-              <span key={t} className="lanes-tick-num" style={{ left: `${(t / span) * 100}%` }}>{t}</span>
+              <span key={t} className="lanes-tick-num" style={{ left: `${(t / span) * 100}%` }}>{tickToMs(t)}</span>
             ))}
           </div>
         </div>

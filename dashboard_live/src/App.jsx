@@ -8,60 +8,131 @@ import {
   getLiveDataBase,
   loadRuntimeEvents, loadCorrectionProposal, loadCorrectionGuardDecision,
 } from './data/liveDataClient.js'
+import { tickToMs, SIM_TIME_CAPTION } from './components/constants.js'
 
-// Tiny inline toolbar for the Visualization tab — algorithm + tick scrubber + playback.
-// Lives here (not Header) so the controls only appear when they're useful.
+// Resolve the LLM/Guard-recommended algorithm robustly (case-insensitive),
+// preferring a candidate that actually has trace events. Mirrors the goal's
+// fallback order: guard decision -> recommendation -> manifest -> first
+// algorithm with non-empty events -> MLFQ.
+function resolveRecommendedAlgo(recommendation, guardDecision, manifest, traces) {
+  const traceKey = (name) => {
+    if (!name) return null
+    const k = Object.keys(traces).find(
+      kk => kk.toLowerCase() === String(name).toLowerCase()
+    )
+    return k && traces[k]?.length ? k : null
+  }
+  const candidates = [
+    guardDecision?.scheduling_algorithm,
+    guardDecision?.algorithm,
+    guardDecision?.fallback_algorithm,
+    recommendation?.recommended_scheduling_algorithm,
+    recommendation?.algorithm,
+    manifest?.llm_selected_algorithm,
+    manifest?.recommended_algorithm,
+  ]
+  for (const c of candidates) {
+    const m = traceKey(c)
+    if (m) return m
+  }
+  const anyWithEvents = ALGOS.find(a => traceKey(a))
+  return anyWithEvents || 'MLFQ'
+}
+
+// Speed labels (human-friendly) -> replay rate in trace ticks per second.
+// "Instant" is special-cased: it jumps straight to the end of the trace.
+export const REPLAY_SPEEDS = { Slow: 2, Normal: 6, Fast: 12, Instant: null }
+const SPEED_ORDER = ['Slow', 'Normal', 'Fast', 'Instant']
+
+// Presentation toolbar for the Visualization tab. The primary path is the
+// RUN -> autoplay flow; the draggable scrubber is demoted behind a "Manual
+// scrub" disclosure. All user-facing time is shown in simulated milliseconds.
 function VizToolbar({
   algo, onAlgoChange, currentTick, maxTick, onTickChange,
-  isPlaying, onTogglePlay, onReset, speed, onSpeedChange,
+  isPlaying, onTogglePlay, onReset, speedLabel, onSpeedChange,
+  manualScrub, onToggleManual,
 }) {
-  const SPEEDS = [1, 2, 4]
   const atEnd = currentTick >= maxTick
+  const pct = maxTick > 0 ? Math.min(100, (currentTick / maxTick) * 100) : 0
   return (
     <div className="viz-toolbar">
-      <label className="viz-toolbar-label">Algorithm</label>
-      <select
-        className="viz-toolbar-select"
-        value={algo}
-        onChange={e => onAlgoChange(e.target.value)}
-      >
-        {ALGOS.map(a => <option key={a} value={a}>{a}</option>)}
-      </select>
-      <button
-        className="viz-toolbar-playbtn"
-        onClick={onTogglePlay}
-        title={isPlaying ? 'Pause' : (atEnd ? 'Replay from start' : 'Play')}
-      >
-        {isPlaying ? '⏸' : (atEnd ? '⟲' : '▶')}
-      </button>
-      <button
-        className="viz-toolbar-resetbtn"
-        onClick={onReset}
-        title="Reset to tick 0"
-      >
-        ⏮
-      </button>
-      <div className="viz-toolbar-speeds">
-        {SPEEDS.map(s => (
-          <button
-            key={s}
-            className={`viz-toolbar-speed ${speed === s ? 'active' : ''}`}
-            onClick={() => onSpeedChange(s)}
-          >
-            {s}x
-          </button>
-        ))}
+      <div className="viz-toolbar-row">
+        <label className="viz-toolbar-label">Algorithm</label>
+        <select
+          className="viz-toolbar-select"
+          value={algo}
+          onChange={e => onAlgoChange(e.target.value)}
+        >
+          {ALGOS.map(a => <option key={a} value={a}>{a}</option>)}
+        </select>
+
+        <button
+          className="viz-toolbar-playbtn"
+          onClick={onTogglePlay}
+          title={isPlaying ? 'Pause replay' : (atEnd ? 'Replay from start' : 'Play replay')}
+        >
+          {isPlaying ? '⏸ Pause' : (atEnd ? '⟲ Replay' : '▶ Play')}
+        </button>
+        <button
+          className="viz-toolbar-resetbtn"
+          onClick={onReset}
+          title="Reset to 0 ms"
+        >
+          ⏮
+        </button>
+
+        <div className="viz-toolbar-speeds" role="group" aria-label="Replay speed">
+          {SPEED_ORDER.map(s => (
+            <button
+              key={s}
+              className={`viz-toolbar-speed ${speedLabel === s ? 'active' : ''}`}
+              onClick={() => onSpeedChange(s)}
+              title={REPLAY_SPEEDS[s] == null
+                ? 'Jump to the end immediately'
+                : `${REPLAY_SPEEDS[s]} trace ticks per second`}
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+
+        <div className="viz-toolbar-spacer" />
+
+        <span className="viz-toolbar-time" title={SIM_TIME_CAPTION}>
+          <span className="viz-toolbar-time-label">Replay time</span>
+          <span className="viz-toolbar-time-val">{tickToMs(currentTick)} ms</span>
+          <span className="viz-toolbar-time-max">/ {tickToMs(maxTick)} ms</span>
+        </span>
+
+        <button
+          className={`viz-toolbar-manual ${manualScrub ? 'active' : ''}`}
+          onClick={onToggleManual}
+          title="Advanced: scrub replay time manually"
+        >
+          Manual scrub {manualScrub ? '▾' : '▸'}
+        </button>
       </div>
-      <label className="viz-toolbar-label">Tick</label>
-      <span className="viz-toolbar-tick">{currentTick}<span className="viz-toolbar-tickmax">/ {maxTick}</span></span>
-      <input
-        type="range"
-        className="viz-toolbar-slider"
-        min={0}
-        max={maxTick}
-        value={currentTick}
-        onChange={e => onTickChange(Number(e.target.value))}
-      />
+
+      {/* Thin, non-draggable progress bar — the default (presentation) control. */}
+      <div className="viz-progress" aria-hidden="true">
+        <div className="viz-progress-fill" style={{ width: `${pct}%` }} />
+      </div>
+
+      {/* Draggable scrubber only when Manual scrub is enabled. */}
+      {manualScrub && (
+        <div className="viz-toolbar-row viz-manual-row">
+          <label className="viz-toolbar-label">Scrub</label>
+          <input
+            type="range"
+            className="viz-toolbar-slider"
+            min={0}
+            max={maxTick}
+            value={currentTick}
+            onChange={e => onTickChange(Number(e.target.value))}
+          />
+          <span className="viz-toolbar-time-val">{tickToMs(currentTick)} ms</span>
+        </div>
+      )}
     </div>
   )
 }
@@ -97,7 +168,6 @@ import MLFQQueuePanel from './components/MLFQQueuePanel.jsx'
 // imported by reference only.
 
 const POLL_INTERVAL_MS = 1500
-const BASE_TICKS_PER_SEC = 6    // 1x speed → ~10s per 60-tick trace
 
 function formatUpdatedAt(iso) {
   if (!iso || iso === '1970-01-01T00:00:00Z') return null
@@ -111,7 +181,8 @@ export default function App() {
   const [tick, setTick] = useState(0)
   const [selectedMetric, setSelectedMetric] = useState('avg_response_time')
   const [isPlaying, setIsPlaying] = useState(false)
-  const [playSpeed, setPlaySpeed] = useState(1)  // multiplier of BASE_TICKS_PER_SEC
+  const [speedLabel, setSpeedLabel] = useState('Normal')  // Slow | Normal | Fast | Instant
+  const [manualScrub, setManualScrub] = useState(false)
 
   const [traces,          setTraces]          = useState(fallbackTraces)
   const [recommendation,  setRecommendation]  = useState(null)
@@ -129,6 +200,8 @@ export default function App() {
   const [correctionGuardDecision, setCorrectionGuardDecision] = useState(null)
 
   const manifestVersionRef = useRef(null)
+  const recommendedAlgoRef = useRef('MLFQ')
+  const algoInitializedRef = useRef(false)
 
   const loadAll = useCallback(async () => {
     try {
@@ -141,12 +214,26 @@ export default function App() {
         loadAllTraces(),
       ])
       const usedFallback = !mf
-      setManifest(mf || fallbackManifest)
-      setRecommendation(rec || fallbackRecommendation)
-      setGuardDecision(gd || fallbackGuardDecision)
+      const mfEff = mf || fallbackManifest
+      const recEff = rec || fallbackRecommendation
+      const gdEff = gd || fallbackGuardDecision
+      setManifest(mfEff)
+      setRecommendation(recEff)
+      setGuardDecision(gdEff)
       setWorkloadSummary(wl || fallbackWorkloadSummary)
       setMetrics(mt || fallbackMetrics)
       setTraces(trResult.traces)
+
+      // Resolve the recommended algorithm from the freshly loaded data and
+      // remember it so RUN-complete can reset the replay to it. On the very
+      // first load, also default the visualization to it (instead of the
+      // hardcoded 'MLFQ') unless the user has already picked one.
+      const recommended = resolveRecommendedAlgo(recEff, gdEff, mfEff, trResult.traces)
+      recommendedAlgoRef.current = recommended
+      if (!algoInitializedRef.current) {
+        algoInitializedRef.current = true
+        setAlgo(recommended)
+      }
       setDataMode(usedFallback ? 'fallback' : (mf?.mode || 'simulator'))
       setUpdatedAt(mf?.updated_at ? formatUpdatedAt(mf.updated_at) : null)
       setManifestVersion(mf?.version ?? null)
@@ -195,14 +282,14 @@ export default function App() {
   const events   = traces[traceKey] || []
   const maxTick  = useMemo(() => Math.max(...events.map(e => e.tick), 1), [events])
 
-  // Default the visualization tick to a mid-trace position when the algo changes.
-  useEffect(() => { setTick(Math.round(maxTick * 0.55)) }, [maxTick, algoKey])
-
-  // Fake-live playback: while isPlaying, advance `tick` by 1 every interval.
-  // Stops automatically when reaching maxTick (no looping — feels more like a real run).
+  // Pseudo-live replay: while isPlaying, advance simulated time one trace tick
+  // per interval at the selected speed (trace ticks per second). Stops at the
+  // end of the trace (no looping — feels like a real run completing).
   useEffect(() => {
     if (!isPlaying) return
-    const intervalMs = Math.max(16, Math.round(1000 / (BASE_TICKS_PER_SEC * playSpeed)))
+    const ticksPerSec = REPLAY_SPEEDS[speedLabel]
+    if (!ticksPerSec) return  // 'Instant' is handled in handleSpeedChange
+    const intervalMs = Math.max(16, Math.round(1000 / ticksPerSec))
     const id = setInterval(() => {
       setTick(t => {
         if (t >= maxTick) { setIsPlaying(false); return t }
@@ -210,19 +297,31 @@ export default function App() {
       })
     }, intervalMs)
     return () => clearInterval(id)
-  }, [isPlaying, playSpeed, maxTick])
+  }, [isPlaying, speedLabel, maxTick])
 
   const totalTraceEvents = useMemo(
     () => Object.values(traces).reduce((sum, evs) => sum + (evs?.length || 0), 0),
     [traces],
   )
 
+  // Manual algorithm change: reset replay to the start and pause, so the user
+  // can re-watch this algorithm from 0 ms with the play button.
   function handleAlgoChange(newAlgo) {
     setAlgo(newAlgo)
     setIsPlaying(false)
-    const newEvents = traces[Object.keys(traces).find(k => k.toLowerCase() === newAlgo.toLowerCase())] || []
-    const newMax = Math.max(...newEvents.map(e => e.tick), 1)
-    setTick(Math.round(newMax * 0.55))
+    setTick(0)
+  }
+
+  function handleSpeedChange(label) {
+    if (label === 'Instant') {
+      // Jump straight to the end of the trace.
+      setIsPlaying(false)
+      setTick(maxTick)
+      return
+    }
+    setSpeedLabel(label)
+    // Choosing a play speed starts/continues playback (unless already at end).
+    setIsPlaying(p => (p ? p : tick < maxTick))
   }
 
   // Manual scrub: pause auto-play so user controls take over.
@@ -243,11 +342,15 @@ export default function App() {
     setTick(0)
   }
 
-  // After a RUN completes (new traces arrive), jump to tick 0 and auto-play
-  // so the user sees the experiment "stream in" instead of a static snapshot.
+  // After a RUN completes (new traces arrive): switch to the Visualization tab,
+  // select the LLM/Guard-recommended algorithm, reset replay time to 0, and
+  // auto-play so the user watches the scheduler execution unfold from the start.
   const onRunComplete = useCallback(() => {
     loadAll().then(() => {
+      setTab('Visualization')
+      setAlgo(recommendedAlgoRef.current)
       setTick(0)
+      setSpeedLabel('Normal')
       setIsPlaying(true)
     })
   }, [loadAll])
@@ -281,14 +384,29 @@ export default function App() {
   }
 
   function renderVisualizationTab() {
+    const backendLabel = dataMode === 'xv6-log' || dataMode === 'xv6'
+      ? 'actual xv6 scheduler trace'
+      : dataMode === 'fallback'
+        ? 'bundled sample trace'
+        : 'actual scheduler trace'
     return (
       <div className="viz-page">
+        <div className="viz-replay-status" title={SIM_TIME_CAPTION}>
+          <span className="viz-replay-dot" />
+          <span className="viz-replay-text">
+            Pseudo-live replay · {backendLabel} · simulated time
+          </span>
+          <span className="viz-replay-sub">
+            Replaying the already-generated trace with time dilation — not live kernel control.
+          </span>
+        </div>
         <VizToolbar
           algo={algo} onAlgoChange={handleAlgoChange}
           currentTick={tick} maxTick={maxTick} onTickChange={handleTickChange}
           isPlaying={isPlaying} onTogglePlay={handleTogglePlay}
           onReset={handleReset}
-          speed={playSpeed} onSpeedChange={setPlaySpeed}
+          speedLabel={speedLabel} onSpeedChange={handleSpeedChange}
+          manualScrub={manualScrub} onToggleManual={() => setManualScrub(m => !m)}
         />
         <div className="tab-grid viz-grid">
           <div className="tab-col viz-col-left">

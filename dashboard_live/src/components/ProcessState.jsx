@@ -1,5 +1,5 @@
 import Card from './Card.jsx'
-import { PROC_COLORS } from './constants.js'
+import { PROC_COLORS, tickToMs } from './constants.js'
 
 /**
  * ProcessState — Page 2 educational state-transition diagram.
@@ -102,11 +102,14 @@ export default function ProcessState({ events, currentTick }) {
   }
   Object.values(groups).forEach(g => g.sort((a, b) => a - b))
 
-  // Latest transition event drives the active animation.
+  // Latest transition event drives the active animation + the caption.
   let activePath = null
+  let latest = null
   for (let i = visible.length - 1; i >= 0; i--) {
-    if (visible[i].event in EVENT_TO_PATH) {
-      activePath = EVENT_TO_PATH[visible[i].event]
+    const ev = visible[i]
+    if (ev.event in EVENT_TO_PATH && ev.pid >= 0) {
+      activePath = EVENT_TO_PATH[ev.event]
+      latest = ev
       break
     }
   }
@@ -116,6 +119,11 @@ export default function ProcessState({ events, currentTick }) {
 
   return (
     <Card label="Process State" className="card-pstate">
+      <div className="pstate-latest">
+        {latest
+          ? <>Latest transition: <strong>P{latest.pid} {latest.event}</strong> at {tickToMs(latest.tick)} ms</>
+          : <span className="pstate-latest-idle">Waiting for first transition…</span>}
+      </div>
       <div className="pstate-diagram">
         <svg
           className="pstate-svg"

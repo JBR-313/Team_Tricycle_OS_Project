@@ -1,5 +1,5 @@
 import Card from './Card.jsx'
-import { PROC_COLORS } from './constants.js'
+import { PROC_COLORS, tickToMs } from './constants.js'
 
 function buildSegments(events, capTick) {
   const dispatched = {}
@@ -40,7 +40,7 @@ export default function MainGantt({ events, currentTick, maxTick, algo }) {
             <div
               key={i}
               className="gantt-seg"
-              title={`P${s.pid}: tick ${s.start}→${s.end}`}
+              title={`P${s.pid}: ${tickToMs(s.start)} ms → ${tickToMs(s.end)} ms`}
               style={{
                 left: `${x}%`,
                 width: `${w}%`,
@@ -54,11 +54,13 @@ export default function MainGantt({ events, currentTick, maxTick, algo }) {
         {ticks.filter(t => t > 0).map(t => (
           <div key={t} className="gantt-grid-line" style={{ left: `${(t / span) * 100}%` }} />
         ))}
-        <div className="gantt-tick-marker" style={{ left: `${(currentTick / span) * 100}%` }} />
+        <div className="gantt-tick-marker" style={{ left: `${(currentTick / span) * 100}%` }}>
+          <span className="gantt-tick-marker-label">{tickToMs(currentTick)} ms</span>
+        </div>
       </div>
       <div className="gantt-tick-axis">
         {ticks.map(t => (
-          <span key={t} className="gantt-tick-num" style={{ left: `${(t / span) * 100}%` }}>{t}</span>
+          <span key={t} className="gantt-tick-num" style={{ left: `${(t / span) * 100}%` }}>{tickToMs(t)}</span>
         ))}
       </div>
       <div className="gantt-legend">
@@ -70,7 +72,7 @@ export default function MainGantt({ events, currentTick, maxTick, algo }) {
         ))}
         <div className="gantt-legend-item" style={{ marginLeft: 4 }}>
           <div className="gantt-legend-dot" style={{ background: 'rgba(99,102,241,0.70)', width: 2, height: 8, borderRadius: 1 }} />
-          <span>tick {currentTick}</span>
+          <span>{tickToMs(currentTick)} ms (simulated)</span>
         </div>
       </div>
     </Card>

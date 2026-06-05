@@ -466,15 +466,23 @@
 .viz-page .gantt-legend-item { font-size: 13px; color: #1e293b; }
 .viz-toolbar {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 6px 12px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  padding: 8px 12px;
   background: rgba(255,255,255,0.80);
   border-radius: 12px;
   border: 1px solid rgba(255,255,255,0.62);
   box-shadow: 0 4px 14px rgba(80,90,120,0.08);
   flex-shrink: 0;
 }
+.viz-toolbar-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.viz-toolbar-spacer { flex: 1; }
+.viz-manual-row { padding-top: 2px; }
 .viz-toolbar-label {
   font-size: 0.62rem;
   font-weight: 700;
@@ -534,6 +542,77 @@
   background: #0a3069;
   color: #fff;
 }
+
+/* Simulated-time readout */
+.viz-toolbar-time {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  cursor: help;
+}
+.viz-toolbar-time-label {
+  font-size: 0.60rem;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.viz-toolbar-time-val { font-size: 0.92rem; font-weight: 800; color: #0a3069; }
+.viz-toolbar-time-max { font-size: 0.72rem; color: #94a3b8; }
+
+/* Manual scrub disclosure */
+.viz-toolbar-manual {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 3px 9px;
+  border: 1px dashed rgba(10,48,105,0.35);
+  border-radius: 6px;
+  background: transparent;
+  color: #475569;
+  cursor: pointer;
+}
+.viz-toolbar-manual.active { color: #0a3069; border-style: solid; background: #eef4ff; }
+
+/* Thin non-draggable progress bar (default presentation control) */
+.viz-progress {
+  height: 6px;
+  border-radius: 4px;
+  background: rgba(10,48,105,0.10);
+  overflow: hidden;
+}
+.viz-progress-fill {
+  height: 100%;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #0a3069, #3b6fb0);
+  transition: width 120ms linear;
+}
+
+/* Pseudo-live replay status banner */
+.viz-replay-status {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  background: rgba(16,185,129,0.08);
+  border: 1px solid rgba(16,185,129,0.24);
+  flex-shrink: 0;
+}
+.viz-replay-dot {
+  width: 9px; height: 9px; border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 0 0 rgba(16,185,129,0.5);
+  animation: viz-replay-pulse 1.8s ease-out infinite;
+  flex-shrink: 0;
+}
+@keyframes viz-replay-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(16,185,129,0.45); }
+  70%  { box-shadow: 0 0 0 7px rgba(16,185,129,0); }
+  100% { box-shadow: 0 0 0 0 rgba(16,185,129,0); }
+}
+.viz-replay-text { font-size: 0.80rem; font-weight: 800; color: #065f46; }
+.viz-replay-sub  { font-size: 0.70rem; color: #475569; }
 
 .header-spacer { flex: 1; }
 
@@ -716,7 +795,7 @@
   font-weight: 700;
   color: rgba(255,255,255,0.95);
   border-right: 1.5px solid rgba(255,255,255,0.55);
-  transition: opacity 0.15s;
+  transition: width 0.12s linear, left 0.12s linear, opacity 0.15s;
   user-select: none;
 }
 
@@ -744,6 +823,20 @@
   z-index: 10;
   pointer-events: none;
   animation: tick-pulse 2s ease-in-out infinite;
+  transition: left 0.12s linear;
+}
+.gantt-tick-marker-label {
+  position: absolute;
+  top: 1px;
+  left: 3px;
+  font-size: 0.55rem;
+  font-weight: 800;
+  color: #4338ca;
+  white-space: nowrap;
+  background: rgba(255,255,255,0.78);
+  border-radius: 3px;
+  padding: 0 3px;
+  pointer-events: none;
 }
 
 .gantt-tick-axis {
@@ -2051,3 +2144,59 @@
   margin: 6px 0 0;
   flex-shrink: 0;
 }
+
+/* ─────────────────────────────────────────────────────────────
+   PSEUDO-LIVE REPLAY ADDITIONS (presentation goal)
+───────────────────────────────────────────────────────────── */
+
+/* Smooth lane-segment growth during replay. */
+.lane-seg { transition: width 0.12s linear, left 0.12s linear; }
+
+/* ProcessState — latest transition caption */
+.pstate-latest {
+  font-size: 0.74rem;
+  color: #334155;
+  margin-bottom: 6px;
+  padding: 3px 8px;
+  background: rgba(99,102,241,0.07);
+  border-radius: 6px;
+  border: 1px solid rgba(99,102,241,0.16);
+}
+.pstate-latest strong { color: #4338ca; }
+.pstate-latest-idle { color: #94a3b8; }
+
+/* TraceStack — kernel parameter evidence strip */
+.trace-evidence {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 8px;
+  padding: 6px 8px;
+  background: rgba(2,132,199,0.06);
+  border: 1px solid rgba(2,132,199,0.18);
+  border-radius: 8px;
+}
+.trace-evidence-label {
+  font-size: 0.60rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #0369a1;
+}
+.trace-evidence-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.trace-evidence-chip {
+  font-size: 0.66rem;
+  font-weight: 700;
+  color: #075985;
+  background: rgba(255,255,255,0.85);
+  border: 1px solid rgba(2,132,199,0.25);
+  border-radius: 5px;
+  padding: 1px 6px;
+  white-space: nowrap;
+}
+
+/* Visualization-page font bumps for the new bits (scoped, mirrors existing) */
+.viz-page .pstate-latest      { font-size: 0.82rem; }
+.viz-page .trace-evidence-chip { font-size: 0.72rem; }
+.viz-page .viz-replay-text    { font-size: 0.86rem; }
+.viz-page .viz-replay-sub     { font-size: 0.76rem; }
