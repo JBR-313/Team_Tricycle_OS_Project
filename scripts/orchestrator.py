@@ -98,6 +98,13 @@ PROFILE_MAP = {
     "ambiguous_mixed":        ROOT / "workloads" / "ambiguous_mixed.json",
     "pure_batch":             ROOT / "workloads" / "pure_batch.json",
     "bursty_long_tail":       ROOT / "workloads" / "bursty_long_tail.json",
+    # Scheduling-lab coverage workloads (simulator only; each isolates one
+    # canonical scheduling phenomenon — see docs/workload_coverage_matrix.md).
+    "convoy_effect":            ROOT / "workloads" / "convoy_effect.json",
+    "fairness_rr":              ROOT / "workloads" / "fairness_rr.json",
+    "staggered_short_arrival":  ROOT / "workloads" / "staggered_short_arrival.json",
+    "starvation_priority":      ROOT / "workloads" / "starvation_priority.json",
+    "burst_prediction_demo":    ROOT / "workloads" / "burst_prediction_demo.json",
 }
 
 # For the xv6 backend, the LLM pipeline must analyze the EXACT processes that
@@ -1026,6 +1033,176 @@ def run_xv6_backend(out_dir: Path, seed: int, profile: str, run_order: list[str]
                              target_metric, dry_run, pred_args=pred_args)
 
 
+# ── after-running LLM stages (trace explanation + feedback rules) ──────────────
+
+def run_trace_explainer(out_dir: Path, live_dir: Path, selected: str, *,
+                        offline_fixture: bool, dry_run: bool) -> None:
+    """[8] Trace Explainer — natural-language explanation of the finished run.
+
+    Always produces a FRESH trace_explanation.json for THIS run or an explicit
+    non-stale `available: false` placeholder. Never leaves an older run's
+    explanation in place. Uses the real Solar Pro 3 LLM when a key is available;
+    with --offline-fixture and no key it falls back to the committed demo
+    explanation (stamped source=demo_fallback); otherwise writes the placeholder.
+    """
+    print("\n[8] Trace explainer (after-running LLM)")
+    exp_out = out_dir / "trace_explanation.json"
+    live_exp = live_dir / "trace_explanation.json"
+    trace = out_dir / f"trace_{selected.lower()}.jsonl"
+    metrics = out_dir / "metrics.json"
+    rec = out_dir / "recommendation.json"
+    proposal = out_dir / "correction_proposal.json"
+
+    if dry_run:
+        print("  [DRY-RUN] skipped")
+        return
+
+    # Never leave a stale explanation from a previous run.
+    for p in (exp_out, live_exp):
+        try:
+            p.unlink(missing_ok=True)
+        except Exception:  # noqa: BLE001
+            pass
+
+    sel_disp = normalize_algorithm_name(selected)
+
+    def _placeholder(reason: str, source: str = "not_available") -> None:
+        doc = {
+            "available": False,
+            "reason": reason,
+            "generated_at": _iso_now(),
+            "source": source,
+            "scheduling_algorithm": sel_disp,
+        }
+        exp_out.write_text(json.dumps(doc, indent=2) + "\n")
+        copy_file(exp_out, live_exp, False)
+        print(f"  trace_explanation: unavailable ({source})")
+
+    if not (trace.is_file() and metrics.is_file()):
+        _placeholder("no trace/metrics available to explain for this run")
+        return
+
+    cmd = [
+        sys.executable, str(TOOLS_DIR / "trace_explainer.py"),
+        "--trace", str(trace), "--metrics", str(metrics),
+        "--out", str(exp_out),
+    ]
+    if rec.is_file():
+        cmd += ["--rec", str(rec)]
+    if proposal.is_file():
+        cmd += ["--proposal", str(proposal)]
+
+    ok = False
+    try:
+        rc = subprocess.run(cmd, capture_output=False).returncode
+        ok = rc == 0 and exp_out.exists()
+    except Exception as exc:  # noqa: BLE001
+        print(f"  [explainer] exception: {exc}")
+        ok = False
+
+    if ok:
+        doc = _read_json(exp_out)
+        doc["available"] = True
+        doc.setdefault("source", "llm")
+        doc["scheduling_algorithm"] = doc.get("scheduling_algorithm") or sel_disp
+        doc["generated_at"] = _iso_now()
+        exp_out.write_text(json.dumps(doc, indent=2, ensure_ascii=False) + "\n")
+        copy_file(exp_out, live_exp, False)
+        print(f"  trace_explanation: fresh (source={doc.get('source')})")
+        return
+
+    # LLM failed (most often: UPSTAGE_API_KEY missing or network error).
+    if offline_fixture:
+        demo = DEMO_DIR / "trace_explanation.json"
+        if demo.is_file():
+            doc = _read_json(demo)
+            doc["available"] = True
+            doc["source"] = "demo_fallback"
+            doc["scheduling_algorithm"] = doc.get("scheduling_algorithm") or sel_disp
+            doc["generated_at"] = _iso_now()
+            exp_out.write_text(json.dumps(doc, indent=2, ensure_ascii=False) + "\n")
+            copy_file(exp_out, live_exp, False)
+            print("  trace_explanation: committed demo fixture (offline-fixture)")
+            return
+    _placeholder(
+        "trace explanation was not generated for this run "
+        "(LLM unavailable: no UPSTAGE_API_KEY or network error)"
+    )
+
+
+def run_feedback_generator(out_dir: Path, live_dir: Path, *,
+                           offline_fixture: bool, dry_run: bool) -> None:
+    """[9] Feedback Rule Generator — FAIL-only prompt-feedback loop.
+
+    Per CLAUDE.md, the feedback loop fires ONLY on a FAIL judgment (or
+    starvation). SUCCESS / NEAR-SUCCESS skip honestly and leave the rules
+    untouched. Feedback is NEVER faked: if the LLM is unavailable (no key),
+    we log an explicit skip rather than substituting a fixture — even in
+    --offline-fixture mode. Rules generated here affect FUTURE recommendations,
+    not the just-finished run.
+    """
+    print("\n[9] Feedback rule generator (FAIL-only)")
+    metrics = out_dir / "metrics.json"
+    rec = out_dir / "recommendation.json"
+    rules_out = out_dir / "feedback_rules.md"
+    live_rules = live_dir / "feedback_rules.md"
+
+    if dry_run:
+        print("  [DRY-RUN] skipped")
+        return
+
+    m = _read_json(metrics)
+    judgment = str(m.get("judgment", "")).strip().upper()
+    starvation = bool(m.get("starvation_occurred"))
+
+    if judgment != "FAIL" and not starvation:
+        print(f"  feedback skipped honestly (judgment={judgment or 'UNKNOWN'}; "
+              f"feedback fires only on FAIL).")
+        return
+
+    # Preserve any existing accumulated rules so the advisor's FIFO/dedup logic
+    # sees them (it reads the --feedback file as both prior rules and output).
+    if live_rules.is_file() and not rules_out.is_file():
+        try:
+            shutil.copy2(live_rules, rules_out)
+        except Exception:  # noqa: BLE001
+            pass
+
+    cmd = [
+        sys.executable, str(TOOLS_DIR / "llm_advisor.py"),
+        "--mode", "feedback",
+        "--metrics", str(metrics),
+        "--rec", str(rec),
+        "--feedback", str(rules_out),
+    ]
+    rc = 1
+    try:
+        rc = subprocess.run(cmd, capture_output=False).returncode
+    except Exception as exc:  # noqa: BLE001
+        print(f"  [feedback] exception: {exc}")
+        rc = 1
+
+    if rc != 0:
+        # run_feedback raised SystemExit — the LLM was unavailable (missing
+        # UPSTAGE_API_KEY or a network/API error). Feedback is NEVER faked, so
+        # we honestly skip rather than substituting fixture rules (even with
+        # --offline-fixture). The just-finished run is unaffected either way.
+        suffix = " (offline-fixture set, but feedback is never faked)" if offline_fixture else ""
+        print("  feedback skipped: LLM unavailable for feedback "
+              "(missing UPSTAGE_API_KEY or network/API error)" + suffix)
+        return
+
+    # rc == 0: the advisor's feedback mode ran. It writes the rules file only
+    # when the LLM produced NEW, non-duplicate rules; "no usable rules" / "only
+    # duplicates" leave it untouched. Report which actually happened.
+    if rules_out.is_file() and rules_out.read_text().strip():
+        copy_file(rules_out, live_rules, False)
+        print(f"  feedback rules written/updated -> {_rel(live_rules)}")
+    else:
+        print("  feedback ran on the FAIL run but produced no new rules "
+              "(empty/duplicate); rules file unchanged.")
+
+
 # ── metadata + export (after running) ──────────────────────────────────────────
 
 def ensure_metadata_files(out_dir: Path, dry_run: bool):
@@ -1522,6 +1699,20 @@ def main() -> int:
             target_metric=target_metric, top_metrics=top_metrics,
             guard_params=guard_params, force_correction=args.force_correction,
             dry_run=dry_run,
+        )
+
+    # After-running LLM stages: explain the run, then (FAIL-only) learn from it.
+    #   [8] Trace Explainer        -> trace_explanation.json (fresh or explicit
+    #                                 unavailable placeholder; never stale)
+    #   [9] Feedback Rule Generator-> feedback_rules.md (FAIL judgment only)
+    if not dry_run:
+        run_trace_explainer(
+            out_dir, live_dir, selected,
+            offline_fixture=args.offline_fixture, dry_run=dry_run,
+        )
+        run_feedback_generator(
+            out_dir, live_dir,
+            offline_fixture=args.offline_fixture, dry_run=dry_run,
         )
 
     print("\n[DONE] Orchestrator pipeline complete.")
