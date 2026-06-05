@@ -2,7 +2,7 @@
   "guard_result": "accepted",
   "algorithm": "SJF",
   "params": {
-    "alpha_percent": 50,
+    "alpha_percent": 20,
     "initial": 10,
     "min": 1,
     "max": 100000
@@ -13,46 +13,46 @@
   "predicted_bursts": [
     {
       "pid": 1,
-      "predicted_burst": 10,
-      "confidence": 0.85,
-      "basis": "cpu_bound label suggests longer CPU bursts, but burst_count=1 and no io_count indicate moderate length"
+      "predicted_burst": 1,
+      "confidence": 0.9,
+      "basis": "cpu_bound label with burst_count=1 suggests short CPU burst"
     },
     {
       "pid": 2,
-      "predicted_burst": 5,
+      "predicted_burst": 1,
       "confidence": 0.9,
-      "basis": "interactive label with burst_count=1 and no io_count implies short CPU burst"
+      "basis": "interactive label with burst_count=1 indicates short CPU burst"
     },
     {
       "pid": 3,
-      "predicted_burst": 8,
-      "confidence": 0.8,
-      "basis": "mixed label with burst_count=2 and io_count=1 suggests moderate CPU burst length"
+      "predicted_burst": 1,
+      "confidence": 0.85,
+      "basis": "mixed label with burst_count=2 and io_count=1 suggests moderate CPU burst"
     },
     {
       "pid": 4,
-      "predicted_burst": 4,
-      "confidence": 0.92,
-      "basis": "interactive label with burst_count=1 and no io_count indicates short CPU burst"
+      "predicted_burst": 1,
+      "confidence": 0.9,
+      "basis": "interactive label with burst_count=1 indicates short CPU burst"
     },
     {
       "pid": 5,
-      "predicted_burst": 12,
-      "confidence": 0.78,
-      "basis": "cpu_bound label with burst_count=1 and no io_count suggests longer CPU burst"
+      "predicted_burst": 1,
+      "confidence": 0.9,
+      "basis": "cpu_bound label with burst_count=1 suggests short CPU burst"
     },
     {
       "pid": 6,
-      "predicted_burst": 9,
-      "confidence": 0.82,
-      "basis": "mixed label with burst_count=2 and io_count=1 suggests moderate CPU burst length"
+      "predicted_burst": 1,
+      "confidence": 0.85,
+      "basis": "mixed label with burst_count=2 and io_count=1 suggests moderate CPU burst"
     }
   ],
   "prediction_source": "llm",
   "reason": "Accepted: SJF is suitable for waiting_time (compat=0.95, confidence=0.95).",
   "_meta": {
     "source": "tools/algorithm_guard.py",
-    "generated_at": "2026-06-05T16:47:31.253058+00:00",
+    "generated_at": "2026-06-05T19:02:18.707368+00:00",
     "recommendation_source": "recommendation.json"
   },
   "scheduling_algorithm": "SJF",

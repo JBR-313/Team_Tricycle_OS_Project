@@ -153,6 +153,11 @@
   cursor: pointer;
 }
 .tab-btn:hover { color: #000; background: rgba(255,255,255,0.4); }
+.tab-btn-locked {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.tab-btn-locked:hover { color: #475569; background: transparent; }
 .tab-btn.active {
   color: #000;
   background: rgba(255,255,255,0.85);
@@ -443,15 +448,17 @@
   margin-bottom: 12px;
   text-transform: uppercase;
 }
-/* Process State — enlarged for projector readability (goal §8). */
-.viz-page .pstate-box-name { font-size: 19px; letter-spacing: 0.06em; }
-.viz-page .pstate-token    { width: 30px; height: 30px; font-size: 14px; border-radius: 9px; }
-.viz-page .pstate-tokens   { gap: 7px; }
-.viz-page .pstate-box      { padding: 12px 10px 14px; border-width: 3px; }
-.viz-page .pstate-label    { font-size: 13px; color: #1e293b; }
-/* Thicker connectors + more prominent active transition. */
-.viz-page .pstate-path        { stroke-width: 2.6; }
-.viz-page .pstate-path.active { stroke-width: 4; stroke-dasharray: 6 3; }
+/* Process State — boxes are the primary structure; labels + tokens are sized
+   to fit naturally inside them (goal §4). Larger boxes (heights set below),
+   SMALLER state labels and SMALLER process tokens. */
+.viz-page .pstate-box-name { font-size: 13px; letter-spacing: 0.04em; }
+.viz-page .pstate-token    { width: 22px; height: 22px; font-size: 11px; border-radius: 7px; }
+.viz-page .pstate-tokens   { gap: 5px; }
+.viz-page .pstate-box      { padding: 8px 8px 10px; border-width: 2px; gap: 6px; }
+.viz-page .pstate-label    { font-size: 11px; color: #1e293b; }
+/* Connectors + active transition. */
+.viz-page .pstate-path        { stroke-width: 2.4; }
+.viz-page .pstate-path.active { stroke-width: 3.6; stroke-dasharray: 6 3; }
 .viz-page .notif-title     { font-size: 16px; font-weight: 700; color: #000; }
 .viz-page .notif-body      { font-size: 14px; color: #1e293b; }
 .viz-page .notif-tick      { font-size: 13px; color: #475569; }
@@ -716,8 +723,10 @@
    Left:  Gantt chart (prominent), Process State Transition (large).
    Right: Process Lanes (large), MLFQ queue (large only when MLFQ), Trace Log
           (smaller / scrollable). */
-.card-gantt   { flex: 1.4 0 0; min-height: 130px; }
-.card-pstate  { flex: 2.0 0 0; min-height: 240px; }
+/* Gantt height ~halved; the recovered vertical space goes to Process State
+   so the state diagram becomes the dominant, readable panel (goal §4/§5). */
+.card-gantt   { flex: 0.75 0 0; min-height: 96px; max-height: 24%; }
+.card-pstate  { flex: 3.0 0 0; min-height: 320px; }
 
 /* Right column */
 .card-lanes      { flex: 2.6 0 0; min-height: 180px; }
@@ -1003,10 +1012,10 @@
 
 /* Box positions — must mirror the SVG viewBox coordinates so the
    pipes meet the box edges. */
-.pstate-ready      { left: 6%;  top: 2%;  right: 55%; height: 19%; }
-.pstate-running    { left: 6%;  top: 50%; right: 55%; height: 19%; }
-.pstate-terminated { left: 6%;  top: 78%; right: 39%; height: 19%; }
-.pstate-waiting    { left: 55%; top: 26%; right: 6%;  height: 19%; }
+.pstate-ready      { left: 5%;  top: 1%;  right: 54%; height: 24%; }
+.pstate-running    { left: 5%;  top: 49%; right: 54%; height: 24%; }
+.pstate-terminated { left: 5%;  top: 76%; right: 36%; height: 23%; }
+.pstate-waiting    { left: 54%; top: 25%; right: 5%;  height: 24%; }
 
 /* RUNNING is the state the audience should track — make it pop. */
 .viz-page .pstate-running {
@@ -2254,14 +2263,41 @@
    STAGED-DEMO LLM REVEAL (idle hero / analyzing / placeholders / typewriter)
 ───────────────────────────────────────────────────────────── */
 
+/* Pre-analysis layout — a vertically-centered pair (hero + neutral input
+   summary) so the screen stays calm and balanced without stretched, empty
+   full-height cards (goal §6). */
+.llm-idle-layout {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 24px;
+  height: 100%;
+  align-items: center;
+  max-width: 1180px;
+  margin: 0 auto;
+}
+.llm-idle-aside {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.llm-idle-aside .card-wl {
+  flex: 0 0 auto;
+}
+.llm-idle-note {
+  margin: 0;
+  font-size: 0.78rem;
+  color: #64748b;
+  line-height: 1.5;
+  padding: 0 4px;
+}
+
 /* Idle hero — shown on the LLM tab before the first RUN. */
 .llm-idle-hero {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  height: 100%;
   justify-content: center;
-  padding: 36px 32px;
+  padding: 40px 36px;
   border-radius: 18px;
   background: linear-gradient(150deg, rgba(238,244,255,0.95), rgba(248,250,252,0.95));
   border: 1px solid rgba(10,48,105,0.10);

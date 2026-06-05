@@ -9,6 +9,7 @@
 export default function Header({
   tab, onTabChange,
   runAvailable, runLabel, runDisabled, runPill, onRunClick,
+  minimal = false,
 }) {
   const TABS = ['LLM', 'Visualization', 'Evaluation']
 
@@ -19,6 +20,12 @@ export default function Header({
     RUNNING: 'run-pill-run', PARSING: 'run-pill-run', EVALUATING: 'run-pill-run',
   }[runPill] || 'run-pill-idle'
 
+  // In the pre-analysis (minimal) state the Visualization / Evaluation tabs are
+  // locked so the viewer cannot preview execution results before analysis
+  // starts; only the LLM call-to-action remains. The staged flow re-enables
+  // them automatically once a run begins.
+  const isLocked = (t) => minimal && t !== 'LLM'
+
   return (
     <div className="header-bar">
       <div className="header-title">LLM Sched Copilot</div>
@@ -27,8 +34,10 @@ export default function Header({
         {TABS.map(t => (
           <button
             key={t}
-            className={`tab-btn ${tab === t ? 'active' : ''}`}
-            onClick={() => onTabChange(t)}
+            className={`tab-btn ${tab === t ? 'active' : ''} ${isLocked(t) ? 'tab-btn-locked' : ''}`}
+            onClick={() => { if (!isLocked(t)) onTabChange(t) }}
+            disabled={isLocked(t)}
+            title={isLocked(t) ? 'Available after analysis starts' : t}
           >
             {t}
           </button>
@@ -37,12 +46,16 @@ export default function Header({
 
       <div className="header-spacer" />
 
-      {runAvailable === false && (
+      {/* Pre-analysis: keep the top-right area calm — only the primary action.
+          Status pills (and the offline hint) are hidden until a run begins. */}
+      {!minimal && runAvailable === false && (
         <span className="run-pill run-pill-idle" title="Run server offline — analysis uses bundled data">
           server offline
         </span>
       )}
-      <span className={`run-pill ${pillClass}`} title={runPill}>{runPill}</span>
+      {!minimal && (
+        <span className={`run-pill ${pillClass}`} title={runPill}>{runPill}</span>
+      )}
       <button
         className="header-run-button"
         onClick={onRunClick}
