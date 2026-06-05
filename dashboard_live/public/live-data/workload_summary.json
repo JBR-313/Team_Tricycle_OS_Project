@@ -1,72 +1,64 @@
 {
-    "id": "ambiguous_mixed",
-    "description": "Balanced workload where the best algorithm depends on the chosen target metric. Tests the LLM's ability to read target_metric and trade off, instead of always picking MLFQ.",
-    "target_metric": "avg_waiting_time",
-    "expected_best_algorithm": "SJF",
-    "expected_behavior": "On avg_waiting_time SJF wins. On avg_response_time MLFQ or SRTF wins. On throughput RR or FCFS is competitive. If the LLM reads target_metric and picks accordingly, regret stays low; otherwise it lands in NEAR-SUCCESS or FAIL.",
+    "id": "xv6_interactive",
+    "description": "Mirror of the schedtest `interactive` curated table (user/schedtest.c). Process order == fork order so LLM burst priors align to xv6 by index. Single CPU burst per process (one-shot run_burst).",
+    "target_metric": "avg_response_time",
+    "expected_best_algorithm": "SRTF",
+    "expected_behavior": "Short interactive jobs should preempt the lone CPU-bound job; SRTF/SJF minimize response time using burst priors.",
     "schema_version": 2,
-    "process_count": 6,
-    "avg_arrival_gap": 1.2,
-    "cpu_bound_ratio": 0.33,
-    "interactive_ratio": 0.33,
-    "avg_priority": 3.17,
-    "priority_variance": 0.57,
-    "has_starvation_risk": false,
+    "process_count": 5,
+    "avg_arrival_gap": 3.75,
+    "cpu_bound_ratio": 0.0,
+    "interactive_ratio": 0.8,
+    "avg_priority": 4.2,
+    "priority_variance": 3.7,
+    "has_starvation_risk": true,
     "burst_count_distribution": {
         "min": 1,
-        "max": 2,
-        "avg": 1.33
+        "max": 1,
+        "avg": 1
     },
-    "total_cpu_work": 25,
-    "workload_file": "workloads/ambiguous_mixed.json",
+    "total_cpu_work": 11,
+    "workload_file": "workloads/xv6_interactive.json",
     "visible_processes": [
         {
             "pid": 1,
             "arrival_time": 0,
-            "priority": 4,
-            "label": "cpu_bound",
-            "burst_count": 1,
-            "io_count": 0
-        },
-        {
-            "pid": 2,
-            "arrival_time": 1,
-            "priority": 3,
+            "priority": 5,
             "label": "interactive",
             "burst_count": 1,
             "io_count": 0
         },
         {
-            "pid": 3,
+            "pid": 2,
             "arrival_time": 2,
-            "priority": 3,
-            "label": "mixed",
-            "burst_count": 2,
-            "io_count": 1
-        },
-        {
-            "pid": 4,
-            "arrival_time": 3,
             "priority": 2,
             "label": "interactive",
             "burst_count": 1,
             "io_count": 0
         },
         {
-            "pid": 5,
-            "arrival_time": 4,
-            "priority": 4,
-            "label": "cpu_bound",
+            "pid": 3,
+            "arrival_time": 5,
+            "priority": 3,
+            "label": "interactive",
             "burst_count": 1,
             "io_count": 0
         },
         {
-            "pid": 6,
-            "arrival_time": 6,
-            "priority": 3,
-            "label": "mixed",
-            "burst_count": 2,
-            "io_count": 1
+            "pid": 4,
+            "arrival_time": 10,
+            "priority": 7,
+            "label": "cpu",
+            "burst_count": 1,
+            "io_count": 0
+        },
+        {
+            "pid": 5,
+            "arrival_time": 15,
+            "priority": 4,
+            "label": "interactive",
+            "burst_count": 1,
+            "io_count": 0
         }
     ]
 }

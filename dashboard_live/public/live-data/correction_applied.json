@@ -1,4 +1,7 @@
 {
   "applied": false,
-  "reason": "correction apply loop re-runs the real xv6 kernel; not applicable to the simulator backend."
+  "reason": "Initial recommendation met success criteria (judgment=SUCCESS).",
+  "original_algorithm": "SRTF",
+  "original_judgment": "SUCCESS",
+  "target_metric": "avg_response_time"
 }
