@@ -62,6 +62,7 @@ async function _maybeJson(path) {
 export async function loadRuntimeEvents()          { return _maybeJson('runtime_events.json') }
 export async function loadCorrectionProposal()     { return _maybeJson('correction_proposal.json') }
 export async function loadCorrectionGuardDecision(){ return _maybeJson('correction_guard_decision.json') }
+export async function loadCorrectionApplied()      { return _maybeJson('correction_applied.json') }
 
 // Returns { events: [...], errors: [...bad-line messages] }
 // Events are normalized through the schema-compat layer (tick/algo spellings)

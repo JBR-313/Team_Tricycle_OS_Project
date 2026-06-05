@@ -1,4 +1,12 @@
 {
-  "total_problems": 0,
-  "events": []
+  "total_problems": 1,
+  "events": [
+    {
+      "tick": 15,
+      "type": "high_preemption_rate",
+      "pid": -1,
+      "detail": "12 preemptions in 15 ticks (0.80/tick)",
+      "severity": "low"
+    }
+  ]
 }

@@ -1,0 +1,5 @@
+# Development / test dependencies (not needed to run the demo).
+#   pip install -r requirements-dev.txt
+# Tests are offline and require NO UPSTAGE_API_KEY.
+-r requirements.txt
+pytest>=7.4

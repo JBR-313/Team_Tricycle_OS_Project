@@ -1,0 +1,13 @@
+{
+  "preview_only": true,
+  "applied": false,
+  "guard_result": "accepted",
+  "proposal_source": "correction_proposal.json",
+  "correction_type": "quantum_increase",
+  "new_scheduling_algorithm": "SRTF",
+  "reason": "correction validated: quantum_increase on SRTF",
+  "_meta": {
+    "source": "tools/correction_guard.py",
+    "generated_at": "2026-06-05T20:17:59Z"
+  }
+}

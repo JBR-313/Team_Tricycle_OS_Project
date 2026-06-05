@@ -1,0 +1,227 @@
+{
+  "id": "starvation_priority",
+  "description": "A continuous stream of high-priority short jobs risks starving one low-priority long job.",
+  "target_metric": "max_waiting_time",
+  "expected_best_algorithm": "MLFQ",
+  "expected_behavior": "Strict Priority without aging starves the low-priority job (high max waiting time / starvation). Priority+Aging and MLFQ's periodic boost rescue it; RR is fair but slower overall.",
+  "schema_version": 2,
+  "processes": [
+    {
+      "pid": 1,
+      "arrival_time": 0,
+      "cpu_bursts": [
+        15
+      ],
+      "io_bursts": [],
+      "priority": 9,
+      "label": "cpu_bound_low_priority",
+      "actual_bursts": [
+        15
+      ]
+    },
+    {
+      "pid": 2,
+      "arrival_time": 0,
+      "cpu_bursts": [
+        2,
+        2
+      ],
+      "io_bursts": [
+        2
+      ],
+      "priority": 1,
+      "label": "high_priority_interactive",
+      "actual_bursts": [
+        2,
+        2
+      ]
+    },
+    {
+      "pid": 3,
+      "arrival_time": 1,
+      "cpu_bursts": [
+        2,
+        2
+      ],
+      "io_bursts": [
+        2
+      ],
+      "priority": 1,
+      "label": "high_priority_interactive",
+      "actual_bursts": [
+        2,
+        2
+      ]
+    },
+    {
+      "pid": 4,
+      "arrival_time": 2,
+      "cpu_bursts": [
+        2,
+        2
+      ],
+      "io_bursts": [
+        2
+      ],
+      "priority": 1,
+      "label": "high_priority_interactive",
+      "actual_bursts": [
+        2,
+        2
+      ]
+    },
+    {
+      "pid": 5,
+      "arrival_time": 3,
+      "cpu_bursts": [
+        2,
+        2
+      ],
+      "io_bursts": [
+        2
+      ],
+      "priority": 1,
+      "label": "high_priority_interactive",
+      "actual_bursts": [
+        2,
+        2
+      ]
+    },
+    {
+      "pid": 6,
+      "arrival_time": 4,
+      "cpu_bursts": [
+        2,
+        2
+      ],
+      "io_bursts": [
+        2
+      ],
+      "priority": 1,
+      "label": "high_priority_interactive",
+      "actual_bursts": [
+        2,
+        2
+      ]
+    },
+    {
+      "pid": 7,
+      "arrival_time": 5,
+      "cpu_bursts": [
+        2,
+        2
+      ],
+      "io_bursts": [
+        2
+      ],
+      "priority": 1,
+      "label": "high_priority_interactive",
+      "actual_bursts": [
+        2,
+        2
+      ]
+    },
+    {
+      "pid": 8,
+      "arrival_time": 6,
+      "cpu_bursts": [
+        2,
+        2
+      ],
+      "io_bursts": [
+        2
+      ],
+      "priority": 1,
+      "label": "high_priority_interactive",
+      "actual_bursts": [
+        2,
+        2
+      ]
+    },
+    {
+      "pid": 9,
+      "arrival_time": 7,
+      "cpu_bursts": [
+        2,
+        2
+      ],
+      "io_bursts": [
+        2
+      ],
+      "priority": 1,
+      "label": "high_priority_interactive",
+      "actual_bursts": [
+        2,
+        2
+      ]
+    },
+    {
+      "pid": 10,
+      "arrival_time": 8,
+      "cpu_bursts": [
+        2,
+        2
+      ],
+      "io_bursts": [
+        2
+      ],
+      "priority": 1,
+      "label": "high_priority_interactive",
+      "actual_bursts": [
+        2,
+        2
+      ]
+    },
+    {
+      "pid": 11,
+      "arrival_time": 9,
+      "cpu_bursts": [
+        2,
+        2
+      ],
+      "io_bursts": [
+        2
+      ],
+      "priority": 1,
+      "label": "high_priority_interactive",
+      "actual_bursts": [
+        2,
+        2
+      ]
+    },
+    {
+      "pid": 12,
+      "arrival_time": 10,
+      "cpu_bursts": [
+        2,
+        2
+      ],
+      "io_bursts": [
+        2
+      ],
+      "priority": 1,
+      "label": "high_priority_interactive",
+      "actual_bursts": [
+        2,
+        2
+      ]
+    },
+    {
+      "pid": 13,
+      "arrival_time": 11,
+      "cpu_bursts": [
+        2,
+        2
+      ],
+      "io_bursts": [
+        2
+      ],
+      "priority": 1,
+      "label": "high_priority_interactive",
+      "actual_bursts": [
+        2,
+        2
+      ]
+    }
+  ]
+}

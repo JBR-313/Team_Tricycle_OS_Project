@@ -39,23 +39,27 @@ export const fallbackWorkloadSummary = {
   reason: 'No live data.',
 }
 
+// No live data == no real run happened. Do NOT imply a failed execution:
+// judgment is UNKNOWN (not FAIL), regret is null, and numeric metrics are null
+// so the UI renders N/A instead of a misleading "0 / FAIL".
 export const fallbackMetrics = {
-  scheduling_algorithm: 'RR',
+  scheduling_algorithm: null,
   process_count: 0,
   completed_count: 0,
-  total_execution_time: 0,
-  avg_response_time: 0,
-  avg_turnaround_time: 0,
-  avg_waiting_time: 0,
-  throughput: 0,
-  max_waiting_time: 0,
+  total_execution_time: null,
+  avg_response_time: null,
+  avg_turnaround_time: null,
+  avg_waiting_time: null,
+  throughput: null,
+  max_waiting_time: null,
   starvation_occurred: false,
   starvation_pids: [],
-  preemption_count: 0,
+  preemption_count: null,
   per_process: [],
   comparison: {},
-  judgment: 'FAIL',
-  regret_score: 0,
+  judgment: 'UNKNOWN',
+  regret_score: null,
+  no_data: true,
 }
 
 export const fallbackTraces = {

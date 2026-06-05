@@ -47,6 +47,9 @@ XV6_PROFILES = {
 SIM_PROFILES = XV6_PROFILES | {
     "cpu_bound_vs_io_bound", "ambiguous_mixed",
     "pure_batch", "bursty_long_tail",
+    # Scheduling-lab coverage workloads (simulator only).
+    "convoy_effect", "fairness_rr", "staggered_short_arrival",
+    "starvation_priority", "burst_prediction_demo",
 }
 
 ALLOWED_ORIGINS = {

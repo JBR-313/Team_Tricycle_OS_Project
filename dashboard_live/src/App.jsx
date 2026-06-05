@@ -6,7 +6,7 @@ import {
   loadManifest, loadRecommendation, loadGuardDecision,
   loadWorkloadSummary, loadMetrics, loadAllTraces,
   getLiveDataBase,
-  loadRuntimeEvents, loadCorrectionProposal, loadCorrectionGuardDecision,
+  loadRuntimeEvents, loadCorrectionProposal, loadCorrectionGuardDecision, loadCorrectionApplied,
 } from './data/liveDataClient.js'
 import { tickToMs } from './components/constants.js'
 import { useRun } from './data/useRun.js'
@@ -185,6 +185,8 @@ import Header              from './components/Header.jsx'
 import LLMRecommendation   from './components/LLMRecommendation.jsx'
 import AlgorithmGuard      from './components/AlgorithmGuard.jsx'
 import EvaluationResult    from './components/EvaluationResult.jsx'
+import TraceExplanationCard from './components/TraceExplanationCard.jsx'
+import RuntimeCorrectionCard from './components/RuntimeCorrectionCard.jsx'
 import LLMExplanation      from './components/LLMExplanation.jsx'
 import AnalyzingStatus     from './components/AnalyzingStatus.jsx'
 import MainGantt           from './components/MainGantt.jsx'
@@ -236,6 +238,7 @@ export default function App() {
   const [runtimeEvents,           setRuntimeEvents]           = useState(null)
   const [correctionProposal,      setCorrectionProposal]      = useState(null)
   const [correctionGuardDecision, setCorrectionGuardDecision] = useState(null)
+  const [correctionApplied,       setCorrectionApplied]       = useState(null)
 
   const manifestVersionRef = useRef(null)
   const recommendedAlgoRef = useRef('MLFQ')
@@ -283,14 +286,16 @@ export default function App() {
         if (exRes.ok) setTraceExplanation(await exRes.json())
       } catch {/* optional */}
 
-      const [re, cp, cd] = await Promise.all([
+      const [re, cp, cd, ca] = await Promise.all([
         loadRuntimeEvents(),
         loadCorrectionProposal(),
         loadCorrectionGuardDecision(),
+        loadCorrectionApplied(),
       ])
       setRuntimeEvents(re)
       setCorrectionProposal(cp)
       setCorrectionGuardDecision(cd)
+      setCorrectionApplied(ca)
     } catch (err) {
       setLoadError(err.message)
       setDataMode('fallback')
@@ -384,6 +389,9 @@ export default function App() {
   // already-loaded (or fallback) data so the demo never gets stuck.
   useEffect(() => {
     if (demoPhase === DemoPhase.ANALYZING_LLM && runState === 'ERROR') {
+      // Reset the run guard so a subsequent RUN click is not ignored, then
+      // reveal the already-loaded (or fallback) analysis so we never get stuck.
+      runInitiatedRef.current = false
       startReveal()
     }
   }, [demoPhase, runState, startReveal])
@@ -554,6 +562,8 @@ export default function App() {
             selectedMetric={selectedMetric}
             onSelectedMetricChange={setSelectedMetric}
           />
+          <TraceExplanationCard explanation={traceExplanation} />
+          <RuntimeCorrectionCard correction={correctionApplied} />
         </div>
       </div>
     )
@@ -569,6 +579,8 @@ export default function App() {
         runPill={runPill}
         onRunClick={handlePrimaryRun}
         minimal={demoPhase === DemoPhase.IDLE}
+        manifest={manifest}
+        loadError={!!loadError}
       />
       <div className="dashboard-main tab-main">
         {tab === 'LLM' && renderLLMTab()}

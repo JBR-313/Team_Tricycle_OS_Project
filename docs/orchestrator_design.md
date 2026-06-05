@@ -209,8 +209,33 @@ repeat on the same seed/profile; the LLM-selected algorithm runs first.
 
 ---
 
+## After-running stages [7]–[9]
+
+After export + contract validation, the orchestrator runs three host-side
+after-running stages:
+
+- **[7] Runtime correction apply loop** (`_run_correction_apply_loop`) — on a
+  FAIL judgment / starvation / high-severity event (xv6 backend), re-runs xv6
+  with a corrected, Correction-Guard-approved algorithm/params on the **same**
+  workload and writes `correction_applied.json` (before/after). Host-side and
+  post-evaluation — never in-kernel, never tick-level. Simulator backend = no-op.
+- **[8] Trace Explainer** (`run_trace_explainer` → `tools/trace_explainer.py`) —
+  writes a fresh `trace_explanation.json` for this run, or an explicit
+  `available:false` placeholder (no key) / committed demo fixture (offline
+  mode). Never leaves a stale explanation behind.
+- **[9] Feedback Rule Generator** (`run_feedback_generator` →
+  `llm_advisor --mode feedback`) — fires **only** on FAIL/starvation; appends
+  non-duplicate rules to `feedback_rules.md` (FIFO-capped). Never faked without
+  a key. Affects FUTURE recommendations, not the finished run.
+
+See `docs/implementation_status.md` for the full stage map.
+
+---
+
 ## Relationship to other docs
 
 - `docs/architecture.md` — three-phase architecture and module responsibilities.
 - `docs/trace_format.md` — raw `[SCHED]` / `[SCHEDTEST]` line formats and the
   normalized JSONL fields.
+- `docs/implementation_status.md` — what is implemented, with evidence.
+- `docs/system_limitations.md` — explicit limits (CPUS=1, no-future-burst, …).

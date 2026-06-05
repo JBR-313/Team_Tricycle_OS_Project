@@ -1,30 +1,30 @@
 {
-  "backend": "simulator",
+  "backend": "xv6",
   "seed": 42,
-  "workload_type": "ambiguous_mixed",
-  "llm_selected_algorithm": "SJF",
+  "workload_type": "interactive",
+  "llm_selected_algorithm": "SRTF",
   "algorithms_executed": [
-    "SJF",
+    "SRTF",
     "RR",
     "FCFS",
     "Priority",
     "MLFQ",
-    "SRTF"
+    "SJF"
   ],
-  "generated_at": "2026-06-05T19:02:18Z",
+  "generated_at": "2026-06-05T20:17:59Z",
   "orchestrator_version": "1.0.0",
-  "mode": "simulator",
-  "updated_at": "2026-06-05T19:02:18Z",
-  "version": 48,
-  "workload": "ambiguous_mixed",
+  "mode": "xv6-log",
+  "updated_at": "2026-06-05T20:17:59Z",
+  "version": 50,
+  "workload": "xv6_interactive",
   "algorithms": [
-    "SJF",
+    "SRTF",
     "RR",
     "FCFS",
     "Priority",
     "MLFQ",
-    "SRTF"
+    "SJF"
   ],
-  "recommended_algorithm": "SJF",
-  "target_metric": "avg_waiting_time"
+  "recommended_algorithm": "SRTF",
+  "target_metric": "avg_response_time"
 }

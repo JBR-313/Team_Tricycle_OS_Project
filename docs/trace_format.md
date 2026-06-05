@@ -274,16 +274,20 @@ A process has moved from one MLFQ queue to another (demotion or aging promotion)
 
 ---
 
-### CORRECTION_APPLIED *(Future Work — not emitted today)*
+### CORRECTION_APPLIED *(reserved in-kernel event — not emitted today)*
 
-> Reserved trace event for the closed-loop runtime-correction path.
-> The current pipeline ships **preview-only** correction artifacts
-> (`runtime_events.json`, `correction_proposal.json`,
-> `correction_guard_decision.json`) and does **not** emit
-> `CORRECTION_APPLIED`. The schema below is the design target.
-
-When the closed loop is wired, a runtime correction proposed and
-guard-validated would be applied at the next scheduling point.
+> This reserved event would mark a correction applied **inside the kernel at a
+> scheduling point**. The kernel does **not** emit it, and by design never will
+> in the hot path — there is no in-kernel LLM and no tick-level correction.
+>
+> Runtime correction **is** implemented, but as a **host-side post-evaluation
+> apply loop**, not a kernel event: `scripts/orchestrator.py` re-runs xv6 with a
+> corrected, Guard-approved algorithm/params after a FAIL and records the
+> before/after in `correction_applied.json` (a host artifact, not a trace line).
+> The pipeline also ships the observational/preview artifacts
+> `runtime_events.json`, `correction_proposal.json`,
+> `correction_guard_decision.json`. The schema below remains reserved for
+> documentation only.
 
 ```json
 {"tick": 45, "algo": "MLFQ",  "event": "CORRECTION_APPLIED", "pid": -1, "state": null, "correction_type": "parameter_update", "new_params": {"aging_threshold": 20, "boost_interval": 80}}

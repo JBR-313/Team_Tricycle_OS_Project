@@ -1870,6 +1870,134 @@
 .run-pill-ok   { background: #d1fae5; color: #047857; }
 .run-pill-err  { background: #fee2e2; color: #b91c1c; }
 
+/* Compact data-source honesty badge (SourceBadge.jsx). Tells the viewer
+   whether the current data is a real xv6 trace or a simulator/fallback. */
+.source-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 999px;
+  margin-right: 6px;
+  border: 1px solid transparent;
+}
+.source-badge-xv6      { background: #dcfce7; color: #15803d; border-color: #86efac; }
+.source-badge-sim      { background: #e0e7ff; color: #4338ca; border-color: #c7d2fe; }
+.source-badge-snapshot { background: #ede9fe; color: #6d28d9; border-color: #ddd6fe; }
+.source-badge-fallback { background: #fef9c3; color: #a16207; border-color: #fde68a; }
+.source-badge-unknown  { background: #f1f5f9; color: #64748b; border-color: #e2e8f0; }
+
+/* Post-run LLM explanation card (TraceExplanationCard.jsx, Evaluation tab). */
+.card-trace-expl .trace-expl-pattern {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+.trace-expl-pattern-tag {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: #eef2ff;
+  color: #4338ca;
+  padding: 3px 9px;
+  border-radius: 6px;
+}
+.trace-expl-algo {
+  font-size: 12px;
+  font-weight: 700;
+  color: #0f172a;
+}
+.trace-expl-source {
+  margin-left: auto;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748b;
+  background: #f1f5f9;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+.trace-expl-section { margin-bottom: 10px; }
+.trace-expl-title {
+  margin: 0 0 3px;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+}
+.trace-expl-body { margin: 0; font-size: 13px; line-height: 1.5; color: #1e293b; }
+.trace-expl-bullets { margin: 0; padding-left: 18px; font-size: 13px; line-height: 1.5; color: #1e293b; }
+.trace-expl-section-suggest .trace-expl-body { color: #047857; }
+.trace-expl-unavailable { padding: 6px 2px; }
+.trace-expl-na-tag {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #a16207;
+  background: #fef9c3;
+  padding: 3px 9px;
+  border-radius: 6px;
+  margin-bottom: 8px;
+}
+.trace-expl-na-text { margin: 0 0 6px; font-size: 13px; color: #334155; }
+.trace-expl-na-hint { margin: 0; font-size: 12px; color: #64748b; }
+.trace-expl-na-hint code { background: #f1f5f9; padding: 1px 5px; border-radius: 4px; }
+
+/* Honest empty state when no live data exists (fallbackData.no_data). */
+.eval-nodata { padding: 10px 4px; text-align: center; }
+.eval-nodata-tag {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: #64748b;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  padding: 4px 12px;
+  border-radius: 999px;
+  margin-bottom: 10px;
+}
+.eval-nodata-text { margin: 0; font-size: 13px; color: #475569; line-height: 1.5; }
+
+/* Runtime correction result card (RuntimeCorrectionCard.jsx, Evaluation tab). */
+.correction-none { padding: 4px 2px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.correction-applied { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.correction-tag {
+  font-size: 10px; font-weight: 800; text-transform: uppercase;
+  letter-spacing: 0.05em; padding: 3px 9px; border-radius: 6px;
+}
+.correction-tag-none { background: #f1f5f9; color: #64748b; }
+.correction-tag-good { background: #dcfce7; color: #15803d; }
+.correction-tag-warn { background: #fef9c3; color: #a16207; }
+.correction-trigger {
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  color: #64748b; background: #f1f5f9; padding: 2px 8px; border-radius: 999px;
+}
+.correction-reason { margin: 0; font-size: 13px; color: #475569; }
+.correction-flow { display: flex; align-items: center; gap: 14px; margin: 4px 0 8px; }
+.correction-side {
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 8px 12px; border-radius: 8px; background: #f8fafc; border: 1px solid #e2e8f0;
+  min-width: 92px;
+}
+.correction-side-after { background: #f0fdf4; border-color: #bbf7d0; }
+.correction-side-label { font-size: 10px; font-weight: 700; text-transform: uppercase; color: #94a3b8; }
+.correction-algo { font-size: 15px; font-weight: 800; color: #0f172a; }
+.correction-val { font-size: 13px; color: #334155; }
+.correction-judg { font-size: 11px; font-weight: 700; color: #64748b; }
+.correction-arrow { font-size: 22px; color: #94a3b8; }
+.correction-metric-note { margin: 0; font-size: 12px; color: #64748b; line-height: 1.5; }
+
 /* Extra manifest metadata strip */
 .header-manifest-meta {
   display: flex;

@@ -1,0 +1,114 @@
+{
+  "id": "fairness_rr",
+  "description": "Eight equal-length CPU jobs arrive at nearly the same time. Tests fair time-slicing.",
+  "target_metric": "avg_response_time",
+  "expected_best_algorithm": "RR",
+  "expected_behavior": "RR (and MLFQ's top queue) give every job an early, fair slice -> low avg response time. FCFS makes later jobs wait for full earlier bursts. SJF/SRTF tie on equal bursts.",
+  "schema_version": 2,
+  "processes": [
+    {
+      "pid": 1,
+      "arrival_time": 0,
+      "cpu_bursts": [
+        6
+      ],
+      "io_bursts": [],
+      "priority": 2,
+      "label": "cpu_bound",
+      "actual_bursts": [
+        6
+      ]
+    },
+    {
+      "pid": 2,
+      "arrival_time": 1,
+      "cpu_bursts": [
+        6
+      ],
+      "io_bursts": [],
+      "priority": 2,
+      "label": "cpu_bound",
+      "actual_bursts": [
+        6
+      ]
+    },
+    {
+      "pid": 3,
+      "arrival_time": 2,
+      "cpu_bursts": [
+        6
+      ],
+      "io_bursts": [],
+      "priority": 2,
+      "label": "cpu_bound",
+      "actual_bursts": [
+        6
+      ]
+    },
+    {
+      "pid": 4,
+      "arrival_time": 3,
+      "cpu_bursts": [
+        6
+      ],
+      "io_bursts": [],
+      "priority": 2,
+      "label": "cpu_bound",
+      "actual_bursts": [
+        6
+      ]
+    },
+    {
+      "pid": 5,
+      "arrival_time": 4,
+      "cpu_bursts": [
+        6
+      ],
+      "io_bursts": [],
+      "priority": 2,
+      "label": "cpu_bound",
+      "actual_bursts": [
+        6
+      ]
+    },
+    {
+      "pid": 6,
+      "arrival_time": 5,
+      "cpu_bursts": [
+        6
+      ],
+      "io_bursts": [],
+      "priority": 2,
+      "label": "cpu_bound",
+      "actual_bursts": [
+        6
+      ]
+    },
+    {
+      "pid": 7,
+      "arrival_time": 6,
+      "cpu_bursts": [
+        6
+      ],
+      "io_bursts": [],
+      "priority": 2,
+      "label": "cpu_bound",
+      "actual_bursts": [
+        6
+      ]
+    },
+    {
+      "pid": 8,
+      "arrival_time": 7,
+      "cpu_bursts": [
+        6
+      ],
+      "io_bursts": [],
+      "priority": 2,
+      "label": "cpu_bound",
+      "actual_bursts": [
+        6
+      ]
+    }
+  ]
+}

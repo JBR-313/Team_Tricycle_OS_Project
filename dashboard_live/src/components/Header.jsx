@@ -6,10 +6,13 @@
  * and a single onRunClick handler that does the right thing for the current
  * phase (RUN ANALYSIS -> RUN VISUALIZATION -> VIEW EVALUATION).
  */
+import SourceBadge from './SourceBadge.jsx'
+
 export default function Header({
   tab, onTabChange,
   runAvailable, runLabel, runDisabled, runPill, onRunClick,
   minimal = false,
+  manifest = null, loadError = false,
 }) {
   const TABS = ['LLM', 'Visualization', 'Evaluation']
 
@@ -52,6 +55,9 @@ export default function Header({
         <span className="run-pill run-pill-idle" title="Run server offline — analysis uses bundled data">
           server offline
         </span>
+      )}
+      {!minimal && (
+        <SourceBadge manifest={manifest} loadError={loadError} />
       )}
       {!minimal && (
         <span className={`run-pill ${pillClass}`} title={runPill}>{runPill}</span>
