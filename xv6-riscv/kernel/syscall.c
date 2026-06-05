@@ -107,6 +107,7 @@ extern uint64 sys_setpriority(void);
 extern uint64 sys_getpriority(void);
 extern uint64 sys_setpredictor(void);
 extern uint64 sys_getpredictor(void);
+extern uint64 sys_setbursthint(void);
 
 // An array mapping syscall numbers from syscall.h
 // to the function that handles the system call.
@@ -138,6 +139,7 @@ static uint64 (*syscalls[])(void) = {
 [SYS_getpriority]  sys_getpriority,
 [SYS_setpredictor] sys_setpredictor,
 [SYS_getpredictor] sys_getpredictor,
+[SYS_setbursthint] sys_setbursthint,
 };
 
 void

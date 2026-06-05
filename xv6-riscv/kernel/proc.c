@@ -557,6 +557,38 @@ get_predicted_burst(int pid)
   return -1;
 }
 
+// Apply an LLM-generated INITIAL burst prior to a specific process (SJF/SRTF).
+// Used by the schedtest demo path: the parent calls this right after fork, so
+// the child's first SJF/SRTF decision uses the hint instead of the generic
+// initial prediction.  The value is clamped into the predictor's [min,max]; the
+// true future burst is never read or stored.  Returns 0 on success, -1 if the
+// pid is not found or predicted_burst < 1.
+int
+set_burst_hint(int pid, int predicted_burst)
+{
+  if(predicted_burst < 1)
+    return -1;
+
+  acquire(&sched_lock);
+  int lo = pred.min_predicted_burst;
+  int hi = pred.max_predicted_burst;
+  release(&sched_lock);
+  if(predicted_burst < lo) predicted_burst = lo;
+  if(predicted_burst > hi) predicted_burst = hi;
+
+  struct proc *p;
+  for(p = proc; p < &proc[NPROC]; p++){
+    acquire(&p->lock);
+    if(p->pid == pid){
+      p->predicted_burst = predicted_burst;  // initial prior only; no future burst
+      release(&p->lock);
+      return 0;
+    }
+    release(&p->lock);
+  }
+  return -1;
+}
+
 // Update a process's burst prediction at the end of an observed CPU burst,
 // using integer exponential averaging:
 //   new = (alpha*observed + (100-alpha)*old) / 100
@@ -572,12 +604,22 @@ update_burst_prediction(struct proc *p)
   int a   = pred.alpha_percent;
   int lo  = pred.min_predicted_burst;
   int hi  = pred.max_predicted_burst;
-  int np  = (a * observed + (100 - a) * p->predicted_burst) / 100;
+  int old = p->predicted_burst;
+  int np  = (a * observed + (100 - a) * old) / 100;
   if(np < lo) np = lo;
   if(np > hi) np = hi;
 
   p->predicted_burst = np;
   p->cur_burst_run   = 0;
+
+  // Observability for the predictor demo.  `observed` is already-consumed CPU
+  // time, never a future burst, so emitting it leaks nothing.  Limited to the
+  // predictor schedulers to keep the other algorithms' traces clean.
+  if(sched_mode == SCHED_SJF || sched_mode == SCHED_SRTF)
+    printf("[SCHED] tick=%d algo=%s event=PRED_UPDATE pid=%d observed=%d "
+           "predicted_prev=%d predicted_next=%d alpha=%d\n",
+           ticks, (sched_mode == SCHED_SRTF) ? "SRTF" : "SJF",
+           p->pid, observed, old, np, a);
 }
 
 // ── Scheduling helpers ────────────────────────────────────────────────────────

@@ -165,10 +165,20 @@ def build_system_prompt(feedback_path: Path) -> str:
     return prompt
 
 
+# Aggregate fields derived from the true CPU bursts. Sending them to the LLM
+# would leak ground-truth burst totals, violating the "no future burst leakage"
+# honesty contract (CLAUDE.md: "Future CPU bursts must not be given to the LLM
+# as input."). The model must predict bursts from VISIBLE per-process features
+# (arrival_time, priority, label, burst_count, io_count) only.
+_BURST_LEAK_KEYS = ("total_cpu_work",)
+
+
 def build_user_prompt(summary: dict) -> str:
+    # Defensive copy with burst-derived aggregates stripped before serialization.
+    safe = {k: v for k, v in summary.items() if k not in _BURST_LEAK_KEYS}
     return (
         "Here is the workload summary (JSON):\n\n"
-        f"{json.dumps(summary, indent=2, ensure_ascii=False)}\n\n"
+        f"{json.dumps(safe, indent=2, ensure_ascii=False)}\n\n"
         "Recommend the single best scheduling algorithm for this workload "
         "and return the strict JSON object described in the system prompt."
     )

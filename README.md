@@ -154,15 +154,15 @@ LLM Sched Copilot can suggest MLFQ parameters such as:
 SJF and SRTF are powerful Scheduling Algorithms because they favor short CPU bursts.
 
 However, a real OS cannot know the exact next CPU burst in advance.  
-Therefore, this project treats burst prediction as an experimental feature.
+This project therefore uses a **hybrid predictor** (see §10.2 for the mechanics):
 
-Possible predictors:
+- traditional exponential averaging (EMA), always on, refined from observed CPU
+- LLM-assisted **initial** burst prior, derived from visible features only
+- LLM-assisted predictor parameter tuning (`alpha`, `initial`, `min`, `max`)
 
-- traditional exponential averaging
-- LLM-assisted burst prediction
-- LLM-assisted predictor parameter tuning
-
-The LLM must not receive the actual future CPU burst as input.
+The LLM produces the initial prior; xv6 executes SJF/SRTF and corrects the
+prediction via EMA. The LLM must not receive the actual future CPU burst as
+input, and the kernel never calls the LLM.
 
 ---
 
@@ -589,9 +589,13 @@ algorithm each one favours.
 
 ## 10.2 EMA and LLM Burst Prediction (SJF / SRTF)
 
-- **EMA baseline (default):** `tau_next = (alpha * observed + (100-alpha) * tau_prev) / 100`. Updated when a CPU burst ends (xv6: at `sleep()`; simulator: at end-of-burst). Defaults `alpha=50%, initial=10, [min=1, max=100]`. The simulator emits `[SCHED] event=PRED_UPDATE pid=… predicted_prev=… predicted_next=…` on every refresh.
-- **LLM hint (optional):** when the advisor picks SJF/SRTF it may also return `predicted_bursts: [{pid, predicted_burst|predicted_bursts, confidence, basis}]` based ONLY on visible features. The orchestrator forwards these to the simulator via `Simulator(prediction_source="llm")`. The xv6 backend currently uses EMA only; LLM hints are simulator-side until a future kernel patch.
-- **Trace evidence:** the `[SCHED] event=PRED_UPDATE` line is emitted by the **simulator only** (the xv6 kernel does not emit it yet — that is Future Work), so EMA drift is visible on the simulator path; on the xv6 demo path SJF/SRTF still schedule on the EMA `predicted_burst`, just without a per-update trace line. LLM-hinted runs tend to land closer to the ideal shortest-job baseline on first dispatch.
+The predictor is a **hybrid**: the LLM supplies an *initial* burst prior from
+visible features, and the xv6 kernel *refines* it with EMA from observed CPU
+time. The LLM never sees a true future burst; the kernel never calls the LLM.
+
+- **EMA refinement (always on):** `tau_next = (alpha * observed + (100-alpha) * tau_prev) / 100`. Updated when a CPU burst ends, using `observed` = already-consumed CPU only. Defaults `alpha=50%, initial=10, [min=1, max=100]`. Both backends now emit `[SCHED] event=PRED_UPDATE pid=… observed=… predicted_prev=… predicted_next=… alpha=…` (xv6: `kernel/proc.c update_burst_prediction()`, gated to SJF/SRTF; simulator: at end-of-burst).
+- **LLM initial prior (optional):** when the advisor produces `predicted_bursts: [{pid, predicted_burst, confidence, basis}]` (from visible features ONLY), Algorithm Guard clamps each value and the orchestrator forwards them to **both** backends. xv6 receives them via the `setbursthint(pid, predicted_burst)` syscall: `user/schedtest.c` applies each prior right after `fork()` (aligned to fork order through the curated `workloads/xv6_*.json` mirror), so the child's *first* SJF/SRTF decision uses the LLM prior instead of the generic `initial`. The simulator uses the same priors via `Simulator(prediction_source="llm")`.
+- **Trace evidence:** an xv6 SJF/SRTF run emits `[SCHEDTEST] event=PREDICTOR_PARAMS …`, one `[SCHEDTEST] event=BURST_HINT_APPLIED pid=… index=… predicted_burst=…` per process, and `[SCHED] event=PRED_UPDATE …` as EMA refines each prior from observed CPU. The honest claim: the LLM seeds the prior from visible features; xv6 is the execution authority and corrects it from real usage. If no priors arrive, the kernel falls back to its built-in `initial` and pure EMA.
 
 ## 10.3 Running the End-to-End Demo (and without an API key)
 
