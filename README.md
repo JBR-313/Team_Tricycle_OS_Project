@@ -164,6 +164,23 @@ The LLM produces the initial prior; xv6 executes SJF/SRTF and corrects the
 prediction via EMA. The LLM must not receive the actual future CPU burst as
 input, and the kernel never calls the LLM.
 
+**Why the SRTF demo often shows no `PREEMPT` events (expected, not a bug).**
+SRTF only preempts a running job when a newly-arrived job has a *shorter
+predicted remaining time*. Because true future bursts may never be leaked to the
+scheduler, every never-run process starts with the **same cold-start EMA prior**
+(`initial`), while the running job's predicted remaining only *decreases* as it
+executes. A fresh arrival therefore (almost) never looks shorter than the job
+already running, so no preemption is triggered. In the bundled `ambiguous_mixed`
+workload the arrivals are staggered by ~1 tick and the running job's estimate is
+already below the cold-start prior by the time the next job arrives — hence the
+SRTF trace contains `ARRIVE`/`DISPATCH`/`PRED_UPDATE`/`EXIT` but no `PREEMPT`.
+This is a direct consequence of the "no future bursts" constraint, not a
+visualization or scheduler defect: the Gantt, Process Lanes, Process State and
+Trace Log all render `PREEMPT` correctly when a trace contains it (e.g. RR/MLFQ
+quantum preemption). A trace that *would* visibly preempt under SRTF requires
+seeding a shorter burst prior for the late arrival (a burst-hint run), which is a
+backend concern outside this frontend-only dashboard polish.
+
 ---
 
 ## 4. LLM Roles

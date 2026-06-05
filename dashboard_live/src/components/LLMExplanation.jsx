@@ -1,4 +1,5 @@
 import Card from './Card.jsx'
+import Typewriter from './Typewriter.jsx'
 
 /**
  * LLMExplanation — Page 1 §4 (pre-execution only).
@@ -70,10 +71,21 @@ function targetMetricPhrase(t) {
   return `${clean}-sensitive`
 }
 
-export default function LLMExplanation({ recommendation, workloadSummary }) {
+export default function LLMExplanation({ recommendation, workloadSummary, show = true, typing = false }) {
   const rec = recommendation || {}
   const wl  = workloadSummary || {}
   const algo = (rec.recommended_scheduling_algorithm || rec.algorithm || '').toUpperCase()
+
+  if (!show) {
+    return (
+      <Card label="LLM Explanation" className="card-expl page1-card page1-card-expl">
+        <div className="llm-placeholder">
+          <span className="llm-placeholder-dots"><i /><i /><i /></span>
+          <span className="llm-placeholder-text">Preparing explanation…</span>
+        </div>
+      </Card>
+    )
+  }
 
   if (!algo) {
     return (
@@ -108,7 +120,9 @@ export default function LLMExplanation({ recommendation, workloadSummary }) {
     <Card label="LLM Explanation" className="card-expl page1-card page1-card-expl">
       <section className="page1-section">
         <h4 className="page1-section-title">Summary</h4>
-        <p className="page1-body">{summary}</p>
+        <p className="page1-body">
+          {typing ? <Typewriter text={summary} start speed={14} /> : summary}
+        </p>
       </section>
 
       <section className="page1-section">

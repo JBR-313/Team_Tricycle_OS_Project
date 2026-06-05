@@ -102,11 +102,13 @@ export default function ProcessState({ events, currentTick }) {
   }
   Object.values(groups).forEach(g => g.sort((a, b) => a - b))
 
-  // Latest transition event drives the active animation.
+  // Latest transition event drives the active animation (no caption text — the
+  // animated connector itself communicates the transition).
   let activePath = null
   for (let i = visible.length - 1; i >= 0; i--) {
-    if (visible[i].event in EVENT_TO_PATH) {
-      activePath = EVENT_TO_PATH[visible[i].event]
+    const ev = visible[i]
+    if (ev.event in EVENT_TO_PATH && ev.pid >= 0) {
+      activePath = EVENT_TO_PATH[ev.event]
       break
     }
   }

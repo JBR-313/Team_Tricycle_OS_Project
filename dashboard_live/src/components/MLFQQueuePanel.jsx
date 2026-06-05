@@ -1,5 +1,5 @@
 import Card from './Card.jsx'
-import { PROC_COLORS } from './constants.js'
+import { PROC_COLORS, tickToMs } from './constants.js'
 
 /**
  * MLFQQueuePanel — visible only when algo === 'MLFQ'.
@@ -15,7 +15,7 @@ export default function MLFQQueuePanel({ events, currentTick, algo }) {
     return (
       <Card label="Multilevel Queue" className="card-mlfq-queue card-mlfq-inactive">
         <div className="mlfq-inactive-msg">
-          MLFQ queue view appears when <strong>MLFQ</strong> is selected.
+          MLFQ queues are not applicable for <strong>{algo}</strong>.
         </div>
       </Card>
     )
@@ -59,11 +59,33 @@ export default function MLFQQueuePanel({ events, currentTick, algo }) {
     }
   }
 
-  const queueLanes = [0, 1, 2]
+  // Derive the queue structure from the trace itself so 3/4/5-queue configs
+  // all render honestly (kernel default is 3). Use the FULL trace for a stable
+  // lane count, not just the events visible so far.
+  let maxQueue = 2
+  for (const e of events) {
+    for (const k of ['queue', 'from_queue', 'to_queue']) {
+      if (Number.isInteger(e[k]) && e[k] > maxQueue) maxQueue = e[k]
+    }
+  }
+  const queueLanes = Array.from({ length: maxQueue + 1 }, (_, i) => i)
+
+  // Per-level quantum: prefer an applied MLFQ_PARAMS event, else the kernel
+  // default {2,4,8,8,8}. quantum arrives as a CSV token (e.g. "2,4,8").
+  const DEFAULT_QUANTUM = [2, 4, 8, 8, 8]
+  let quantumByLevel = DEFAULT_QUANTUM
+  const paramEv = events.find(e => e.event === 'MLFQ_PARAMS' && e.quantum != null)
+  if (paramEv) {
+    const parsed = String(paramEv.quantum).split(',').map(s => parseInt(s, 10)).filter(Number.isFinite)
+    if (parsed.length) quantumByLevel = parsed
+  }
+  const quantumFor = (q) => quantumByLevel[q] ?? quantumByLevel[quantumByLevel.length - 1] ?? '—'
+
   const pidsByQueue = new Map(queueLanes.map(q => [q, []]))
+  const lastLane = queueLanes[queueLanes.length - 1]
   for (const [pid, q] of pidQueue.entries()) {
     if (pidStatus.get(pid) === 'DONE') continue
-    const lane = pidsByQueue.get(q) ?? pidsByQueue.get(2)
+    const lane = pidsByQueue.get(q) ?? pidsByQueue.get(lastLane)
     lane.push(pid)
   }
   for (const arr of pidsByQueue.values()) arr.sort((a, b) => a - b)
@@ -75,26 +97,24 @@ export default function MLFQQueuePanel({ events, currentTick, algo }) {
     .reverse()
 
   // ─── C. Per-queue dispatch share ──────────────────────────────────────────
-  const dispatchByQueue = { 0: 0, 1: 0, 2: 0 }
+  const dispatchByQueue = Object.fromEntries(queueLanes.map(q => [q, 0]))
   for (const e of visible) {
     if (e.event !== 'DISPATCH') continue
     const q = (e.queue ?? 0)
     if (q in dispatchByQueue) dispatchByQueue[q] += 1
   }
   const totalDispatches = Object.values(dispatchByQueue).reduce((a, b) => a + b, 0) || 1
-  const sharePct = (q) => Math.round((dispatchByQueue[q] / totalDispatches) * 100)
-
-  const QUEUE_QUANTUM = { 0: 2, 1: 4, 2: 8 }
+  const sharePct = (q) => Math.round(((dispatchByQueue[q] ?? 0) / totalDispatches) * 100)
 
   return (
     <Card label="MLFQ · Queue State" className="card-mlfq-queue">
-      {/* A. Lanes */}
-      <div className="mlfq-lanes">
+      {/* A. Lanes — large 2x2 queue cards (Q0|Q1 / Q2|Q3) for projector reading. */}
+      <div className="mlfq-lanes mlfq-lanes-2x2">
         {queueLanes.map(q => (
           <div key={q} className="mlfq-lane">
             <div className="mlfq-lane-head">
               <span className="mlfq-lane-name">Q{q}</span>
-              <span className="mlfq-lane-meta">quantum = {QUEUE_QUANTUM[q]}</span>
+              <span className="mlfq-lane-meta">quantum = {quantumFor(q)}</span>
             </div>
             <div className="mlfq-lane-chips">
               {pidsByQueue.get(q).length === 0
@@ -135,7 +155,7 @@ export default function MLFQQueuePanel({ events, currentTick, algo }) {
             <ul className="mlfq-change-list">
               {recentChanges.map((e, i) => (
                 <li key={i}>
-                  <span className="mlfq-change-tick">t={e.tick}</span>
+                  <span className="mlfq-change-tick">{tickToMs(e.tick)} ms</span>
                   <span className="mlfq-change-pid">P{e.pid}</span>
                   <span className="mlfq-change-arrow">Q{e.from_queue} → Q{e.to_queue}</span>
                   <span className="mlfq-change-reason">{e.reason || '—'}</span>

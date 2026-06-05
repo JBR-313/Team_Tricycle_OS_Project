@@ -443,9 +443,15 @@
   margin-bottom: 12px;
   text-transform: uppercase;
 }
-.viz-page .pstate-box-name { font-size: 16px; }
-.viz-page .pstate-token    { font-size: 13px; }
+/* Process State — enlarged for projector readability (goal §8). */
+.viz-page .pstate-box-name { font-size: 19px; letter-spacing: 0.06em; }
+.viz-page .pstate-token    { width: 30px; height: 30px; font-size: 14px; border-radius: 9px; }
+.viz-page .pstate-tokens   { gap: 7px; }
+.viz-page .pstate-box      { padding: 12px 10px 14px; border-width: 3px; }
 .viz-page .pstate-label    { font-size: 13px; color: #1e293b; }
+/* Thicker connectors + more prominent active transition. */
+.viz-page .pstate-path        { stroke-width: 2.6; }
+.viz-page .pstate-path.active { stroke-width: 4; stroke-dasharray: 6 3; }
 .viz-page .notif-title     { font-size: 16px; font-weight: 700; color: #000; }
 .viz-page .notif-body      { font-size: 14px; color: #1e293b; }
 .viz-page .notif-tick      { font-size: 13px; color: #475569; }
@@ -466,15 +472,23 @@
 .viz-page .gantt-legend-item { font-size: 13px; color: #1e293b; }
 .viz-toolbar {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 6px 12px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  padding: 8px 12px;
   background: rgba(255,255,255,0.80);
   border-radius: 12px;
   border: 1px solid rgba(255,255,255,0.62);
   box-shadow: 0 4px 14px rgba(80,90,120,0.08);
   flex-shrink: 0;
 }
+.viz-toolbar-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.viz-toolbar-spacer { flex: 1; }
+.viz-manual-row { padding-top: 2px; }
 .viz-toolbar-label {
   font-size: 0.62rem;
   font-weight: 700;
@@ -521,19 +535,92 @@
   border-radius: 6px;
 }
 .viz-toolbar-speed {
-  font-size: 0.70rem;
+  font-size: 0.74rem;
   font-weight: 700;
-  padding: 2px 7px;
+  padding: 3px 11px;
   border: none;
-  border-radius: 4px;
+  border-radius: 5px;
   background: transparent;
-  color: #64748b;
+  color: #475569;
   cursor: pointer;
+  white-space: nowrap;
 }
+.viz-toolbar-speed:hover { color: #0a3069; }
 .viz-toolbar-speed.active {
   background: #0a3069;
   color: #fff;
 }
+
+/* Simulated-time readout */
+.viz-toolbar-time {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  cursor: help;
+}
+.viz-toolbar-time-label {
+  font-size: 0.60rem;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.viz-toolbar-time-val { font-size: 0.92rem; font-weight: 800; color: #0a3069; }
+.viz-toolbar-time-max { font-size: 0.72rem; color: #94a3b8; }
+
+/* Manual scrub disclosure */
+.viz-toolbar-manual {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 3px 9px;
+  border: 1px dashed rgba(10,48,105,0.35);
+  border-radius: 6px;
+  background: transparent;
+  color: #475569;
+  cursor: pointer;
+}
+.viz-toolbar-manual.active { color: #0a3069; border-style: solid; background: #eef4ff; }
+
+/* Thin non-draggable progress bar (default presentation control) */
+.viz-progress {
+  height: 6px;
+  border-radius: 4px;
+  background: rgba(10,48,105,0.10);
+  overflow: hidden;
+}
+.viz-progress-fill {
+  height: 100%;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #0a3069, #3b6fb0);
+  transition: width 120ms linear;
+}
+
+/* Pseudo-live replay status banner */
+.viz-replay-status {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  background: rgba(16,185,129,0.08);
+  border: 1px solid rgba(16,185,129,0.24);
+  flex-shrink: 0;
+}
+.viz-replay-dot {
+  width: 9px; height: 9px; border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 0 0 rgba(16,185,129,0.5);
+  animation: viz-replay-pulse 1.8s ease-out infinite;
+  flex-shrink: 0;
+}
+@keyframes viz-replay-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(16,185,129,0.45); }
+  70%  { box-shadow: 0 0 0 7px rgba(16,185,129,0); }
+  100% { box-shadow: 0 0 0 0 rgba(16,185,129,0); }
+}
+.viz-replay-text { font-size: 0.80rem; font-weight: 800; color: #065f46; }
+.viz-replay-sub  { font-size: 0.70rem; color: #475569; }
 
 .header-spacer { flex: 1; }
 
@@ -625,17 +712,27 @@
 .eval-grid .tab-col > .card-eval { flex: 1 0 0; min-height: 0; }
 .eval-grid .tab-col > .card-cmp  { flex: 1.6 0 0; min-height: 0; }
 
-/* Visualization tab — 1:1 split.
-   Left:  compact Gantt strip, Process State Transition (large hero).
-   Right: Process Lanes (top), MLFQ queue (middle, MLFQ only), Trace Log
-          (bottom, 5 rows visible). */
-.card-gantt   { flex: 1 0 0; max-height: 30%; }
-.card-pstate  { flex: 3 0 0; }
+/* Visualization tab — readability-first layout (goal §12).
+   Left:  Gantt chart (prominent), Process State Transition (large).
+   Right: Process Lanes (large), MLFQ queue (large only when MLFQ), Trace Log
+          (smaller / scrollable). */
+.card-gantt   { flex: 1.4 0 0; min-height: 130px; }
+.card-pstate  { flex: 2.0 0 0; min-height: 240px; }
 
 /* Right column */
-.card-lanes      { flex: 2.3 0 0; }
-.card-mlfq-queue { flex: 1.2 0 0; min-height: 170px; }
-.card-trace      { flex: 2.0 0 0; min-height: 320px; }
+.card-lanes      { flex: 2.6 0 0; min-height: 180px; }
+.card-mlfq-queue { flex: 1.2 0 0; min-height: 150px; }
+.card-trace      { flex: 1.6 0 0; min-height: 200px; }
+
+/* When MLFQ is selected, give the queue panel real room and shrink the trace
+   log; for every other algorithm the panel only shows a one-line
+   "not applicable" note, so it must not waste vertical space (goal §10). */
+.viz-grid-mlfq .card-mlfq-queue { flex: 2.8 0 0; min-height: 260px; }
+.viz-grid-mlfq .card-trace      { flex: 1.1 0 0; min-height: 150px; }
+.viz-grid:not(.viz-grid-mlfq) .card-mlfq-queue {
+  flex: 0 0 auto;
+  min-height: 0;
+}
 .card-wl         { flex: 1 0 0; }
 .card-cmp        { flex: 1.6 0 0; }
 .card-metric     { flex: 1 0 0; }
@@ -667,14 +764,31 @@
    MLFQ Queue Panel
 ───────────────────────────────────────────────────────────── */
 .mlfq-lanes      { display: flex; flex-direction: column; gap: 6px; }
+/* Large 2x2 queue grid for projector reading (Q0|Q1 / Q2|Q3). */
+.mlfq-lanes-2x2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
 .mlfq-lane       { background: rgba(241,245,249,0.6); border-radius: 6px; padding: 6px 8px; }
-.mlfq-lane-head  { display: flex; justify-content: space-between; font-size: 0.7rem; color: #475569; margin-bottom: 4px; }
+.mlfq-lanes-2x2 .mlfq-lane {
+  border: 1px solid rgba(10,48,105,0.12);
+  border-radius: 10px;
+  padding: 10px 12px;
+  min-height: 78px;
+}
+.mlfq-lane-head  { display: flex; justify-content: space-between; align-items: baseline; font-size: 0.7rem; color: #475569; margin-bottom: 4px; }
 .mlfq-lane-name  { font-weight: 700; color: #0a3069; }
 .mlfq-lane-meta  { font-style: italic; }
 .mlfq-lane-chips { display: flex; flex-wrap: wrap; gap: 4px; min-height: 22px; }
+.mlfq-lanes-2x2 .mlfq-lane-chips { gap: 6px; min-height: 34px; }
 .mlfq-empty      { color: #94a3b8; font-size: 0.7rem; font-style: italic; }
 .mlfq-chip       { padding: 2px 7px; border-radius: 10px; color: #fff; font-size: 0.7rem; font-weight: 700; }
+.mlfq-lanes-2x2 .mlfq-chip { padding: 4px 11px; font-size: 0.92rem; border-radius: 13px; }
 .mlfq-chip.running { outline: 2px solid #0a3069; outline-offset: 1px; }
+/* Bigger queue headings inside the 2x2 grid. */
+.viz-page .mlfq-lanes-2x2 .mlfq-lane-name { font-size: 20px; }
+.viz-page .mlfq-lanes-2x2 .mlfq-lane-meta { font-size: 14px; }
 
 .mlfq-share       { margin-top: 8px; }
 .mlfq-share-label { font-size: 0.7rem; color: #475569; margin-bottom: 4px; font-weight: 600; }
@@ -716,7 +830,7 @@
   font-weight: 700;
   color: rgba(255,255,255,0.95);
   border-right: 1.5px solid rgba(255,255,255,0.55);
-  transition: opacity 0.15s;
+  transition: width 0.12s linear, left 0.12s linear, opacity 0.15s;
   user-select: none;
 }
 
@@ -744,6 +858,20 @@
   z-index: 10;
   pointer-events: none;
   animation: tick-pulse 2s ease-in-out infinite;
+  transition: left 0.12s linear;
+}
+.gantt-tick-marker-label {
+  position: absolute;
+  top: 1px;
+  left: 3px;
+  font-size: 0.55rem;
+  font-weight: 800;
+  color: #4338ca;
+  white-space: nowrap;
+  background: rgba(255,255,255,0.78);
+  border-radius: 3px;
+  padding: 0 3px;
+  pointer-events: none;
 }
 
 .gantt-tick-axis {
@@ -875,10 +1003,15 @@
 
 /* Box positions — must mirror the SVG viewBox coordinates so the
    pipes meet the box edges. */
-.pstate-ready      { left: 7%;  top: 4%;  right: 57%; height: 16%; }
-.pstate-running    { left: 7%;  top: 52%; right: 57%; height: 16%; }
-.pstate-terminated { left: 7%;  top: 79%; right: 41%; height: 17%; }
-.pstate-waiting    { left: 57%; top: 28%; right: 7%;  height: 16%; }
+.pstate-ready      { left: 6%;  top: 2%;  right: 55%; height: 19%; }
+.pstate-running    { left: 6%;  top: 50%; right: 55%; height: 19%; }
+.pstate-terminated { left: 6%;  top: 78%; right: 39%; height: 19%; }
+.pstate-waiting    { left: 55%; top: 26%; right: 6%;  height: 19%; }
+
+/* RUNNING is the state the audience should track — make it pop. */
+.viz-page .pstate-running {
+  box-shadow: 0 0 0 3px rgba(29,78,216,0.18), 0 4px 14px rgba(29,78,216,0.18);
+}
 
 /* Transition labels — small, near the matching connector. */
 .pstate-label {
@@ -1231,11 +1364,11 @@
   position: relative;
   width: 100%;
   height: 100%;
-  padding-left: 22px;
+  padding-left: 36px;
 }
 .lanes-tick-num {
   position: absolute;
-  font-size: 0.48rem;
+  font-size: 0.62rem;
   color: #94a3b8;
   font-weight: 600;
   transform: translateX(-50%);
@@ -1245,9 +1378,9 @@
 .lane-row {
   position: relative;
   flex: 1;
-  min-height: 0;
-  max-height: 24px;
-  margin-bottom: 3px;
+  min-height: 26px;
+  max-height: 48px;
+  margin-bottom: 6px;
 }
 
 .lane-label {
@@ -1255,38 +1388,50 @@
   left: 0;
   top: 50%;
   transform: translateY(-50%);
-  font-size: 0.50rem;
-  font-weight: 700;
-  color: #94a3b8;
-  width: 18px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #334155;
+  width: 30px;
   text-align: right;
 }
 
 .lane-track {
   position: absolute;
-  left: 22px;
+  left: 36px;
   right: 0;
   top: 0;
   height: 100%;
   background: rgba(241,245,249,0.70);
-  border-radius: 3px;
+  border-radius: 4px;
   overflow: hidden;
 }
 
 .lane-seg {
   position: absolute;
-  top: 1px;
-  height: calc(100% - 2px);
-  border-radius: 2px;
-  opacity: 0.85;
+  top: 2px;
+  height: calc(100% - 4px);
+  border-radius: 3px;
+  opacity: 0.92;
+  display: flex;
+  align-items: center;
+  padding: 0 4px;
+  overflow: hidden;
+}
+.lane-seg-label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: rgba(255,255,255,0.96);
+  white-space: nowrap;
+  pointer-events: none;
 }
 
 .lane-tick-marker {
   position: absolute;
   top: 0;
-  width: 1.5px;
+  width: 2.5px;
   height: 100%;
-  background: rgba(99,102,241,0.85);
+  background: rgba(99,102,241,0.95);
+  box-shadow: 0 0 5px rgba(99,102,241,0.5);
   z-index: 10;
   pointer-events: none;
   animation: tick-pulse 2s ease-in-out infinite;
@@ -2051,3 +2196,178 @@
   margin: 6px 0 0;
   flex-shrink: 0;
 }
+
+/* ─────────────────────────────────────────────────────────────
+   PSEUDO-LIVE REPLAY ADDITIONS (presentation goal)
+───────────────────────────────────────────────────────────── */
+
+/* Smooth lane-segment growth during replay. */
+.lane-seg { transition: width 0.12s linear, left 0.12s linear; }
+
+/* ProcessState — latest transition caption */
+.pstate-latest {
+  font-size: 0.74rem;
+  color: #334155;
+  margin-bottom: 6px;
+  padding: 3px 8px;
+  background: rgba(99,102,241,0.07);
+  border-radius: 6px;
+  border: 1px solid rgba(99,102,241,0.16);
+}
+.pstate-latest strong { color: #4338ca; }
+.pstate-latest-idle { color: #94a3b8; }
+
+/* TraceStack — kernel parameter evidence strip */
+.trace-evidence {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 8px;
+  padding: 6px 8px;
+  background: rgba(2,132,199,0.06);
+  border: 1px solid rgba(2,132,199,0.18);
+  border-radius: 8px;
+}
+.trace-evidence-label {
+  font-size: 0.60rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #0369a1;
+}
+.trace-evidence-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.trace-evidence-chip {
+  font-size: 0.66rem;
+  font-weight: 700;
+  color: #075985;
+  background: rgba(255,255,255,0.85);
+  border: 1px solid rgba(2,132,199,0.25);
+  border-radius: 5px;
+  padding: 1px 6px;
+  white-space: nowrap;
+}
+
+/* Visualization-page font bumps for the new bits (scoped, mirrors existing) */
+.viz-page .trace-evidence-chip { font-size: 0.72rem; }
+
+/* ─────────────────────────────────────────────────────────────
+   STAGED-DEMO LLM REVEAL (idle hero / analyzing / placeholders / typewriter)
+───────────────────────────────────────────────────────────── */
+
+/* Idle hero — shown on the LLM tab before the first RUN. */
+.llm-idle-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  height: 100%;
+  justify-content: center;
+  padding: 36px 32px;
+  border-radius: 18px;
+  background: linear-gradient(150deg, rgba(238,244,255,0.95), rgba(248,250,252,0.95));
+  border: 1px solid rgba(10,48,105,0.10);
+}
+.llm-idle-badge {
+  align-self: flex-start;
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #1d4ed8;
+  background: rgba(29,78,216,0.10);
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+.llm-idle-title {
+  margin: 0;
+  font-size: 30px;
+  font-weight: 800;
+  color: #0a3069;
+  letter-spacing: -0.01em;
+}
+.llm-idle-sub {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.6;
+  color: #334155;
+  max-width: 44ch;
+}
+.llm-idle-sub strong { color: #1d4ed8; }
+.llm-idle-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+}
+.llm-idle-step {
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: #475569;
+  background: rgba(255,255,255,0.85);
+  border: 1px solid rgba(10,48,105,0.12);
+  border-radius: 8px;
+  padding: 5px 10px;
+}
+
+/* Analyzing status banner — cycling messages during the first RUN. */
+.llm-analyzing {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: rgba(29,78,216,0.06);
+  border: 1px solid rgba(29,78,216,0.16);
+}
+.llm-analyzing-spinner {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  border-radius: 50%;
+  border: 2.5px solid rgba(29,78,216,0.25);
+  border-top-color: #1d4ed8;
+  animation: llm-spin 0.7s linear infinite;
+}
+@keyframes llm-spin { to { transform: rotate(360deg); } }
+.llm-analyzing-lines { display: flex; flex-direction: column; gap: 3px; }
+.llm-analyzing-line {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: #475569;
+}
+.llm-analyzing-line.current { color: #1d4ed8; font-weight: 700; }
+.llm-analyzing-line.done    { color: #94a3b8; }
+
+/* Placeholder shown in an LLM card before its reveal stage. */
+.llm-placeholder {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 70px;
+  padding: 18px 8px;
+  color: #94a3b8;
+}
+.llm-placeholder-sm { min-height: 44px; padding: 10px 8px; }
+.llm-placeholder-text { font-size: 0.92rem; font-weight: 600; }
+.llm-placeholder-dots { display: inline-flex; gap: 5px; }
+.llm-placeholder-dots i {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: #c7d2e8;
+  display: inline-block;
+  animation: llm-dot 1.1s ease-in-out infinite;
+}
+.llm-placeholder-dots i:nth-child(2) { animation-delay: 0.18s; }
+.llm-placeholder-dots i:nth-child(3) { animation-delay: 0.36s; }
+@keyframes llm-dot {
+  0%, 80%, 100% { opacity: 0.3; transform: translateY(0); }
+  40%           { opacity: 1;   transform: translateY(-3px); }
+}
+
+/* Typewriter blinking caret. */
+.tw-caret {
+  display: inline-block;
+  margin-left: 1px;
+  color: #1d4ed8;
+  animation: tw-blink 0.9s steps(1) infinite;
+}
+@keyframes tw-blink { 50% { opacity: 0; } }

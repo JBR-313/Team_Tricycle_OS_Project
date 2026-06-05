@@ -46,7 +46,17 @@ function cleanReason(raw) {
   return s
 }
 
-export default function AlgorithmGuard({ guardDecision: g }) {
+export default function AlgorithmGuard({ guardDecision: g, show = true }) {
+  if (!show) {
+    return (
+      <Card label="Algorithm Guard" className="card-guard page1-card page1-card-guard">
+        <div className="llm-placeholder llm-placeholder-sm">
+          <span className="llm-placeholder-dots"><i /><i /><i /></span>
+          <span className="llm-placeholder-text">Awaiting recommendation to validate…</span>
+        </div>
+      </Card>
+    )
+  }
   if (!g) {
     return (
       <Card label="Algorithm Guard" className="card-guard page1-card page1-card-guard">
