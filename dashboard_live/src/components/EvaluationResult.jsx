@@ -45,6 +45,21 @@ export default function EvaluationResult({ metrics, recommendation: rec }) {
     )
   }
 
+  // No live data: do not imply a failed run — show a calm, honest empty state.
+  if (metrics.no_data) {
+    return (
+      <Card label="Evaluation Result" className="card-eval">
+        <div className="eval-nodata">
+          <span className="eval-nodata-tag">NO DATA</span>
+          <p className="eval-nodata-text">
+            No live trace data available. Run the xv6 pipeline or select a
+            snapshot to evaluate a scheduling run.
+          </p>
+        </div>
+      </Card>
+    )
+  }
+
   const verdict = metrics.judgment || 'UNKNOWN'
   const vStyle  = VERDICT_STYLE[verdict] || VERDICT_STYLE.UNKNOWN
   const regret  = formatRegret(metrics.regret_score)

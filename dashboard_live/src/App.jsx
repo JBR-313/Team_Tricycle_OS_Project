@@ -185,6 +185,7 @@ import Header              from './components/Header.jsx'
 import LLMRecommendation   from './components/LLMRecommendation.jsx'
 import AlgorithmGuard      from './components/AlgorithmGuard.jsx'
 import EvaluationResult    from './components/EvaluationResult.jsx'
+import TraceExplanationCard from './components/TraceExplanationCard.jsx'
 import LLMExplanation      from './components/LLMExplanation.jsx'
 import AnalyzingStatus     from './components/AnalyzingStatus.jsx'
 import MainGantt           from './components/MainGantt.jsx'
@@ -384,6 +385,9 @@ export default function App() {
   // already-loaded (or fallback) data so the demo never gets stuck.
   useEffect(() => {
     if (demoPhase === DemoPhase.ANALYZING_LLM && runState === 'ERROR') {
+      // Reset the run guard so a subsequent RUN click is not ignored, then
+      // reveal the already-loaded (or fallback) analysis so we never get stuck.
+      runInitiatedRef.current = false
       startReveal()
     }
   }, [demoPhase, runState, startReveal])
@@ -554,6 +558,7 @@ export default function App() {
             selectedMetric={selectedMetric}
             onSelectedMetricChange={setSelectedMetric}
           />
+          <TraceExplanationCard explanation={traceExplanation} />
         </div>
       </div>
     )
@@ -569,6 +574,8 @@ export default function App() {
         runPill={runPill}
         onRunClick={handlePrimaryRun}
         minimal={demoPhase === DemoPhase.IDLE}
+        manifest={manifest}
+        loadError={!!loadError}
       />
       <div className="dashboard-main tab-main">
         {tab === 'LLM' && renderLLMTab()}
