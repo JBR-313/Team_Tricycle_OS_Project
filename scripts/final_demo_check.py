@@ -104,10 +104,16 @@ def check_contract() -> None:
 
 
 def check_simulator_smoke() -> None:
-    rc, out = run([sys.executable, str(ROOT / "scripts" / "orchestrator.py"),
-                   "--backend", "simulator", "--seed", "42",
-                   "--workload", "interactive", "--run-all", "--offline-fixture"],
-                  timeout=300)
+    # Non-destructive: write to throwaway dirs so the committed demo live-data
+    # (which may be a real xv6 run) is never clobbered by this health check.
+    import tempfile
+    with tempfile.TemporaryDirectory() as td:
+        rc, out = run([sys.executable, str(ROOT / "scripts" / "orchestrator.py"),
+                       "--backend", "simulator", "--seed", "42",
+                       "--workload", "interactive", "--run-all", "--offline-fixture",
+                       "--out-dir", str(Path(td) / "out"),
+                       "--live-data-dir", str(Path(td) / "live")],
+                      timeout=300)
     record(PASS if rc == 0 else FAIL, "simulator fallback smoke",
            "" if rc == 0 else "orchestrator (simulator) failed")
 
@@ -126,10 +132,15 @@ def check_xv6_smoke(force: bool) -> None:
     if not ok:
         record(FAIL if force else SKIP, "xv6 smoke", why)
         return
-    rc, out = run([sys.executable, str(ROOT / "scripts" / "orchestrator.py"),
-                   "--backend", "xv6", "--seed", "42",
-                   "--workload", "interactive", "--run-all"],
-                  timeout=600)
+    # Non-destructive: throwaway dirs so the committed demo live-data is safe.
+    import tempfile
+    with tempfile.TemporaryDirectory() as td:
+        rc, out = run([sys.executable, str(ROOT / "scripts" / "orchestrator.py"),
+                       "--backend", "xv6", "--seed", "42",
+                       "--workload", "interactive", "--run-all",
+                       "--out-dir", str(Path(td) / "out"),
+                       "--live-data-dir", str(Path(td) / "live")],
+                      timeout=600)
     record(PASS if rc == 0 else FAIL, "xv6 smoke",
            "" if rc == 0 else "orchestrator (xv6) failed — see output above")
 
