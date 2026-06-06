@@ -11,7 +11,7 @@ The **tools** package is the decision layer of the Visual Scheduler system. It a
 ```
 workload_summary.json  ──►  llm_advisor.py  ──►  recommendation.json
                                   │  ▲
-                                  │  └── prompt_feedback_rules.md (optional)
+                                  │  └── feedback_rules.md (opt-in: --feedback only)
                                   ▼
                             solar_client.py  ──►  Upstage Solar Pro 3 API
 ```
@@ -44,7 +44,7 @@ cp tools/.env.example tools/.env
 # advise mode (default): outputs/workload_summary.json → outputs/recommendation.json
 python3 tools/llm_advisor.py
 
-# feedback mode: outputs/metrics.json → outputs/feedback_rules.md (only on judgment=FAIL)
+# feedback mode: outputs/metrics.json → outputs/live/feedback_rules.md (only on judgment=FAIL)
 python3 tools/llm_advisor.py --mode feedback
 ```
 
@@ -54,13 +54,13 @@ python3 tools/llm_advisor.py \
     --mode advise \
     --in outputs/workload_summary.json \
     --out outputs/recommendation.json \
-    --feedback outputs/feedback_rules.md
+    --feedback outputs/live/feedback_rules.md
 
 python3 tools/llm_advisor.py \
     --mode feedback \
     --metrics outputs/metrics.json \
     --rec outputs/recommendation.json \
-    --feedback outputs/feedback_rules.md
+    --feedback outputs/live/feedback_rules.md
 ```
 
 ### Algorithm Guard
@@ -113,7 +113,7 @@ python3 tools/algorithm_guard.py \
 Reads `outputs/metrics.json` (produced by Role A's `metrics.py`). The `judgment` field decides whether a feedback rule is generated:
 
 - `SUCCESS` / `NEAR-SUCCESS` → no action (rules file untouched)
-- `FAIL` → query the LLM and overwrite `outputs/feedback_rules.md`
+- `FAIL` → query the LLM and overwrite `outputs/live/feedback_rules.md`
 
 `FAIL` is set by Role A when `regret_score > 0.25` or `starvation_occurred = true` — see [`docs/evaluation_plan.md`](../docs/evaluation_plan.md) for the full criteria.
 
@@ -125,7 +125,7 @@ Reads `outputs/metrics.json` (produced by Role A's `metrics.py`). The `judgment`
 **`recommendation.json` (optional context)**:
 If `outputs/recommendation.json` is present, its `target_metric`, `reason`, and `params` are added to the LLM prompt for richer rule generation. Absent file is non-fatal.
 
-**Output** `outputs/feedback_rules.md` is overwritten with a flat Markdown bullet list plus a metadata header comment. On the next `advise` run it is auto-injected into the system prompt.
+**Output** `outputs/live/feedback_rules.md` (canonical path) is overwritten with a flat Markdown bullet list plus a metadata header comment. This is **generation** only. The rules are injected into a future `advise` prompt **only when consumption is opted in** — i.e. when a `--feedback <path>` argument is passed (the orchestrator does this solely under its `--use-feedback` flag). Default runs pass no `--feedback`, so generated rules never affect the recommendation automatically.
 
 ### Trace Explainer
 
@@ -223,7 +223,7 @@ python3 tools/solar_client.py
 ```
 workload_summary.json  ──►  llm_advisor.py  ──►  recommendation.json
                                   │  ▲
-                                  │  └── prompt_feedback_rules.md (선택사항)
+                                  │  └── feedback_rules.md (opt-in: --feedback 전달 시에만)
                                   ▼
                             solar_client.py  ──►  Upstage Solar Pro 3 API
 ```
@@ -256,7 +256,7 @@ cp tools/.env.example tools/.env
 # advise 모드 (기본): outputs/workload_summary.json → outputs/recommendation.json
 python3 tools/llm_advisor.py
 
-# feedback 모드: outputs/metrics.json → outputs/feedback_rules.md (judgment=FAIL일 때만)
+# feedback 모드: outputs/metrics.json → outputs/live/feedback_rules.md (judgment=FAIL일 때만)
 python3 tools/llm_advisor.py --mode feedback
 ```
 
@@ -266,13 +266,13 @@ python3 tools/llm_advisor.py \
     --mode advise \
     --in outputs/workload_summary.json \
     --out outputs/recommendation.json \
-    --feedback outputs/feedback_rules.md
+    --feedback outputs/live/feedback_rules.md
 
 python3 tools/llm_advisor.py \
     --mode feedback \
     --metrics outputs/metrics.json \
     --rec outputs/recommendation.json \
-    --feedback outputs/feedback_rules.md
+    --feedback outputs/live/feedback_rules.md
 ```
 
 ### Algorithm Guard
@@ -302,7 +302,7 @@ reject 시에는 `params`도 fallback 알고리즘의 기본값으로 교체되�
 `outputs/metrics.json` (Role A의 `metrics.py`가 생성)의 `judgment` 필드로 발동 여부를 결정합니다.
 
 - `SUCCESS` / `NEAR-SUCCESS` → 아무 동작 안 함 (규칙 파일 그대로)
-- `FAIL` → LLM에게 규칙 작성 요청 → `outputs/feedback_rules.md` 덮어쓰기
+- `FAIL` → LLM에게 규칙 작성 요청 → `outputs/live/feedback_rules.md` 덮어쓰기
 
 `FAIL` 조건은 `regret_score > 0.25` 또는 `starvation_occurred = true` (전체 기준은 [`docs/evaluation_plan.md`](../docs/evaluation_plan.md) 참고).
 
@@ -314,7 +314,7 @@ reject 시에는 `params`도 fallback 알고리즘의 기본값으로 교체되�
 **`recommendation.json` (선택적 컨텍스트)**:
 `outputs/recommendation.json`이 있으면 `target_metric`, `reason`, `params`도 LLM 프롬프트에 추가되어 더 정확한 규칙이 생성됩니다. 없어도 동작은 합니다.
 
-**출력** `outputs/feedback_rules.md`는 LLM이 생성한 마크다운 불릿 규칙 목록 + 메타데이터 헤더로 덮어쓰기 됩니다. 다음 advise 실행 시 자동으로 시스템 프롬프트에 주입됩니다.
+**출력** `outputs/live/feedback_rules.md`(정규 경로)는 LLM이 생성한 마크다운 불릿 규칙 목록 + 메타데이터 헤더로 덮어쓰기 됩니다. 이는 **생성(generation)**일 뿐입니다. 규칙이 이후 advise 프롬프트에 주입되는 것은 **소비(consumption)를 명시적으로 켰을 때만** — 즉 `--feedback <경로>` 인자가 전달될 때만 일어납니다(오케스트레이터는 `--use-feedback` 플래그에서만 이 인자를 전달). 기본 실행은 `--feedback`을 전달하지 않으므로 생성된 규칙이 추천에 자동으로 영향을 주지 않습니다.
 
 ### Trace Explainer
 

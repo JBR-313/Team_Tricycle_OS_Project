@@ -135,8 +135,15 @@ Burst prediction error is computed only after execution completes.
 
 The judgment is stored in `outputs/metrics.json` under the `"judgment"` field.
 
-On FAIL, the Feedback Rule Generator is triggered to generate `outputs/feedback_rules.md`.  
+On FAIL, the Feedback Rule Generator is triggered to **generate** rules at the
+canonical path `outputs/live/feedback_rules.md`.
 On SUCCESS or NEAR-SUCCESS, no feedback is generated.
+
+**Generation vs consumption.** Generation (above) is automatic on FAIL.
+*Consumption* — feeding accumulated rules back into a future advise prompt — is
+**opt-in only** (`scripts/orchestrator.py --use-feedback`). The default
+evaluation/demo run consumes no feedback, keeping results deterministic and
+preventing a stale or overfit rule from polluting an unrelated workload.
 
 ---
 

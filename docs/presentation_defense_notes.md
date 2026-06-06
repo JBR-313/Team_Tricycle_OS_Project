@@ -54,6 +54,19 @@ call. `--offline-fixture` opts in to committed fixtures and stamps
 fixture (offline mode) or an explicit `available:false` placeholder. The
 Feedback step logs an honest skip — it is **never** faked.
 
+### Does feedback change the current run?
+No. Feedback rules are **generated** after evaluation (FAIL/starvation only) and
+written to `outputs/live/feedback_rules.md`. They can only influence **future**
+recommendations, and only when **consumption is explicitly enabled** with
+`--use-feedback`. The just-finished run is never altered.
+
+### Why is feedback consumption opt-in?
+To keep the final demo **deterministic** and to prevent a stale or overfit rule
+from polluting an unrelated workload's recommendation. By default the advisor
+runs from the base prompt with no feedback injected; `--use-feedback` (or
+`use_feedback:true` to the run-server) is a deliberate, recorded choice
+(`manifest.feedback_consumed=true` + a small **Feedback: ON** dashboard chip).
+
 ### How do you prove xv6 actually executed?
 - Run `python3 scripts/orchestrator.py --backend xv6 …`: it builds the kernel,
   boots QEMU, runs `schedtest` per algorithm, and captures the **real serial

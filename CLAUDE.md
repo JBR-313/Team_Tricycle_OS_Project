@@ -69,8 +69,18 @@ guard_decision.json       → trace.jsonl
 trace.jsonl               → metrics.json + runtime_events.json
 runtime_events.json       → correction.json → guard → next scheduling point
 trace.jsonl + metrics.json → trace_explanation.json
-metrics.json              → feedback_rules.md (fail only)
+metrics.json              → outputs/live/feedback_rules.md (fail only; GENERATION)
+feedback_rules.md         → advise prompt (CONSUMPTION; opt-in via --use-feedback)
 ```
+
+## Feedback Loop (generation vs consumption)
+Feedback **generation** is automatic and FAIL-only: a FAIL/starvation run writes
+`outputs/live/feedback_rules.md` (the one canonical path). Feedback **consumption**
+— injecting those rules back into a future advise prompt — is **opt-in only** via
+`scripts/orchestrator.py --use-feedback` (or `use_feedback:true` to run_server).
+The default final demo consumes nothing, so it stays deterministic and stale or
+overfit rules cannot pollute a recommendation. Feedback never changes the
+already-finished run; it only influences FUTURE recommendations when opted in.
 
 ## Metrics
 ```

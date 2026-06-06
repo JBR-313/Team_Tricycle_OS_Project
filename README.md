@@ -376,10 +376,19 @@ The Trace Explainer helps users understand not only what happened, but why it ha
 > `tools/llm_advisor.py --mode feedback` runs as orchestrator step **[9]** and
 > fires **only** when the run's judgment is FAIL (or starvation occurred);
 > SUCCESS / NEAR-SUCCESS skip honestly. New non-duplicate rules are appended to
-> `feedback_rules.md` (FIFO-capped, deduped) and fed into future advise prompts.
+> the canonical `outputs/live/feedback_rules.md` (FIFO-capped at 20, deduped).
 > Feedback is **never faked**: with no `UPSTAGE_API_KEY` the step logs an
 > explicit skip rather than substituting fixture rules. Generated rules affect
 > FUTURE recommendations, not the just-finished run.
+>
+> **Generation vs consumption (opt-in).** Generation (above) is automatic on
+> FAIL. *Consumption* — injecting accumulated rules back into the advise prompt
+> — is **opt-in only**, via `python3 scripts/orchestrator.py … --use-feedback`
+> (or `use_feedback:true` in the run-server body). The default demo passes **no**
+> `--feedback` argument, so it consumes nothing and stays deterministic; stale
+> or overfit rules can never silently pollute a recommendation. When opted in,
+> `manifest.feedback_consumed=true` (+ `feedback_rule_count`) records it and the
+> dashboard shows a small **Feedback: ON** chip.
 
 If the LLM recommendation was poor, the system asks the LLM to generate a feedback rule.
 
@@ -526,8 +535,10 @@ The GUI shows (as `dashboard_live`, the primary React/Vite UI on
 
 > The runtime-correction **apply loop** runs in the pipeline and writes
 > `correction_applied.json`; the **feedback rules** (FAIL-only) are written to
-> `feedback_rules.md`. Both are produced by the orchestrator today, but are not
-> yet surfaced as dedicated dashboard cards (the explanation card is). See §11.1.
+> `outputs/live/feedback_rules.md`. Both are produced by the orchestrator today.
+> Feedback *consumption* is opt-in (`--use-feedback`) and, when enabled, surfaces
+> as a small **Feedback: ON** header chip; the apply loop is not yet a dedicated
+> card (the explanation card is). See §11.1.
 
 Main dashboard message:
 
@@ -832,7 +843,7 @@ Concise current status:
 | LLM Advisor (Solar Pro 3) + Algorithm Guard | **Implemented** | Runtime backend is Upstage Solar Pro 3. The orchestrator is **strict by default**: missing/invalid `UPSTAGE_API_KEY` or any advisor failure exits with a clear error. Pass `--offline-fixture` (or `--allow-fallback`) to opt in to the committed `outputs/_demo_fixtures/` fixtures; that path stamps `manifest.metadata_source = "demo_fallback"`. |
 | Runtime correction — host-side post-evaluation apply loop (detect → propose → correction-guard → re-run xv6 → before/after → `correction_applied.json`) | **Implemented** | `scripts/orchestrator.py` step [7]. NOT kernel hot-path / not tick-level / no in-kernel LLM. Simulator backend = intentional no-op. |
 | Trace Explainer (`tools/trace_explainer.py`, orchestrator step [8]) | **Implemented** | fresh `trace_explanation.json` per run or explicit `available:false`; rendered on the Evaluation tab |
-| Feedback Rule Generator (`llm_advisor --mode feedback`, orchestrator step [9]) | **Implemented (FAIL-only)** | fires only on FAIL/starvation; never faked when no API key; FIFO-capped + deduped in `feedback_rules.md` |
+| Feedback Rule Generator (`llm_advisor --mode feedback`, orchestrator step [9]) | **Implemented (FAIL-only)** | fires only on FAIL/starvation; never faked when no API key; FIFO-capped + deduped in `outputs/live/feedback_rules.md`. **Generation is automatic; consumption is opt-in** — only `--use-feedback` injects rules back into the advise prompt (default demo consumes nothing → deterministic). |
 | Core unit tests (`tests/`, pytest) + CI step | **Implemented** | guard / metrics / trace_parser / workloads; offline, no API key |
 | Live streaming | **Polling only** | no websocket; `manifest.json` poll |
 

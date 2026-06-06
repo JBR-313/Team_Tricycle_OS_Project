@@ -20,7 +20,8 @@ Honest by design: where something is intentionally *not* built, it says so.
 | Metrics Evaluator | Implemented | `tools/metrics.py` `compute_metrics`, `compute_judgment`, `compute_regret` | judgment thresholds: SUCCESS ≤0.10, NEAR ≤0.25 regret; starvation forces FAIL |
 | Runtime correction — host-side apply loop | Implemented | `orchestrator.py` `_run_correction_apply_loop`; `correction_applied.json` | post-evaluation re-run only; **no** in-kernel LLM, **no** tick-level control; simulator backend = no-op |
 | Trace Explainer | Implemented (step [8]) | `tools/trace_explainer.py`; `run_trace_explainer` | fresh per run or explicit `available:false`; needs API key (else placeholder / demo fixture) |
-| Feedback Rule Generator | Implemented (step [9], FAIL-only) | `llm_advisor --mode feedback`; `run_feedback_generator` | fires only on FAIL/starvation; never faked without a key; FIFO-capped + deduped |
+| Feedback Rule Generator | Implemented (step [9], FAIL-only) | `llm_advisor --mode feedback`; `run_feedback_generator` | GENERATION fires only on FAIL/starvation; never faked without a key; FIFO-capped + deduped at `outputs/live/feedback_rules.md` |
+| Feedback consumption (opt-in) | Implemented | `orchestrator.py --use-feedback`; `run_advisor`; `run_server` `use_feedback` | OFF by default → deterministic demo; ON injects `--feedback outputs/live/feedback_rules.md` into advise; manifest `feedback_consumed`/`feedback_rule_count` |
 | Dashboard staged flow | Implemented | `dashboard_live/src/App.jsx` DemoPhase machine | IDLE → analyze → reveal → visualize → evaluate |
 | Data-source badge | Implemented | `components/SourceBadge.jsx` from manifest | XV6 TRACE / SIMULATOR / FALLBACK / SNAPSHOT / UNKNOWN |
 | Fallback modes | Implemented | `data/useRun.js` (xv6 default, explicit fallbacks); `fallbackData.js` (no fake FAIL) | empty fallback shows NO DATA, not a failed run |
@@ -39,7 +40,8 @@ Honest by design: where something is intentionally *not* built, it says so.
 [6] validate contract
 [7] correction apply loop (xv6, FAIL/starvation/high-sev) → correction_applied.json
 [8] trace_explainer    → trace_explanation.json   (fresh or available:false)
-[9] feedback (FAIL-only)→ feedback_rules.md
+[9] feedback (FAIL-only)→ outputs/live/feedback_rules.md   (GENERATION)
+    consumption of these rules in [2] is opt-in: --use-feedback only
 ```
 
 See also [`system_limitations.md`](system_limitations.md),

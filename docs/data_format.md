@@ -305,11 +305,11 @@ Possible `correction_type` values: `"parameter_update"`, `"algorithm_change"`, `
 
 ---
 
-## outputs/feedback_rules.md
+## outputs/live/feedback_rules.md
 
 **Format**: Markdown  
-**Producer**: `tools/feedback_generator.py` (via LLM, FAIL only)  
-**Consumer**: `tools/llm_advisor.py` (injected into next LLM prompt)
+**Producer**: `tools/llm_advisor.py --mode feedback` (via LLM, FAIL only) — canonical path `outputs/live/feedback_rules.md`  
+**Consumer**: `tools/llm_advisor.py --mode advise`, **opt-in only** — injected into the next LLM prompt **only** when a `--feedback` path is passed (the orchestrator does this solely under `--use-feedback`). Default runs consume nothing.
 
 ```markdown
 # Feedback Rules — Generated 2026-05-20

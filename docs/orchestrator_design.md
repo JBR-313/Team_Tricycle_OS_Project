@@ -225,8 +225,26 @@ after-running stages:
   mode). Never leaves a stale explanation behind.
 - **[9] Feedback Rule Generator** (`run_feedback_generator` →
   `llm_advisor --mode feedback`) — fires **only** on FAIL/starvation; appends
-  non-duplicate rules to `feedback_rules.md` (FIFO-capped). Never faked without
-  a key. Affects FUTURE recommendations, not the finished run.
+  non-duplicate rules to the canonical `outputs/live/feedback_rules.md`
+  (FIFO-capped at 20). Never faked without a key. Affects FUTURE
+  recommendations, not the finished run.
+
+### Feedback consumption is opt-in (`--use-feedback`)
+
+Stage [9] only **generates** rules. Feeding them back into a future advise
+prompt (stage [2]) is gated behind the orchestrator flag `--use-feedback`
+(default OFF):
+
+- **OFF (default):** `run_advisor` passes **no** `--feedback` argument, so
+  `llm_advisor` advises from the base prompt only. The demo is deterministic and
+  stale/overfit rules cannot influence the recommendation.
+- **ON (`--use-feedback`):** `run_advisor` passes
+  `--feedback outputs/live/feedback_rules.md`. If the file is missing the run
+  proceeds with a clear note (no crash). The manifest records
+  `feedback_consumed:true`, `feedback_rules_path`, and `feedback_rule_count`.
+
+`scripts/run_server.py` mirrors this with an optional request field
+`use_feedback` (default `false`), which appends `--use-feedback` when `true`.
 
 See `docs/implementation_status.md` for the full stage map.
 
