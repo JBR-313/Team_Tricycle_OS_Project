@@ -423,6 +423,53 @@ def cross_check(manifest: dict, rec: dict, guard: dict, r: Report) -> None:
 
 # ── main ──────────────────────────────────────────────────────────────────────
 
+FEEDBACK_RULE_CAP = 20  # mirrors llm_advisor.MAX_RULES
+
+
+def check_feedback_rules(d: Path, r: Report, manifest: dict) -> None:
+    """Validate feedback_rules.md ONLY if present (it is an optional artifact).
+
+    Feedback rules are a FAIL-only future-learning artifact; a healthy demo
+    directory legitimately has none. So absence is silent — NEVER a warning,
+    even under --strict. When present, sanity-check the obvious failure modes:
+      - it is readable markdown text
+      - any rule lines are flat bullets ('- '/'* ')
+      - the rule count does not exceed the FIFO cap (llm_advisor.MAX_RULES)
+      - it does not claim to have influenced THIS run while the manifest says
+        feedback was not consumed (generation vs consumption confusion).
+    """
+    p = d / "feedback_rules.md"
+    if not p.is_file():
+        return  # optional artifact — absence is fine, even in strict mode
+    try:
+        text = p.read_text(encoding="utf-8")
+    except Exception as exc:  # noqa: BLE001
+        r.warn_(f"feedback_rules.md unreadable: {exc}")
+        return
+
+    bullets = []
+    for raw in text.splitlines():
+        s = raw.lstrip()
+        if s.startswith("- ") or s.startswith("* "):
+            rule = s[2:].strip()
+            if rule and rule.lower() not in {"none", "n/a", "(none)"}:
+                bullets.append(rule)
+
+    if len(bullets) > FEEDBACK_RULE_CAP:
+        r.warn_(f"feedback_rules.md has {len(bullets)} rules > cap "
+                f"{FEEDBACK_RULE_CAP}")
+    else:
+        r.good(f"feedback_rules.md present ({len(bullets)} rule(s), "
+               f"within cap {FEEDBACK_RULE_CAP})")
+
+    # Honesty: a stale rules file must not imply it changed the current run
+    # when the manifest says consumption was off.
+    consumed = bool((manifest or {}).get("feedback_consumed"))
+    if not consumed and "this run" in text.lower():
+        r.warn_("feedback_rules.md mentions 'this run' but manifest says "
+                "feedback_consumed=false (generation vs consumption confusion)")
+
+
 def _check_dir(d: Path, r: Report) -> None:
     """Run every per-directory check against `d` and report into `r`."""
     manifest = check_manifest(d, r)
@@ -431,6 +478,7 @@ def _check_dir(d: Path, r: Report) -> None:
     check_metrics(d, r)
     check_traces(d, r)
     check_correction_applied(d, r)
+    check_feedback_rules(d, r, manifest)
     cross_check(manifest, rec, guard, r)
 
 

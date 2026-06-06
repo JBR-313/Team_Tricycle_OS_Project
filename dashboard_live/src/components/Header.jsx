@@ -7,6 +7,7 @@
  * phase (RUN ANALYSIS -> RUN VISUALIZATION -> VIEW EVALUATION).
  */
 import SourceBadge from './SourceBadge.jsx'
+import FeedbackBadge from './FeedbackBadge.jsx'
 
 export default function Header({
   tab, onTabChange,
@@ -58,6 +59,9 @@ export default function Header({
       )}
       {!minimal && (
         <SourceBadge manifest={manifest} loadError={loadError} />
+      )}
+      {!minimal && (
+        <FeedbackBadge manifest={manifest} />
       )}
       {!minimal && (
         <span className={`run-pill ${pillClass}`} title={runPill}>{runPill}</span>
