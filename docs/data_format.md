@@ -107,6 +107,10 @@ Observable summary of the workload. Must not include raw burst sequences.
 }
 ```
 
+> For SJF/SRTF the advisor may also emit `predicted_bursts[]`. Each entry's
+> `pid` is a **workload-definition PID** (1-based), not a kernel runtime PID —
+> see [PID namespaces](#pid-namespaces-workload-index-vs-kernel-runtime-pid).
+
 ---
 
 ## outputs/guard_decision.json
@@ -219,6 +223,52 @@ See `docs/trace_format.md` for the full event type specification.
   "workload_file": "workloads/interactive_heavy.json"
 }
 ```
+
+> `pid` here is a **kernel runtime PID**, and on the xv6 backend
+> `process_count` is `N+1` for an N-process workload (it counts the `schedtest`
+> harness parent). See [PID namespaces](#pid-namespaces-workload-index-vs-kernel-runtime-pid).
+
+---
+
+## PID namespaces: workload index vs kernel runtime PID
+
+xv6 runs surface **two distinct PID namespaces**. They are not the same number —
+do not cross-reference a recommendation PID against a trace PID directly.
+
+| Artifact | PID meaning |
+|---|---|
+| `workloads/*.json`, `workload_summary.json` (`visible_processes[].pid`), `recommendation.json` (`predicted_bursts[].pid`) | **Workload-definition PID** — 1-based position in the workload JSON, fixed before execution. |
+| `trace_*.jsonl`, `metrics.json` (`per_process[].pid`) | **Kernel runtime PID** — assigned by `fork()` inside xv6 at run time. |
+
+**Why they differ (xv6 backend).** The `schedtest` harness is itself a kernel
+process with its own runtime PID (e.g. `3`); it forks one child per workload
+process. xv6 hands out sequential PIDs, so an N-process workload's children get
+PIDs `parent+1 … parent+N` (e.g. `4…8` for 5 processes). The workload JSON's own
+1-based PIDs (`1…5`) never appear in the trace.
+
+**The bridge is already in the trace.** `BURST_HINT_APPLIED` events carry BOTH
+the 0-based workload `index` AND the kernel `pid`, so the mapping is explicit and
+data-present:
+
+```
+workload_pid (1-based)  ==  index + 1   (and kernel_pid == parent_pid + workload_pid)
+```
+
+Nothing is lost across the remap — you can verify it by matching burst values:
+`recommendation.predicted_bursts {pid: 4, predicted_burst: 50}` appears in the
+trace as `BURST_HINT_APPLIED {index: 3, pid: 7, predicted_burst: 50}`. The LLM's
+prediction reached the exact kernel process, just under a remapped PID. (This is
+a consistency *guarantee*, not a defect — it reproduces in every xv6 run.)
+
+**`process_count` includes the harness (xv6 only).** `metrics.process_count`
+counts every PID scheduled in the run window, **including the `schedtest`
+parent**. So for an N-process workload, `workload_summary.process_count == N`
+while `metrics.process_count == N + 1`. Expected, not a stitching error.
+
+**Simulator backend has no harness.** The simulator schedules the workload
+processes directly, so its trace PIDs and `metrics.per_process` PIDs equal the
+workload PIDs `1…N` and `process_count` matches on both sides — no offset, no
+`+1`.
 
 ---
 

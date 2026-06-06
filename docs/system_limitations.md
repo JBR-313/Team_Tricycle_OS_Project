@@ -18,6 +18,13 @@ the demo and defense.
   [`workload_coverage_matrix.md`](workload_coverage_matrix.md).
 - **No kernel LLM.** The LLM never runs inside the kernel and never selects the
   next process at a timer tick. xv6 is the execution authority.
+- **Two PID namespaces on xv6.** `workload_summary`/`recommendation` use 1-based
+  workload-definition PIDs; `trace_*.jsonl`/`metrics` use kernel runtime PIDs
+  assigned by `fork()` (the `schedtest` harness is one PID, each workload process
+  a forked child). They are bridged by `BURST_HINT_APPLIED.index`↔`pid`, and
+  `metrics.process_count` is `N+1` (it counts the harness parent). The simulator
+  has no harness, so its PIDs match 1:1. Full explanation:
+  [`data_format.md`](data_format.md#pid-namespaces-workload-index-vs-kernel-runtime-pid).
 
 ## Scheduling semantics
 
