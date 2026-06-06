@@ -562,14 +562,17 @@ export default function App() {
           <AlgorithmComparison metrics={metrics} recommendation={recommendation} selectedMetric={selectedMetric} />
         </div>
         <div className="tab-col">
+          {/* Evaluation tab UI rolled back to the pre-cards composition so the
+              algorithm-comparison chart is the hero for the 5-min demo. The
+              after-running cards (TraceExplanation / RuntimeCorrection /
+              LLMContribution=ablation) remain wired in code — imports, state and
+              fetches are intact below — and are preserved on branch
+              backup/eval-full-features-20260607. Re-add the three lines here to restore. */}
           <MetricVisualization
             metrics={metrics} recommendation={recommendation}
             selectedMetric={selectedMetric}
             onSelectedMetricChange={setSelectedMetric}
           />
-          <TraceExplanationCard explanation={traceExplanation} />
-          <RuntimeCorrectionCard correction={correctionApplied} />
-          <LLMContributionCard ablation={burstAblation} />
         </div>
       </div>
     )
