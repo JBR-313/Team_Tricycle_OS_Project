@@ -37,6 +37,17 @@ workload to interpret.
 | `cpu_bound`          | ✓ (4 procs) | ✓ | ✓ `workloads/long_cpu_bound_first.json` |
 | `mixed`              | ✓ (5 procs) | ✓ | ✓ `workloads/mixed_workload.json` |
 | `priority_sensitive` | ✓ (5 procs) | ✓ | ✓ `workloads/priority_sensitive.json` |
+| `interactive_storm`  | ✓ (8 procs) | ✓ | ✓ `workloads/xv6_interactive_storm.json` |
+| `batch_convoy`       | ✓ (8 procs) | ✓ | ✓ `workloads/xv6_batch_convoy.json` |
+
+The two 8-proc profiles (`interactive_storm`, `batch_convoy`) were added to
+raise xv6 workload scale and variety beyond ~5 procs. Their mirror JSONs are
+their own canonical file (analyzed == forked), and
+`tests/test_xv6_mirror_alignment.py` parses `WORKLOADS[]` and asserts the
+mirror matches the C table process-for-process. `schedtest.c` compiles clean
+(`-Wall -Werror`) and `fs.img` builds with `_schedtest`; an end-to-end QEMU
+snapshot run for the two new profiles is not yet recorded below (the empirical
+table in §3 predates them).
 
 Additional `PROFILE_MAP` entries that are **not** in `XV6_PROFILES`
 (simulator-only / dev-only profiles):
@@ -71,9 +82,11 @@ metrics + publish + validate).
 
 ## 4. Practical conclusion
 
-- **All four curated profiles are truly supported on the xv6 backend
-  today.** No additional schedtest workload tables need to be added
-  to satisfy the post-RC profile-depth goal.
+- **All four original curated profiles are empirically verified on the xv6
+  backend** (table §3). Two larger 8-proc profiles (`interactive_storm`,
+  `batch_convoy`) have since been added and statically verified (compile +
+  `fs.img` build + mirror-alignment test); a fresh QEMU snapshot run would
+  extend the §3 table to 6/6.
 - The on-stage demo path remains `--seed 42 --workload interactive`
   — this audit is broader confidence, not a replacement for the demo check.
 - The two simulator-only profiles (`short_jobs`, `starvation_risk`)

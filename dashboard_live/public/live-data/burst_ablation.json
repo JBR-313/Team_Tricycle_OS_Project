@@ -1,0 +1,529 @@
+{
+  "metric_legend": {
+    "mae": "mean |predicted - actual| on the first CPU burst (lower=better)",
+    "pairwise_order_accuracy": "fraction of process pairs ordered correctly by predicted burst (higher=better; this is what SJF/SRTF depend on)"
+  },
+  "strategies": {
+    "ema_cold": "blind cold start: constant initial=10",
+    "heuristic": "fixed rule on visible features (short=3 if io_count>0 or burst_count>1 else long=10)",
+    "llm": "Solar Pro 3 reasoning over label-stripped visible features"
+  },
+  "per_workload": [
+    {
+      "workload": "burst_prediction_demo",
+      "process_count": 8,
+      "strategies": {
+        "ema_cold": {
+          "mae": 4.625,
+          "pairwise_order_accuracy": 0.5
+        },
+        "heuristic": {
+          "mae": 1.125,
+          "pairwise_order_accuracy": 0.881
+        },
+        "llm": {
+          "mae": 53.375,
+          "pairwise_order_accuracy": 0.881
+        }
+      },
+      "detail": [
+        {
+          "pid": 1,
+          "actual_first_burst": 2,
+          "ema_cold": 10.0,
+          "heuristic": 3.0,
+          "llm": 10.0
+        },
+        {
+          "pid": 2,
+          "actual_first_burst": 12,
+          "ema_cold": 10.0,
+          "heuristic": 10.0,
+          "llm": 100.0
+        },
+        {
+          "pid": 3,
+          "actual_first_burst": 2,
+          "ema_cold": 10.0,
+          "heuristic": 3.0,
+          "llm": 10.0
+        },
+        {
+          "pid": 4,
+          "actual_first_burst": 12,
+          "ema_cold": 10.0,
+          "heuristic": 10.0,
+          "llm": 100.0
+        },
+        {
+          "pid": 5,
+          "actual_first_burst": 2,
+          "ema_cold": 10.0,
+          "heuristic": 3.0,
+          "llm": 50.0
+        },
+        {
+          "pid": 6,
+          "actual_first_burst": 10,
+          "ema_cold": 10.0,
+          "heuristic": 10.0,
+          "llm": 100.0
+        },
+        {
+          "pid": 7,
+          "actual_first_burst": 2,
+          "ema_cold": 10.0,
+          "heuristic": 3.0,
+          "llm": 10.0
+        },
+        {
+          "pid": 8,
+          "actual_first_burst": 11,
+          "ema_cold": 10.0,
+          "heuristic": 10.0,
+          "llm": 100.0
+        }
+      ]
+    },
+    {
+      "workload": "short_jobs_clustered",
+      "process_count": 25,
+      "strategies": {
+        "ema_cold": {
+          "mae": 9.0,
+          "pairwise_order_accuracy": null
+        },
+        "heuristic": {
+          "mae": 3.96,
+          "pairwise_order_accuracy": null
+        },
+        "llm": {
+          "mae": 10.8,
+          "pairwise_order_accuracy": null
+        }
+      },
+      "detail": [
+        {
+          "pid": 1,
+          "actual_first_burst": 1,
+          "ema_cold": 10.0,
+          "heuristic": 3.0,
+          "llm": 10.0
+        },
+        {
+          "pid": 2,
+          "actual_first_burst": 1,
+          "ema_cold": 10.0,
+          "heuristic": 10.0,
+          "llm": 15.0
+        },
+        {
+          "pid": 3,
+          "actual_first_burst": 1,
+          "ema_cold": 10.0,
+          "heuristic": 3.0,
+          "llm": 10.0
+        },
+        {
+          "pid": 4,
+          "actual_first_burst": 1,
+          "ema_cold": 10.0,
+          "heuristic": 3.0,
+          "llm": 10.0
+        },
+        {
+          "pid": 5,
+          "actual_first_burst": 1,
+          "ema_cold": 10.0,
+          "heuristic": 3.0,
+          "llm": 10.0
+        },
+        {
+          "pid": 6,
+          "actual_first_burst": 1,
+          "ema_cold": 10.0,
+          "heuristic": 3.0,
+          "llm": 12.0
+        },
+        {
+          "pid": 7,
+          "actual_first_burst": 1,
+          "ema_cold": 10.0,
+          "heuristic": 3.0,
+          "llm": 10.0
+        },
+        {
+          "pid": 8,
+          "actual_first_burst": 1,
+          "ema_cold": 10.0,
+          "heuristic": 10.0,
+          "llm": 15.0
+        },
+        {
+          "pid": 9,
+          "actual_first_burst": 1,
+          "ema_cold": 10.0,
+          "heuristic": 3.0,
+          "llm": 10.0
+        },
+        {
+          "pid": 10,
+          "actual_first_burst": 1,
+          "ema_cold": 10.0,
+          "heuristic": 3.0,
+          "llm": 10.0
+        },
+        {
+          "pid": 11,
+          "actual_first_burst": 1,
+          "ema_cold": 10.0,
+          "heuristic": 3.0,
+          "llm": 12.0
+        },
+        {
+          "pid": 12,
+          "actual_first_burst": 1,
+          "ema_cold": 10.0,
+          "heuristic": 10.0,
+          "llm": 15.0
+        },
+        {
+          "pid": 13,
+          "actual_first_burst": 1,
+          "ema_cold": 10.0,
+          "heuristic": 3.0,
+          "llm": 10.0
+        },
+        {
+          "pid": 14,
+          "actual_first_burst": 1,
+          "ema_cold": 10.0,
+          "heuristic": 3.0,
+          "llm": 10.0
+        },
+        {
+          "pid": 15,
+          "actual_first_burst": 1,
+          "ema_cold": 10.0,
+          "heuristic": 3.0,
+          "llm": 10.0
+        },
+        {
+          "pid": 16,
+          "actual_first_burst": 1,
+          "ema_cold": 10.0,
+          "heuristic": 3.0,
+          "llm": 12.0
+        },
+        {
+          "pid": 17,
+          "actual_first_burst": 1,
+          "ema_cold": 10.0,
+          "heuristic": 10.0,
+          "llm": 15.0
+        },
+        {
+          "pid": 18,
+          "actual_first_burst": 1,
+          "ema_cold": 10.0,
+          "heuristic": 10.0,
+          "llm": 15.0
+        },
+        {
+          "pid": 19,
+          "actual_first_burst": 1,
+          "ema_cold": 10.0,
+          "heuristic": 3.0,
+          "llm": 10.0
+        },
+        {
+          "pid": 20,
+          "actual_first_burst": 1,
+          "ema_cold": 10.0,
+          "heuristic": 3.0,
+          "llm": 12.0
+        },
+        {
+          "pid": 21,
+          "actual_first_burst": 1,
+          "ema_cold": 10.0,
+          "heuristic": 3.0,
+          "llm": 12.0
+        },
+        {
+          "pid": 22,
+          "actual_first_burst": 1,
+          "ema_cold": 10.0,
+          "heuristic": 10.0,
+          "llm": 15.0
+        },
+        {
+          "pid": 23,
+          "actual_first_burst": 1,
+          "ema_cold": 10.0,
+          "heuristic": 3.0,
+          "llm": 10.0
+        },
+        {
+          "pid": 24,
+          "actual_first_burst": 1,
+          "ema_cold": 10.0,
+          "heuristic": 3.0,
+          "llm": 10.0
+        },
+        {
+          "pid": 25,
+          "actual_first_burst": 1,
+          "ema_cold": 10.0,
+          "heuristic": 10.0,
+          "llm": 15.0
+        }
+      ]
+    },
+    {
+      "workload": "convoy_effect",
+      "process_count": 11,
+      "strategies": {
+        "ema_cold": {
+          "mae": 9.091,
+          "pairwise_order_accuracy": 0.5
+        },
+        "heuristic": {
+          "mae": 2.727,
+          "pairwise_order_accuracy": 1.0
+        },
+        "llm": {
+          "mae": 15.455,
+          "pairwise_order_accuracy": 1.0
+        }
+      },
+      "detail": [
+        {
+          "pid": 1,
+          "actual_first_burst": 20,
+          "ema_cold": 10.0,
+          "heuristic": 10.0,
+          "llm": 100.0
+        },
+        {
+          "pid": 2,
+          "actual_first_burst": 1,
+          "ema_cold": 10.0,
+          "heuristic": 3.0,
+          "llm": 10.0
+        },
+        {
+          "pid": 3,
+          "actual_first_burst": 1,
+          "ema_cold": 10.0,
+          "heuristic": 3.0,
+          "llm": 10.0
+        },
+        {
+          "pid": 4,
+          "actual_first_burst": 1,
+          "ema_cold": 10.0,
+          "heuristic": 3.0,
+          "llm": 10.0
+        },
+        {
+          "pid": 5,
+          "actual_first_burst": 1,
+          "ema_cold": 10.0,
+          "heuristic": 3.0,
+          "llm": 10.0
+        },
+        {
+          "pid": 6,
+          "actual_first_burst": 1,
+          "ema_cold": 10.0,
+          "heuristic": 3.0,
+          "llm": 10.0
+        },
+        {
+          "pid": 7,
+          "actual_first_burst": 1,
+          "ema_cold": 10.0,
+          "heuristic": 3.0,
+          "llm": 10.0
+        },
+        {
+          "pid": 8,
+          "actual_first_burst": 1,
+          "ema_cold": 10.0,
+          "heuristic": 3.0,
+          "llm": 10.0
+        },
+        {
+          "pid": 9,
+          "actual_first_burst": 1,
+          "ema_cold": 10.0,
+          "heuristic": 3.0,
+          "llm": 10.0
+        },
+        {
+          "pid": 10,
+          "actual_first_burst": 1,
+          "ema_cold": 10.0,
+          "heuristic": 3.0,
+          "llm": 10.0
+        },
+        {
+          "pid": 11,
+          "actual_first_burst": 1,
+          "ema_cold": 10.0,
+          "heuristic": 3.0,
+          "llm": 10.0
+        }
+      ]
+    },
+    {
+      "workload": "bursty_long_tail",
+      "process_count": 5,
+      "strategies": {
+        "ema_cold": {
+          "mae": 8.4,
+          "pairwise_order_accuracy": 0.5
+        },
+        "heuristic": {
+          "mae": 8.4,
+          "pairwise_order_accuracy": 0.5
+        },
+        "llm": {
+          "mae": 2.8,
+          "pairwise_order_accuracy": 0.722
+        }
+      },
+      "detail": [
+        {
+          "pid": 1,
+          "actual_first_burst": 20,
+          "ema_cold": 10.0,
+          "heuristic": 10.0,
+          "llm": 10.0
+        },
+        {
+          "pid": 2,
+          "actual_first_burst": 2,
+          "ema_cold": 10.0,
+          "heuristic": 10.0,
+          "llm": 1.0
+        },
+        {
+          "pid": 3,
+          "actual_first_burst": 1,
+          "ema_cold": 10.0,
+          "heuristic": 10.0,
+          "llm": 1.0
+        },
+        {
+          "pid": 4,
+          "actual_first_burst": 3,
+          "ema_cold": 10.0,
+          "heuristic": 10.0,
+          "llm": 1.0
+        },
+        {
+          "pid": 5,
+          "actual_first_burst": 2,
+          "ema_cold": 10.0,
+          "heuristic": 10.0,
+          "llm": 1.0
+        }
+      ]
+    },
+    {
+      "workload": "staggered_short_arrival",
+      "process_count": 8,
+      "strategies": {
+        "ema_cold": {
+          "mae": 7.0,
+          "pairwise_order_accuracy": 0.5
+        },
+        "heuristic": {
+          "mae": 7.0,
+          "pairwise_order_accuracy": 0.5
+        },
+        "llm": {
+          "mae": 0.0,
+          "pairwise_order_accuracy": 1.0
+        }
+      },
+      "detail": [
+        {
+          "pid": 1,
+          "actual_first_burst": 10,
+          "ema_cold": 10.0,
+          "heuristic": 10.0,
+          "llm": 10.0
+        },
+        {
+          "pid": 2,
+          "actual_first_burst": 2,
+          "ema_cold": 10.0,
+          "heuristic": 10.0,
+          "llm": 2.0
+        },
+        {
+          "pid": 3,
+          "actual_first_burst": 2,
+          "ema_cold": 10.0,
+          "heuristic": 10.0,
+          "llm": 2.0
+        },
+        {
+          "pid": 4,
+          "actual_first_burst": 2,
+          "ema_cold": 10.0,
+          "heuristic": 10.0,
+          "llm": 2.0
+        },
+        {
+          "pid": 5,
+          "actual_first_burst": 2,
+          "ema_cold": 10.0,
+          "heuristic": 10.0,
+          "llm": 2.0
+        },
+        {
+          "pid": 6,
+          "actual_first_burst": 2,
+          "ema_cold": 10.0,
+          "heuristic": 10.0,
+          "llm": 2.0
+        },
+        {
+          "pid": 7,
+          "actual_first_burst": 2,
+          "ema_cold": 10.0,
+          "heuristic": 10.0,
+          "llm": 2.0
+        },
+        {
+          "pid": 8,
+          "actual_first_burst": 2,
+          "ema_cold": 10.0,
+          "heuristic": 10.0,
+          "llm": 2.0
+        }
+      ]
+    }
+  ],
+  "aggregate": {
+    "ema_cold": {
+      "mean_mae": 7.623,
+      "mean_pairwise_order_accuracy": 0.5,
+      "workloads_scored": 5
+    },
+    "heuristic": {
+      "mean_mae": 4.642,
+      "mean_pairwise_order_accuracy": 0.72,
+      "workloads_scored": 5
+    },
+    "llm": {
+      "mean_mae": 16.486,
+      "mean_pairwise_order_accuracy": 0.901,
+      "workloads_scored": 5
+    }
+  }
+}

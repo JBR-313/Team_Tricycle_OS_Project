@@ -11,10 +11,12 @@ the demo and defense.
   only because the scheduler (the other writer) runs with interrupts off on one
   CPU. On CPUS>1 this would need locking. (`xv6-riscv/kernel/trap.c:30`.)
 - **Curated xv6 workloads.** xv6 has **no JSON parser**. `schedtest.c` carries a
-  small set of fixed, curated workload tables (`interactive`, `cpu_bound`,
-  `mixed`, `priority_sensitive`). Arbitrary `workloads/*.json` run on the
-  **simulator** only. The orchestrator maps each curated profile to a mirror
-  JSON so burst priors align to fork order. See
+  fixed set of curated workload tables — six profiles: `interactive`,
+  `cpu_bound`, `mixed`, `priority_sensitive` (≈5 procs each) plus the larger
+  8-proc `interactive_storm` and `batch_convoy`. Arbitrary `workloads/*.json`
+  run on the **simulator** only. The orchestrator maps each curated profile to a
+  mirror JSON so burst priors align to fork order; `tests/test_xv6_mirror_alignment.py`
+  enforces that the C tables and their mirrors stay in lockstep. See
   [`workload_coverage_matrix.md`](workload_coverage_matrix.md).
 - **No kernel LLM.** The LLM never runs inside the kernel and never selects the
   next process at a timer tick. xv6 is the execution authority.
@@ -40,7 +42,9 @@ the demo and defense.
   seed-specific instance (arrival/burst magnitudes vary; counts preserved) so
   simulator runs differ per seed and can be averaged. xv6 has no PRNG in
   `schedtest.c` (curated tables are fixed in C), so on the xv6 backend the seed
-  only labels the run — it does not change the schedule.
+  only labels the run — it does not change the schedule. `tools/seed_sweep.py`
+  reports mean ± std across seeds, but for the same reason it is **simulator-only**:
+  a seed sweep on xv6 would be N identical runs.
 
 ## Pipeline / correction
 

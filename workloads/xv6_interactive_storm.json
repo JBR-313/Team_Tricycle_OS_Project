@@ -1,0 +1,18 @@
+{
+  "id": "xv6_interactive_storm",
+  "description": "Mirror of the schedtest `interactive_storm` curated table (user/schedtest.c). Process order == fork order so LLM burst priors align to xv6 by index. Single CPU burst per process (one-shot run_burst). 8 processes: a storm of tiny interactive jobs racing two CPU hogs.",
+  "target_metric": "avg_response_time",
+  "expected_best_algorithm": "MLFQ",
+  "expected_behavior": "Many short interactive jobs interleave with two CPU hogs; RR/MLFQ keep average response time low by time-slicing the hogs, while FCFS lets a hog block the interactive burst.",
+  "schema_version": 2,
+  "processes": [
+    {"pid": 1, "arrival_time": 0,  "cpu_bursts": [1], "io_bursts": [], "priority": 3, "label": "interactive", "actual_bursts": [1]},
+    {"pid": 2, "arrival_time": 1,  "cpu_bursts": [2], "io_bursts": [], "priority": 4, "label": "interactive", "actual_bursts": [2]},
+    {"pid": 3, "arrival_time": 2,  "cpu_bursts": [1], "io_bursts": [], "priority": 2, "label": "interactive", "actual_bursts": [1]},
+    {"pid": 4, "arrival_time": 3,  "cpu_bursts": [8], "io_bursts": [], "priority": 6, "label": "cpu",         "actual_bursts": [8]},
+    {"pid": 5, "arrival_time": 4,  "cpu_bursts": [1], "io_bursts": [], "priority": 3, "label": "interactive", "actual_bursts": [1]},
+    {"pid": 6, "arrival_time": 6,  "cpu_bursts": [2], "io_bursts": [], "priority": 4, "label": "interactive", "actual_bursts": [2]},
+    {"pid": 7, "arrival_time": 8,  "cpu_bursts": [7], "io_bursts": [], "priority": 7, "label": "cpu",         "actual_bursts": [7]},
+    {"pid": 8, "arrival_time": 10, "cpu_bursts": [1], "io_bursts": [], "priority": 2, "label": "interactive", "actual_bursts": [1]}
+  ]
+}

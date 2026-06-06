@@ -10,4 +10,11 @@ export default defineConfig({
     host: true,
     port: 5174,
   },
+  // Vitest: jsdom for component render tests; setup wires jest-dom matchers.
+  test: {
+    environment: 'jsdom',
+    globals: true,
+    setupFiles: './src/test/setup.js',
+    include: ['src/**/*.{test,spec}.{js,jsx}'],
+  },
 })

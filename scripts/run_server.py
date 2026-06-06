@@ -46,6 +46,7 @@ ORCHESTRATOR = ROOT / "scripts" / "orchestrator.py"
 # Keep this in lockstep with orchestrator.XV6_PROFILES and schedtest.c WORKLOADS.
 XV6_PROFILES = {
     "interactive", "cpu_bound", "mixed", "priority_sensitive",
+    "interactive_storm", "batch_convoy",
 }
 SIM_PROFILES = XV6_PROFILES | {
     # Simulator-only profiles (no curated schedtest.c table). These resolve in

@@ -11,7 +11,7 @@
 static const char *ALGO_NAMES[] = {"RR", "FCFS", "PRIORITY", "MLFQ", "SJF", "SRTF"};
 #define NALGO (sizeof(ALGO_NAMES) / sizeof(ALGO_NAMES[0]))
 
-#define MAXPROC 8
+#define MAXPROC 12
 
 // One planned process in a curated workload.
 struct procdef {
@@ -58,6 +58,30 @@ static struct workload WORKLOADS[] = {
       {2, 5, 9, "cpu"},
       {3, 3, 2, "interactive"},
       {4, 4, 5, "mixed"},
+  }},
+  // Larger profiles (8 procs) exercise the scheduler at more than ~5 jobs and
+  // isolate two phenomena.  interactive_storm: a burst of tiny interactive jobs
+  // racing two CPU hogs — RR/MLFQ keep response time low.  batch_convoy: a long
+  // head job followed by short jobs — the classic convoy effect SJF/SRTF undo.
+  { "interactive_storm", 8, {
+      {0,  1, 3, "interactive"},
+      {1,  2, 4, "interactive"},
+      {2,  1, 2, "interactive"},
+      {3,  8, 6, "cpu"},
+      {4,  1, 3, "interactive"},
+      {6,  2, 4, "interactive"},
+      {8,  7, 7, "cpu"},
+      {10, 1, 2, "interactive"},
+  }},
+  { "batch_convoy", 8, {
+      {0, 12, 5, "cpu"},
+      {1,  2, 5, "cpu"},
+      {2,  3, 5, "cpu"},
+      {2,  1, 5, "interactive"},
+      {3,  2, 5, "cpu"},
+      {4,  1, 5, "interactive"},
+      {5,  3, 5, "cpu"},
+      {6,  2, 5, "cpu"},
   }},
 };
 #define NWORKLOADS (sizeof(WORKLOADS) / sizeof(WORKLOADS[0]))
@@ -303,7 +327,7 @@ main(int argc, char *argv[])
     printf("usage: schedtest <algorithm> <seed> <profile> [flags...]\n");
     printf("  algorithm : rr|fcfs|priority|mlfq|sjf|srtf | all\n");
     printf("  seed      : integer (default 1)\n");
-    printf("  profile   : interactive|cpu_bound|mixed|priority_sensitive (default mixed)\n");
+    printf("  profile   : interactive|cpu_bound|mixed|priority_sensitive|interactive_storm|batch_convoy (default mixed)\n");
     printf("  flags (all LLM/Guard validated; each algorithm reads only its own):\n");
     printf("    --rr-quantum <int>            RR ticks per round\n");
     printf("    --aging <int>                 Priority aging threshold\n");

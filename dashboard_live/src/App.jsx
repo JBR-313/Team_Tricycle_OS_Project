@@ -7,6 +7,7 @@ import {
   loadWorkloadSummary, loadMetrics, loadAllTraces,
   getLiveDataBase,
   loadRuntimeEvents, loadCorrectionProposal, loadCorrectionGuardDecision, loadCorrectionApplied,
+  loadBurstAblation,
 } from './data/liveDataClient.js'
 import { tickToMs } from './components/constants.js'
 import { useRun } from './data/useRun.js'
@@ -196,6 +197,7 @@ import ProcessLanes        from './components/ProcessLanes.jsx'
 import AlgorithmComparison from './components/AlgorithmComparison.jsx'
 import MetricVisualization from './components/MetricVisualization.jsx'
 import MLFQQueuePanel      from './components/MLFQQueuePanel.jsx'
+import LLMContributionCard from './components/LLMContributionCard.jsx'
 
 const POLL_INTERVAL_MS = 1500
 
@@ -239,6 +241,7 @@ export default function App() {
   const [correctionProposal,      setCorrectionProposal]      = useState(null)
   const [correctionGuardDecision, setCorrectionGuardDecision] = useState(null)
   const [correctionApplied,       setCorrectionApplied]       = useState(null)
+  const [burstAblation,           setBurstAblation]           = useState(null)
 
   const manifestVersionRef = useRef(null)
   const recommendedAlgoRef = useRef('MLFQ')
@@ -286,16 +289,18 @@ export default function App() {
         if (exRes.ok) setTraceExplanation(await exRes.json())
       } catch {/* optional */}
 
-      const [re, cp, cd, ca] = await Promise.all([
+      const [re, cp, cd, ca, ab] = await Promise.all([
         loadRuntimeEvents(),
         loadCorrectionProposal(),
         loadCorrectionGuardDecision(),
         loadCorrectionApplied(),
+        loadBurstAblation(),
       ])
       setRuntimeEvents(re)
       setCorrectionProposal(cp)
       setCorrectionGuardDecision(cd)
       setCorrectionApplied(ca)
+      setBurstAblation(ab)
     } catch (err) {
       setLoadError(err.message)
       setDataMode('fallback')
@@ -564,6 +569,7 @@ export default function App() {
           />
           <TraceExplanationCard explanation={traceExplanation} />
           <RuntimeCorrectionCard correction={correctionApplied} />
+          <LLMContributionCard ablation={burstAblation} />
         </div>
       </div>
     )

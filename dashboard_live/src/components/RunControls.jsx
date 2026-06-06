@@ -76,6 +76,7 @@ export default function RunControls({ onRunComplete }) {
   ]
   const PROFILES_XV6 = [
     'interactive', 'cpu_bound', 'mixed', 'priority_sensitive',
+    'interactive_storm', 'batch_convoy',
   ]
   const profileList = backend === 'xv6' ? PROFILES_XV6 : PROFILES_SIM
   const RANDOM = '🎲 random'

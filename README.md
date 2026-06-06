@@ -551,7 +551,9 @@ Main dashboard message:
 > **The shipped demo flow today** is: workload → LLM recommendation
 > → Algorithm Guard → xv6 schedtest execution (per algorithm on the
 > same seed + profile) → Metrics Evaluator → snapshot tour across
-> the four curated xv6 profiles.
+> the four pre-rendered xv6 profile snapshots. (schedtest.c now also
+> carries two larger 8-proc profiles — `interactive_storm`, `batch_convoy`
+> — runnable live; only the original four are pre-rendered as snapshots.)
 >
 > The scenario below illustrates the **host-side closed-loop runtime
 > correction** that ships today: event detection → correction proposal →
@@ -729,6 +731,22 @@ average across seeds. xv6 stays deterministic-by-profile (its curated
 `schedtest.c` tables are fixed in C with no PRNG), so on the xv6 backend the
 seed only labels the run. The profile dropdown also offers a **🎲 random**
 choice that rolls a fresh profile + seed on every press.
+
+**Multi-seed robustness sweep.** Because each seed is a distinct instance, a
+single run is one sample, not proof the recommendation holds. `tools/seed_sweep.py`
+runs a workload across many seeds and reports, per algorithm, the target
+metric's **mean ± std** and how often each algorithm was best, so a pick can be
+defended statistically instead of anecdotally:
+
+```bash
+python3 tools/seed_sweep.py --workload ambiguous_mixed --seeds 1-20
+# → outputs/seed_sweep/seed_sweep_ambiguous_mixed.{json,md}
+#   e.g. "Priority best in 20/20 seeds; avg_waiting 4.75 ± 0.75"
+```
+
+It reuses the orchestrator's profile-alias map (so the dashboard's profile
+names work) and is simulator-only by construction — xv6 is deterministic-by-
+profile, so a seed sweep there would be 20 identical runs.
 
 ## 11. Repository Structure
 
