@@ -167,8 +167,13 @@ GDBPORT = $(shell expr `id -u` % 5000 + 25000)
 QEMUGDB = $(shell if $(QEMU) -help | grep -q '^-gdb'; \
 	then echo "-gdb tcp::$(GDBPORT)"; \
 	else echo "-s -p $(GDBPORT)"; fi)
+# This kernel's scheduler does lockless reads of scheduler globals
+# (sched_mode, rr_quantum, mlfq_cfg, per-proc queue_level/ticks_in_level) that
+# are only safe under a single hart. Default to CPUS=1 so a bare `make qemu`
+# matches that invariant; the orchestrator already pins -smp 1. Override with
+# `make CPUS=N qemu` only if you know the run is multi-CPU-safe.
 ifndef CPUS
-CPUS := 3
+CPUS := 1
 endif
 
 QEMUOPTS = -machine virt -bios none -kernel $K/kernel -m 128M -smp $(CPUS) -nographic

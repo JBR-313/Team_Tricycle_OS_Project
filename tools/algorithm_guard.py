@@ -176,6 +176,18 @@ DEFAULT_PARAMS = {
 MLFQ_QUANTUM_RANGE = (1, 100)
 PREDICTOR_ALGORITHMS = ("SJF", "SRTF")
 
+
+def _default_mlfq_quantum(queues: int) -> list[int]:
+    """A safe per-queue time-slice list whose length == `queues`.
+
+    Geometric 2,4,8,16,32 (so queues=3 reproduces the canonical [2,4,8]),
+    each clamped into MLFQ_QUANTUM_RANGE. Used when the LLM's quantum is
+    missing/invalid/length-mismatched so the result always stays internally
+    consistent with `queues` (never a fixed length-3 default against queues!=3).
+    """
+    lo, hi = MLFQ_QUANTUM_RANGE
+    return [min(max(2 ** (i + 1), lo), hi) for i in range(max(1, queues))]
+
 # Context-aware fallback selection
 # If we must reject, what's the best alternative given the metric?
 # Fallbacks stay within the stable, non-predictive algorithms (RR/MLFQ) so a
@@ -345,22 +357,28 @@ def normalize_params(algo: str, params: Any) -> tuple[dict, list[str]]:
         q = params.get("quantum")
         q_lo, q_hi = MLFQ_QUANTUM_RANGE
         if q is None:
-            pass  # default already in `out`
+            pass  # length reconciled below against out["queues"]
         elif not isinstance(q, list) or not all(
             isinstance(v, int) and not isinstance(v, bool) and q_lo <= v <= q_hi
             for v in q
         ):
             warnings.append(
                 f"MLFQ.quantum={q!r} invalid (must be list of ints in "
-                f"[{q_lo}, {q_hi}]); using default {defaults['quantum']}."
+                f"[{q_lo}, {q_hi}]); using default for queues={out['queues']}."
             )
         elif len(q) != out["queues"]:
             warnings.append(
                 f"MLFQ.quantum length {len(q)} != queues {out['queues']}; "
-                f"using default {defaults['quantum']}."
+                f"using default for queues={out['queues']}."
             )
         else:
             out["quantum"] = q
+        # Reconcile: the seeded default quantum is [2,4,8] (length 3). If queues
+        # was set to a non-default value (or quantum fell back above), the length
+        # must still equal queues — otherwise an inconsistent MLFQ config reaches
+        # the backend. Regenerate a length-correct default in that case.
+        if len(out.get("quantum") or []) != out["queues"]:
+            out["quantum"] = _default_mlfq_quantum(out["queues"])
 
     if algo in PREDICTOR_ALGORITHMS:
         # Cross-field rules the per-key range check can't catch.

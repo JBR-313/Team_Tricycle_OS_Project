@@ -181,17 +181,32 @@ def build_system_prompt(feedback_path: Path) -> str:
     return prompt
 
 
-# Aggregate fields derived from the true CPU bursts. Sending them to the LLM
-# would leak ground-truth burst totals, violating the "no future burst leakage"
-# honesty contract (CLAUDE.md: "Future CPU bursts must not be given to the LLM
-# as input."). The model must predict bursts from VISIBLE per-process features
-# (arrival_time, priority, label, burst_count, io_count) only.
-_BURST_LEAK_KEYS = ("total_cpu_work",)
+# Summary keys that must NOT reach the advisor prompt:
+#   - total_cpu_work        : the SUM of every process's true CPU burst — an
+#                             absolute ground-truth burst aggregate. Sending it
+#                             violates the "no future burst leakage" honesty
+#                             contract (CLAUDE.md: "Future CPU bursts must not be
+#                             given to the LLM as input.").
+#   - expected_best_algorithm / expected_behavior : the workload's EVALUATION
+#                             answer key. Handing these to the advisor would make
+#                             it echo the expected answer, voiding the SUCCESS/
+#                             NEAR/FAIL judgment (best_algorithm is determined by
+#                             the real cross-algorithm comparison, not this hint).
+# NOTE: workload CLASSIFICATION aggregates (cpu_bound_ratio, interactive_ratio,
+# burst_count_distribution, has_starvation_risk) are intentionally KEPT — they
+# are coarse characterizations a scheduler designer may legitimately use and do
+# not reveal any per-process future burst duration. These keys are stripped only
+# from the prompt; workload_summary.json on disk keeps them for the dashboard.
+_PROMPT_STRIP_KEYS = (
+    "total_cpu_work",
+    "expected_best_algorithm",
+    "expected_behavior",
+)
 
 
 def build_user_prompt(summary: dict) -> str:
-    # Defensive copy with burst-derived aggregates stripped before serialization.
-    safe = {k: v for k, v in summary.items() if k not in _BURST_LEAK_KEYS}
+    # Defensive copy with ground-truth / answer-key fields stripped first.
+    safe = {k: v for k, v in summary.items() if k not in _PROMPT_STRIP_KEYS}
     return (
         "Here is the workload summary (JSON):\n\n"
         f"{json.dumps(safe, indent=2, ensure_ascii=False)}\n\n"

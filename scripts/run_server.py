@@ -40,15 +40,20 @@ ROOT = Path(__file__).resolve().parent.parent
 LIVE_DATA = ROOT / "dashboard_live" / "public" / "live-data"
 ORCHESTRATOR = ROOT / "scripts" / "orchestrator.py"
 
+# Only the four curated profiles that schedtest.c actually forks may run on the
+# xv6 backend. Anything else would make orchestrator silently substitute `mixed`
+# while the manifest still badged the requested profile — a dishonest xv6 run.
+# Keep this in lockstep with orchestrator.XV6_PROFILES and schedtest.c WORKLOADS.
 XV6_PROFILES = {
     "interactive", "cpu_bound", "mixed", "priority_sensitive",
-    "short_jobs", "starvation_risk",
 }
 SIM_PROFILES = XV6_PROFILES | {
-    # v2 workload-ID aliases offered by the dashboard's simulator dropdown
-    # (dashboard_live/.../RunControls.jsx PROFILES_SIM). These resolve in
+    # Simulator-only profiles (no curated schedtest.c table). These resolve in
     # orchestrator.PROFILE_MAP; keep this whitelist in sync or the RUN button
     # 400s on a profile the orchestrator would happily accept.
+    "short_jobs", "starvation_risk",
+    # v2 workload-ID aliases offered by the dashboard's simulator dropdown
+    # (dashboard_live/.../RunControls.jsx PROFILES_SIM).
     "interactive_heavy", "short_jobs_clustered", "long_job_first_convoy",
     "interactive_mixed", "priority_critical_tasks",
     "cpu_bound_vs_io_bound", "ambiguous_mixed",
