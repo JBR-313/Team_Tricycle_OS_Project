@@ -18,6 +18,7 @@ export default function RunControls({ onRunComplete }) {
   const [seed, setSeed]             = useState(42)
   const [offlineFixture, setOffline]= useState(true)
   const [err, setErr]               = useState(null)
+  const [lastRoll, setLastRoll]     = useState(null)
   const pollRef = useRef(null)
   const lastStateRef = useRef('IDLE')
 
@@ -77,14 +78,27 @@ export default function RunControls({ onRunComplete }) {
     'interactive', 'cpu_bound', 'mixed', 'priority_sensitive',
   ]
   const profileList = backend === 'xv6' ? PROFILES_XV6 : PROFILES_SIM
+  const RANDOM = '🎲 random'
 
   async function handleRun() {
     setErr(null)
+    // 🎲 random: roll a fresh profile AND seed so every press is a different
+    // run. On the simulator a new seed re-jitters the workload instance; on
+    // xv6 the seed is fixed-by-profile so only the profile changes.
+    let runProfile = profileList.includes(profile) ? profile : profileList[0]
+    let runSeed = Number(seed)
+    if (profile === RANDOM) {
+      runProfile = profileList[Math.floor(Math.random() * profileList.length)]
+      runSeed = Math.floor(Math.random() * 100000)
+      setLastRoll(`rolled ${runProfile} · seed ${runSeed}`)
+    } else {
+      setLastRoll(null)
+    }
     try {
       await startRun({
         backend,
-        profile: profileList.includes(profile) ? profile : profileList[0],
-        seed: Number(seed),
+        profile: runProfile,
+        seed: runSeed,
         run_all: true,
         offline_fixture: offlineFixture,
       })
@@ -118,12 +132,16 @@ export default function RunControls({ onRunComplete }) {
         <label>
           profile
           <select value={profile} onChange={e => setProfile(e.target.value)} disabled={inFlight}>
+            <option value={RANDOM}>{RANDOM}</option>
             {profileList.map(p => <option key={p} value={p}>{p}</option>)}
           </select>
         </label>
         <label>
           seed
-          <input type="number" min="0" value={seed} onChange={e => setSeed(e.target.value)} disabled={inFlight} />
+          <input type="number" min="0" value={seed}
+                 onChange={e => setSeed(e.target.value)}
+                 disabled={inFlight || profile === RANDOM}
+                 title={profile === RANDOM ? 'seed is rolled randomly' : undefined} />
         </label>
         <label className="run-checkbox">
           <input type="checkbox" checked={offlineFixture}
@@ -135,6 +153,7 @@ export default function RunControls({ onRunComplete }) {
         </button>
       </div>
 
+      {lastRoll && <div className="run-hint">🎲 {lastRoll}</div>}
       {err && <div className="run-error">⚠ {err}</div>}
 
       {status?.log_tail?.length > 0 && (

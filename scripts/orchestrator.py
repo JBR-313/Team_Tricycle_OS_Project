@@ -1675,6 +1675,25 @@ def main() -> int:
 
     workload_stem = workload_path.stem
 
+    # Simulator backend: make --seed MEANINGFUL. Materialise a seed-jittered
+    # INSTANCE of the workload (arrival/burst magnitudes vary; process count and
+    # per-process burst/io counts preserved) and analyse + simulate THAT, so
+    # different seeds give genuinely different runs (multi-seed statistics) and
+    # the dashboard's "random" option produces fresh data each press. xv6 stays
+    # deterministic-by-profile: its curated schedtest.c tables are fixed in C
+    # with no PRNG, so we never jitter the kernel path.
+    if args.backend == "simulator" and not dry_run:
+        instance_path = out_dir / "workload_instance.json"
+        rc = _run([sys.executable, str(TOOLS_DIR / "workload_jitter.py"),
+                   "--in", str(workload_path), "--out", str(instance_path),
+                   "--seed", str(args.seed)], dry_run)
+        if rc == 0 and instance_path.is_file():
+            print(f"[orchestrator] simulator: seed {args.seed} -> jittered "
+                  f"instance {_rel(instance_path)}")
+            workload_path = instance_path
+        else:
+            print(f"  [WARN] jitter failed (rc={rc}); using base workload unchanged")
+
     print("=" * 64)
     print("LLM Sched Copilot — Orchestrator")
     print(f"  backend     : {args.backend}")

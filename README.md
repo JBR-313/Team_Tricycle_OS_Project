@@ -718,6 +718,18 @@ RUNNING → PARSING → EVALUATING → DONE, and the views auto-reload. Without
 the server the RUN card hides and the dashboard is read-only over
 `live-data/`.
 
+**`--seed` is meaningful on the simulator.** Before each simulator run the
+orchestrator materialises a seed-jittered *instance* of the chosen workload
+(`tools/workload_jitter.py`): arrival times and burst lengths vary within a
+small band while the process count and per-process burst/io counts are
+preserved, so the workload keeps its character but every seed is a distinct
+instance. Same seed + profile → identical run (all six algorithms still race on
+that one instance); different seeds → different metrics, which is what lets you
+average across seeds. xv6 stays deterministic-by-profile (its curated
+`schedtest.c` tables are fixed in C with no PRNG), so on the xv6 backend the
+seed only labels the run. The profile dropdown also offers a **🎲 random**
+choice that rolls a fresh profile + seed on every press.
+
 ## 11. Repository Structure
 
 Actual top-level layout today (kept honest — paths that don't exist or are

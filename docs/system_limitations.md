@@ -36,6 +36,11 @@ the demo and defense.
   FCFS — and **SRTF may show no preemption**. This is expected, not a bug.
 - **Aging/boost are round-granular**, not strictly tick-accurate — a
   simplification for the lab.
+- **`--seed` jitters the SIMULATOR only.** `tools/workload_jitter.py` derives a
+  seed-specific instance (arrival/burst magnitudes vary; counts preserved) so
+  simulator runs differ per seed and can be averaged. xv6 has no PRNG in
+  `schedtest.c` (curated tables are fixed in C), so on the xv6 backend the seed
+  only labels the run — it does not change the schedule.
 
 ## Pipeline / correction
 
