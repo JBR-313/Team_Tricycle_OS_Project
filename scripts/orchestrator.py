@@ -168,6 +168,29 @@ def _read_json(path: Path) -> dict:
         return {}
 
 
+def _parse_feedback_rules(path: Path) -> list[str]:
+    """Count usable bullet rules in a feedback_rules.md file.
+
+    Mirrors llm_advisor.parse_rules_from_markdown's contract loosely (bullet
+    lines, skipping the 'none' sentinel) so the manifest's feedback_rule_count
+    matches what the advisor would actually inject. Returns [] on any error.
+    """
+    try:
+        text = path.read_text(encoding="utf-8")
+    except Exception:  # noqa: BLE001
+        return []
+    rules: list[str] = []
+    for raw in text.splitlines():
+        stripped = raw.lstrip()
+        for marker in ("- ", "* "):
+            if stripped.startswith(marker):
+                rule = stripped[len(marker):].strip()
+                if rule and rule.lower() not in {"none", "n/a", "(none)"}:
+                    rules.append(rule)
+                break
+    return rules
+
+
 def _run(cmd: list[str], dry_run: bool) -> int:
     print(f"  cmd: {' '.join(cmd)}")
     if dry_run:
@@ -229,13 +252,21 @@ def run_workload_analyzer(workload: Path, out_dir: Path, dry_run: bool):
             print("  [WARN] workload_summary.json not produced; demo fallback used later")
 
 
-def run_advisor(out_dir: Path, dry_run: bool, *, offline_fixture: bool = False) -> bool:
+def run_advisor(out_dir: Path, dry_run: bool, *, offline_fixture: bool = False,
+                use_feedback: bool = False) -> bool:
     """Run llm_advisor (advise).
 
     Default behavior is STRICT: if the advisor fails (missing UPSTAGE_API_KEY,
     network error, schema error, etc.) the orchestrator exits with a clear
     error so we never silently fake a real Solar Pro 3 call. To use the
     committed demo recommendation as a fixture, pass --offline-fixture.
+
+    Feedback consumption is OPT-IN (use_feedback=True). When enabled, the
+    accumulated FAIL-only rules at `out_dir/feedback_rules.md` (the canonical
+    orchestrator path, written by step [9] of a PRIOR run) are injected into
+    the advise prompt. Default runs pass NO --feedback argument, so stale rules
+    cannot influence the recommendation and the demo stays deterministic. The
+    feedback file is generated AFTER evaluation, so it never affects this run.
 
     Returns True if the demo fallback was used (caller flags metadata_source).
     """
@@ -248,6 +279,16 @@ def run_advisor(out_dir: Path, dry_run: bool, *, offline_fixture: bool = False) 
         "--in", str(summary),
         "--out", str(rec_out),
     ]
+    if use_feedback:
+        feedback_file = out_dir / "feedback_rules.md"
+        cmd.extend(["--feedback", str(feedback_file)])
+        if feedback_file.is_file():
+            n = len(_parse_feedback_rules(feedback_file))
+            print(f"  --use-feedback ON: injecting {n} accumulated rule(s) "
+                  f"from {_rel(feedback_file)}")
+        else:
+            print(f"  --use-feedback ON: no rules file at {_rel(feedback_file)} "
+                  f"yet; advising with base prompt (no crash).")
     if dry_run:
         print(f"  cmd: {' '.join(cmd)}")
         print("  [DRY-RUN] skipped")
@@ -1482,7 +1523,9 @@ def _run_correction_apply_loop(out_dir: Path, live_dir: Path, *, backend: str,
 def export_to_live_data(out_dir: Path, live_dir: Path, *, backend: str, seed: int,
                         workload_type: str, workload_stem: str, selected: str,
                         run_order: list[str], dry_run: bool,
-                        metadata_source: str | None = None) -> dict:
+                        metadata_source: str | None = None,
+                        feedback_consumed: bool = False,
+                        feedback_rule_count: int = 0) -> dict:
     print(f"\n[5] Export to {_rel(live_dir)}")
     ensure_dir(live_dir)
 
@@ -1529,6 +1572,15 @@ def export_to_live_data(out_dir: Path, live_dir: Path, *, backend: str, seed: in
     # Honest provenance: flag when metadata came from the demo fallback.
     if metadata_source:
         manifest["metadata_source"] = metadata_source
+
+    # Feedback CONSUMPTION provenance (compact, dashboard-contract-compatible).
+    # Distinct from feedback GENERATION (step [9], post-evaluation). Only stamp
+    # the verbose fields when feedback was actually opted into.
+    manifest["feedback_consumed"] = bool(feedback_consumed)
+    if feedback_consumed:
+        manifest["feedback_rules_path"] = "outputs/live/feedback_rules.md"
+        manifest["feedback_rule_count"] = int(feedback_rule_count)
+
     write_json(live_dir / "manifest.json", manifest, dry_run)
     print(f"  manifest version -> {version}"
           + (f"  (metadata_source={metadata_source})" if metadata_source else ""))
@@ -1573,6 +1625,18 @@ def main() -> int:
         dest="offline_fixture",
         action="store_true",
         help="Alias for --offline-fixture.",
+    )
+    p.add_argument(
+        "--use-feedback",
+        dest="use_feedback",
+        action="store_true",
+        help=(
+            "OPT-IN: inject accumulated FAIL-only feedback rules from "
+            "outputs/live/feedback_rules.md into the advise prompt. Default is "
+            "OFF so the demo stays deterministic and stale/overfit rules cannot "
+            "pollute the recommendation. Rules are still GENERATED after a FAIL "
+            "regardless of this flag — this flag only controls CONSUMPTION."
+        ),
     )
     p.add_argument(
         "--force-correction",
@@ -1629,8 +1693,18 @@ def main() -> int:
 
     # Before-running phase: analyze -> advise -> guard
     run_workload_analyzer(workload_path, out_dir, dry_run)
+    # Feedback CONSUMPTION is opt-in. Snapshot the rule count BEFORE the advise
+    # call (rules are generated post-evaluation, so what the advisor consumes is
+    # whatever a prior FAIL run left behind). This feeds the manifest honestly.
+    feedback_file = out_dir / "feedback_rules.md"
+    feedback_rule_count = (
+        len(_parse_feedback_rules(feedback_file))
+        if args.use_feedback and feedback_file.is_file() else 0
+    )
+    feedback_consumed = bool(args.use_feedback)
     advisor_fellback = run_advisor(
-        out_dir, dry_run, offline_fixture=args.offline_fixture
+        out_dir, dry_run, offline_fixture=args.offline_fixture,
+        use_feedback=args.use_feedback,
     )
     guard_fellback = run_guard(
         out_dir, dry_run, offline_fixture=args.offline_fixture
@@ -1663,6 +1737,8 @@ def main() -> int:
         workload_type=workload_type, workload_stem=workload_stem,
         selected=selected, run_order=run_order, dry_run=dry_run,
         metadata_source=metadata_source,
+        feedback_consumed=feedback_consumed,
+        feedback_rule_count=feedback_rule_count,
     )
 
     # Final phase: validate the published live-data against the dashboard

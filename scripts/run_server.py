@@ -152,6 +152,7 @@ def _worker(params: dict) -> None:
     seed = int(params.get("seed", 42))
     run_all = bool(params.get("run_all", True))
     offline = bool(params.get("offline_fixture", False))
+    use_feedback = bool(params.get("use_feedback", False))
 
     cmd = [
         sys.executable, str(ORCHESTRATOR),
@@ -163,6 +164,8 @@ def _worker(params: dict) -> None:
         cmd.append("--run-all")
     if offline:
         cmd.append("--offline-fixture")
+    if use_feedback:
+        cmd.append("--use-feedback")
 
     STATE.append_log(f"$ {' '.join(cmd)}")
 
@@ -215,6 +218,9 @@ def _validate_run_body(body: dict) -> tuple[bool, str | dict]:
         "seed": seed,
         "run_all": bool(body.get("run_all", True)),
         "offline_fixture": bool(body.get("offline_fixture", False)),
+        # OPT-IN feedback consumption. Defaults to False so the dashboard RUN
+        # button stays deterministic; a missing field is treated as off.
+        "use_feedback": bool(body.get("use_feedback", False)),
     }
 
 

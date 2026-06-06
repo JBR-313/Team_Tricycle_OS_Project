@@ -4,11 +4,17 @@ Pipeline position (see architecture_diagram.md):
 
     workload_summary.json  -->  llm_advisor.py  -->  recommendation.json
                                       ^
-                          prompt_feedback_rules.md (fail-only, if present)
+                          feedback_rules.md (fail-only; consumed ONLY when the
+                          orchestrator passes --feedback, i.e. opt-in)
+
+Feedback consumption is OPT-IN. The orchestrator passes --feedback only under
+its own --use-feedback flag; without it this script gets no feedback path and
+advises from the base prompt alone. See docs/orchestrator_design.md.
 
 What it does:
   1. Read `workload_summary.json` (produced by Role A's workload_analyzer.py).
-  2. If `prompt_feedback_rules.md` exists, append it to the system prompt.
+  2. If a --feedback `feedback_rules.md` is passed AND exists, append it to the
+     system prompt (opt-in consumption only).
   3. Ask Upstage Solar Pro 3 to recommend ONE of:
          FCFS, RR, PRIORITY, MLFQ, SJF, SRTF
      and explain why, as strict JSON. SJF/SRTF use prediction-based burst
@@ -21,7 +27,7 @@ emits `recommendation.json`; algorithm_guard.py validates it downstream.
 Usage:
     python3 tools/llm_advisor.py
     python3 tools/llm_advisor.py --in workload_summary.json \
-        --out recommendation.json --feedback prompt_feedback_rules.md
+        --out recommendation.json --feedback feedback_rules.md
 """
 
 from __future__ import annotations
@@ -167,7 +173,7 @@ def build_system_prompt(feedback_path: Path) -> str:
         if rules:
             prompt += (
                 "\n\n--- ADDITIONAL RULES FROM PAST FAILURES "
-                "(prompt_feedback_rules.md) ---\n"
+                "(feedback_rules.md) ---\n"
                 f"{rules}\n"
                 "Follow these corrective rules carefully.\n"
             )
@@ -327,12 +333,37 @@ When EXISTING RULES are shown, you must:
   - If existing rules already cover every failure pattern shown, emit an
     empty bullet list (just the line "- none")
 
-Each NEW rule should:
-  - begin with a condition tied to workload or metric characteristics
-  - end with a directive ("prefer X over Y", "avoid X when ...", etc.)
-  - be specific (cite the metric and the algorithm by name)
-  - avoid restating textbook algorithm definitions
-  - generalize across the failures shown when multiple runs are summarized
+Each NEW rule MUST contain three parts:
+  1. a workload OR metric CONDITION (e.g. "if the target metric is
+     avg_response_time and the workload mixes short interactive tasks with
+     long CPU-bound tasks")
+  2. a scheduling DIRECTIVE — recommend or avoid an algorithm/parameter
+     ("prefer MLFQ over FCFS", "avoid SJF when ...")
+  3. the metric REASON ("because FCFS causes convoy-driven response delays")
+
+Hard constraints — DO NOT violate these:
+  - Do NOT write rules tied to a specific pid, trace tick, run id, or one-off
+    process identity (no "P1 waited too long", no "at tick 47").
+  - Do NOT write rules that merely describe what happened in the previous run;
+    write GENERAL workload-condition -> algorithm/parameter guidance instead.
+  - Do NOT emit absolute rules like "always avoid FCFS" UNLESS the triggering
+    condition is stated explicitly.
+  - Cite the metric and the algorithm by name; avoid restating textbook
+    algorithm definitions.
+  - Generalize across the failures shown when multiple runs are summarized
+    (prefer one or two broad rules over many narrow ones).
+
+Bad (never produce these):
+  - Use MLFQ next time.
+  - P1 waited too long, so use MLFQ.
+  - Always avoid FCFS.
+
+Good:
+  - If the target metric is avg_response_time and the workload mixes short \
+interactive tasks with long CPU-bound tasks, prefer MLFQ over FCFS because \
+FCFS lets a long job at the head create convoy-driven response delays.
+
+When EXISTING RULES already cover a failure pattern, do not restate it.
 
 Write the output as a flat Markdown bullet list. No preamble, no closing \
 remarks, no code fences.
