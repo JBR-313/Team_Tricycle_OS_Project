@@ -1,23 +1,27 @@
 {
-  "scheduling_algorithm": "SRTF",
-  "detected_pattern": "convoy_effect",
-  "summary": "The SRTF scheduler ran 6 processes with 15 preemptions over 17 ticks, achieving an average response time of 0.6. The runtime monitor would have suggested increasing the quantum to reduce the high preemption rate.",
-  "main_reason": "High preemption rate (15 preemptions in 17 ticks) caused frequent context switches, increasing response time despite SRTF's optimal burst-based scheduling.",
+  "scheduling_algorithm": "MLFQ",
+  "detected_pattern": "fair_timeslicing",
+  "summary": "The MLFQ scheduler ran with 2 queues and quantum values of 10 and 50, using aging and boost intervals. It achieved a low avg_response_time of 0.4 and avg_turnaround_time of 2.8 with no preemptions or starvation.",
+  "main_reason": "The workload consisted of short jobs that completed within the quantum limits, allowing MLFQ to behave like a fair timeslicing scheduler without needing to demote or promote processes.",
   "evidence": [
-    "15 preemptions occurred in 17 ticks (0.88 preemptions per tick)",
-    "total_execution_time was 17 ticks",
-    "avg_response_time was 0.6, higher than Priority's 0.2",
-    "burst hints were applied (5,3,4,50,6) but no quantum was defined"
+    "total_events: 37",
+    "preemptions: 0",
+    "starvation_occurred: false",
+    "avg_response_time: 0.4",
+    "avg_turnaround_time: 2.8",
+    "avg_waiting_time: 0.4",
+    "max_waiting_time: 2",
+    "throughput: 0.312"
   ],
-  "suggestion": "Priority scheduling would likely perform better because it uses fixed priorities and avoids the overhead of frequent preemptions, reducing context switch overhead and improving response time.",
+  "suggestion": "Round-Robin (RR) with quantum=1 would likely do better because it achieved the best avg_response_time of 0.2, though MLFQ's performance was within acceptable regret bounds.",
   "runtime_corrections_applied": 0,
   "_meta": {
     "source": "tools/trace_explainer.py",
     "model": "solar-pro3",
-    "generated_at": "2026-06-06T07:01:12.721600+00:00",
-    "trace": "/home/seonguk/projects/Team_Tricycle_OS_Project/outputs/live/trace_srtf.jsonl"
+    "generated_at": "2026-06-06T21:11:34.023518+00:00",
+    "trace": "/home/seonguk/projects/Team_Tricycle_OS_Project/outputs/live/trace_mlfq.jsonl"
   },
   "available": true,
   "source": "llm",
-  "generated_at": "2026-06-06T07:01:12Z"
+  "generated_at": "2026-06-06T21:11:34Z"
 }

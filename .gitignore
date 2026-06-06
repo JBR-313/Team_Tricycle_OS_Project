@@ -18,6 +18,10 @@ outputs/*
 # underscore + "_fixtures" suffix is intentional: it reads as "committed
 # data", not "build output of demo". See docs/repo_cleanup_plan.md §6.2.
 !outputs/_demo_fixtures/
+# Burst-prediction ablation evidence (report + reproducibility cache) is a
+# committed presentation deliverable, like the demo fixtures above. Regenerate
+# with `python3 tools/burst_ablation.py [--advise]`.
+!outputs/ablation/
 
 # Defensive: catch stray logs outside outputs/. Tracked files (e.g.
 # logs/foo.log if someone deliberately git-added one) are unaffected.

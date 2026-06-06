@@ -666,9 +666,13 @@ Each file in `workloads/` is a JSON object:
 ```
 
 **Hidden actual burst rule:** the LLM advisor and the SJF/SRTF picker MUST
-NOT read `actual_bursts`. They see `visible_processes` in
-`workload_summary.json` (pid, arrival_time, priority, label, burst_count,
-io_count) and — for SJF/SRTF — the EMA / LLM-predicted `predicted_burst`.
+NOT read `actual_bursts`. The advisor reasons over the `visible_processes`
+features in `workload_summary.json` (pid, arrival_time, priority, burst_count,
+io_count) and — for SJF/SRTF — schedules on the EMA / LLM-predicted
+`predicted_burst`. The per-process `label` is deliberately **stripped from the
+prompt** (it stays on disk for the dashboard and the coarse cpu/interactive
+ratios) so burst prediction is genuine multi-feature reasoning, not a one-word
+tag lookup — see §10.2.
 
 The `workloads/` directory holds the curated workloads and which
 algorithm each one favours.
@@ -682,6 +686,7 @@ time. The LLM never sees a true future burst; the kernel never calls the LLM.
 - **EMA refinement (always on):** `tau_next = (alpha * observed + (100-alpha) * tau_prev) / 100`. Updated when a CPU burst ends, using `observed` = already-consumed CPU only. Defaults `alpha=50%, initial=10, [min=1, max=100]`. Both backends now emit `[SCHED] event=PRED_UPDATE pid=… observed=… predicted_prev=… predicted_next=… alpha=…` (xv6: `kernel/proc.c update_burst_prediction()`, gated to SJF/SRTF; simulator: at end-of-burst).
 - **LLM initial prior (optional):** when the advisor produces `predicted_bursts: [{pid, predicted_burst, confidence, basis}]` (from visible features ONLY), Algorithm Guard clamps each value and the orchestrator forwards them to **both** backends. xv6 receives them via the `setbursthint(pid, predicted_burst)` syscall: `user/schedtest.c` applies each prior right after `fork()` (aligned to fork order through the curated `workloads/xv6_*.json` mirror), so the child's *first* SJF/SRTF decision uses the LLM prior instead of the generic `initial`. The simulator uses the same priors via `Simulator(prediction_source="llm")`.
 - **Trace evidence:** an xv6 SJF/SRTF run emits `[SCHEDTEST] event=PREDICTOR_PARAMS …`, one `[SCHEDTEST] event=BURST_HINT_APPLIED pid=… index=… predicted_burst=…` per process, and `[SCHED] event=PRED_UPDATE …` as EMA refines each prior from observed CPU. The honest claim: the LLM seeds the prior from visible features; xv6 is the execution authority and corrects it from real usage. If no priors arrive, the kernel falls back to its built-in `initial` and pure EMA.
+- **Why the LLM prior helps (ablation):** `tools/burst_ablation.py` scores the LLM prior against a blind EMA cold-start and a fixed feature heuristic on held-out `actual_bursts` (read evaluator-side only, never in a prompt). Across 5 burst-relevant workloads the LLM prior nearly **doubles** blind EMA on pairwise *ordering* accuracy (≈0.90 vs 0.50) and beats the hand-coded heuristic (0.72) — and ordering is exactly what SJF/SRTF use to pick the next job. The LLM overshoots absolute *magnitude* (higher MAE), which is precisely what the EMA refinement above corrects: **the LLM ranks at cold-start, the kernel EMA calibrates magnitude.** Regenerate the report with `python3 tools/burst_ablation.py [--advise]` → `outputs/ablation/burst_ablation.md`.
 
 ## 10.3 Running the End-to-End Demo (and without an API key)
 

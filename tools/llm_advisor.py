@@ -68,9 +68,9 @@ BASE_SYSTEM_PROMPT = f"""You are the LLM Scheduling Advisor for an xv6-based \
 educational scheduler lab.
 
 You are given a workload summary describing a set of processes (arrival time, \
-CPU burst, priority, workload type, etc.). Recommend exactly ONE CPU \
-scheduling algorithm that best fits this workload and the user's target \
-metric.
+priority, I/O behaviour, and CPU/I/O burst COUNTS — never the future burst \
+durations). Recommend exactly ONE CPU scheduling algorithm that best fits this \
+workload and the user's target metric.
 
 You may ONLY choose from these algorithms:
   - FCFS     : First-Come First-Served (non-preemptive, simple, convoy effect)
@@ -119,11 +119,16 @@ LLM control) may re-run xv6 with a corrected algorithm. SJF/SRTF never receive \
 real future bursts — only predictions from visible features.
 
 When the recommended algorithm is SJF or SRTF, you may ALSO output a per-process \
-burst hint list, based ONLY on visible features in `visible_processes` (label, \
-arrival_time, priority, burst_count, io_count). DO NOT use any actual burst \
-values — they are not in the prompt and you must not invent them by guessing \
-the ground truth. Your hint is a *prediction*, mirroring what a smart kernel \
-predictor would estimate from the visible features.
+burst hint list. Derive each hint by REASONING over the visible features in \
+`visible_processes` — arrival_time, priority, io_count (number of I/O bursts) \
+and burst_count (number of CPU bursts). There is intentionally NO `label`: you \
+must INFER whether a process is short/interactive or long/CPU-bound from the \
+feature combination (e.g. several CPU bursts interleaved with I/O suggest a \
+short, interactive job; a single CPU burst with no I/O suggests a long batch \
+job) and then CALIBRATE the predicted magnitude in ticks. DO NOT use any actual \
+burst values — they are not in the prompt and you must not invent them by \
+guessing the ground truth. Your hint is a *prediction*, mirroring what a smart \
+kernel predictor would estimate from the visible features.
 
 Respond with STRICT JSON only (no markdown, no prose outside JSON), with \
 exactly these keys (predicted_bursts is OPTIONAL and only relevant for \
@@ -203,10 +208,29 @@ _PROMPT_STRIP_KEYS = (
     "expected_behavior",
 )
 
+# Per-process keys stripped from each `visible_processes` entry before the
+# prompt is built. `label` is an on-the-nose tag ("interactive" / "cpu" /
+# "predictably_short"): handing it over lets the advisor pattern-match a single
+# word instead of REASONING about burst length. We strip it so per-process
+# burst prediction must be inferred from multi-dimensional features
+# (arrival_time, priority, io_count, burst_count). The label is kept in
+# workload_summary.json on disk (for the dashboard and for the coarse top-level
+# cpu_bound_ratio / interactive_ratio aggregates) — only the prompt hides it.
+_VISIBLE_PROCESS_STRIP_KEYS = ("label",)
+
 
 def build_user_prompt(summary: dict) -> str:
     # Defensive copy with ground-truth / answer-key fields stripped first.
     safe = {k: v for k, v in summary.items() if k not in _PROMPT_STRIP_KEYS}
+    # Deep-strip per-process label so burst hints come from reasoning, not a tag.
+    procs = safe.get("visible_processes")
+    if isinstance(procs, list):
+        safe["visible_processes"] = [
+            {k: v for k, v in proc.items()
+             if k not in _VISIBLE_PROCESS_STRIP_KEYS}
+            for proc in procs
+            if isinstance(proc, dict)
+        ]
     return (
         "Here is the workload summary (JSON):\n\n"
         f"{json.dumps(safe, indent=2, ensure_ascii=False)}\n\n"
