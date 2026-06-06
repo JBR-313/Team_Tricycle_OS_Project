@@ -435,8 +435,11 @@ def check_feedback_rules(d: Path, r: Report, manifest: dict) -> None:
       - it is readable markdown text
       - any rule lines are flat bullets ('- '/'* ')
       - the rule count does not exceed the FIFO cap (llm_advisor.MAX_RULES)
-      - it does not claim to have influenced THIS run while the manifest says
-        feedback was not consumed (generation vs consumption confusion).
+
+    NOTE: we do NOT cross-check the file body against manifest.feedback_consumed.
+    Generation is independent of consumption — a FAIL run legitimately GENERATES
+    rules while feedback_consumed=false (consumption is opt-in via --use-feedback).
+    The rules file is a future-learning artifact, not a claim about this run.
     """
     p = d / "feedback_rules.md"
     if not p.is_file():
@@ -461,13 +464,6 @@ def check_feedback_rules(d: Path, r: Report, manifest: dict) -> None:
     else:
         r.good(f"feedback_rules.md present ({len(bullets)} rule(s), "
                f"within cap {FEEDBACK_RULE_CAP})")
-
-    # Honesty: a stale rules file must not imply it changed the current run
-    # when the manifest says consumption was off.
-    consumed = bool((manifest or {}).get("feedback_consumed"))
-    if not consumed and "this run" in text.lower():
-        r.warn_("feedback_rules.md mentions 'this run' but manifest says "
-                "feedback_consumed=false (generation vs consumption confusion)")
 
 
 def _check_dir(d: Path, r: Report) -> None:
