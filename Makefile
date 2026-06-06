@@ -25,8 +25,8 @@ contract:  ## Strict dashboard data-contract validation on committed live-data
 dashboard-build:  ## Build the dashboard (production bundle)
 	cd dashboard_live && npm run build
 
-check: compile contract  ## Fast checks: compile + contract (no build, no xv6)
-	@echo "check OK"
+check: compile contract  ## Fast checks: compile + contract (no build, no xv6, no unit tests)
+	@echo "check OK (unit tests NOT run — use 'make test'; full pre-demo gate: 'make final-demo-check')"
 
 demo-sim:  ## Simulator pipeline smoke (offline fixture; no API key)
 	$(PY) scripts/orchestrator.py --backend simulator --seed 42 \

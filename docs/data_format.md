@@ -171,9 +171,18 @@ See `docs/trace_format.md` for the full event type specification.
 {"tick": 2,  "algo": "MLFQ", "event": "DISPATCH",  "pid": 2, "state": "RUNNING",  "queue": 0}
 {"tick": 4,  "algo": "MLFQ", "event": "PREEMPT",   "pid": 2, "state": "RUNNABLE", "queue": 1, "reason": "quantum_expired"}
 {"tick": 30, "algo": "MLFQ", "event": "QUEUE_CHANGE", "pid": 1, "state": "RUNNABLE", "from_queue": 0, "to_queue": 1, "reason": "demotion"}
-{"tick": 45, "algo": "MLFQ", "event": "CORRECTION_APPLIED", "pid": -1, "state": null, "correction_type": "parameter_update", "new_params": {"aging_threshold": 20}}   // (Future Work — not emitted by today's preview-only pipeline)
+{"tick": 45, "algo": "MLFQ", "event": "CORRECTION_APPLIED", "pid": -1, "state": null, "correction_type": "parameter_update", "new_params": {"aging_threshold": 20}}   // illustrative only — see note below
 {"tick": 60, "algo": "MLFQ", "event": "EXIT",      "pid": 2, "state": "ZOMBIE",   "queue": 1, "turnaround": 58, "waiting": 50, "response": 2}
 ```
+
+> **`CORRECTION_APPLIED` event vs. the correction apply loop.** Runtime
+> correction *is* implemented — as a **host-side** post-evaluation loop that
+> re-runs xv6 with the corrected algorithm and writes `correction_applied.json`
+> (see `docs/implementation_status.md`). What is **not** emitted is an in-trace
+> `CORRECTION_APPLIED` *event* mid-run: the kernel is never interrupted by the
+> LLM at a tick. The line above is illustrative of the schema only; committed
+> traces contain no such event, and the strict `--preview` contract enforces
+> its absence.
 
 ---
 

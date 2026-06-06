@@ -619,8 +619,9 @@ dashboard_live/public/live-data/metrics.json
 dashboard_live/public/live-data/trace_explanation.json
 dashboard_live/public/live-data/trace_<rr|fcfs|priority|mlfq|sjf|srtf>.jsonl
 
-# Committed per-profile xv6 snapshots (selector in the header
-# switches between them; snapshots_manifest.json is the index):
+# Committed per-profile xv6 snapshots (snapshots_manifest.json is the index).
+# NOTE: a snapshot selector is not wired into the current live dashboard; these
+# are a generated artifact set, switchable via the liveDataClient base path:
 dashboard_live/public/live-data/snapshots_manifest.json
 dashboard_live/public/live-data/snapshots/interactive/…
 dashboard_live/public/live-data/snapshots/cpu_bound/…
@@ -690,6 +691,8 @@ cp .env.example .env       # then edit: UPSTAGE_API_KEY=<your key>
 
 # 2a) Final demo path (xv6 + QEMU)
 python3 scripts/orchestrator.py --backend xv6       --seed 42 --workload interactive            --run-all
+#     (to just build+boot the raw kernel to a shell: `cd xv6-riscv && make qemu`
+#      — defaults to CPUS=1; Ctrl-A X to quit QEMU)
 
 # 2b) Dev/fallback path (no QEMU needed)
 python3 scripts/orchestrator.py --backend simulator --seed 42 --workload ambiguous_mixed        --run-all
@@ -979,6 +982,14 @@ fails fast with a clear error rather than silently faking a response.
 - Runtime correction takes effect from the next scheduling point.
 - Future CPU bursts are not given to the LLM as answers.
 - Controlled workloads may be used for reproducible experiments.
+- **xv6 runs single-CPU (`CPUS=1`).** The kernel reads scheduler globals
+  without locking, which is only safe on one hart; the orchestrator pins
+  `-smp 1` and a bare `make qemu` now defaults to `CPUS=1`. See
+  [`docs/system_limitations.md`](docs/system_limitations.md).
+- **Two PID namespaces on xv6.** Workload-definition PIDs (recommendation) and
+  kernel runtime PIDs (traces/metrics) differ; `metrics.process_count` is `N+1`
+  (it counts the `schedtest` harness). See
+  [`docs/data_format.md`](docs/data_format.md#pid-namespaces-workload-index-vs-kernel-runtime-pid).
 
 ---
 

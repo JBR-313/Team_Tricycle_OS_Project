@@ -34,14 +34,14 @@ const STEPS = [
   },
   {
     label: 'Generality',
-    text: 'Switch the Snapshot selector in the header (interactive / cpu_bound / mixed / priority_sensitive) to prove the pipeline runs across every curated workload.',
-    selector: '[data-demo-target="snapshot"]',
+    text: 'The Metric trade-off card already ran all six algorithms on this workload — not just the recommended one. The same orchestrator pipeline also runs every curated xv6 profile (interactive / cpu_bound / mixed / priority_sensitive); re-run it with a different --workload to regenerate this view.',
+    selector: '.card-cf',
   },
 ]
 
 // Briefly outline an element matched by selector. Pure inline-style
 // — no CSS class added, no DOM moved. Silently no-ops if the
-// selector matches nothing (e.g. snapshot selector absent).
+// selector matches nothing (e.g. an element absent from the current layout).
 function flashElement(selector) {
   const el = typeof document !== 'undefined'
     ? document.querySelector(selector)
