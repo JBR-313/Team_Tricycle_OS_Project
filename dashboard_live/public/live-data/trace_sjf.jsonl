@@ -15,7 +15,6 @@
 {"tick": null, "algo": "SJF", "event": "CHILD_START", "source": "xv6", "kind": "schedtest", "pid": 8, "priority": 10, "seed": 42, "profile": "interactive"}
 {"tick": null, "algo": "SJF", "event": "CHILD_EXIT", "source": "xv6", "kind": "schedtest", "pid": 8, "seed": 42, "profile": "interactive"}
 {"tick": null, "algo": "SJF", "event": "RUN_END", "source": "xv6", "kind": "schedtest", "seed": 42, "profile": "interactive"}
-{"tick": 0, "algo": "SJF", "event": "PRED_UPDATE", "source": "xv6", "kind": "sched", "pid": 3, "observed": 1, "predicted_prev": 10, "predicted_next": 5, "alpha": 50, "seed": 42, "profile": "interactive"}
 {"tick": 0, "algo": "SJF", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 4, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
 {"tick": 4, "algo": "SJF", "event": "EXIT", "source": "xv6", "kind": "sched", "pid": 4, "state": "ZOMBIE", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
 {"tick": 4, "algo": "SJF", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 3, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
