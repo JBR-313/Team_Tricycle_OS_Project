@@ -4,10 +4,10 @@
   "current_scheduling_algorithm": "SRTF",
   "triggered_by": [
     {
-      "tick": 15,
+      "tick": 17,
       "type": "high_preemption_rate",
       "pid": -1,
-      "detail": "12 preemptions in 15 ticks (0.80/tick)",
+      "detail": "15 preemptions in 17 ticks (0.88/tick)",
       "severity": "low"
     }
   ],
@@ -15,7 +15,7 @@
     "correction_type": "quantum_increase",
     "new_scheduling_algorithm": "SRTF",
     "new_params": {
-      "alpha_percent": 50,
+      "alpha_percent": 20,
       "initial": 10,
       "min": 1,
       "max": 100000,
@@ -23,16 +23,16 @@
     },
     "rationale": "quantum introduced at 20 (was absent)",
     "triggering_event": {
-      "tick": 15,
+      "tick": 17,
       "type": "high_preemption_rate",
       "pid": -1,
-      "detail": "12 preemptions in 15 ticks (0.80/tick)",
+      "detail": "15 preemptions in 17 ticks (0.88/tick)",
       "severity": "low"
     }
   },
   "_meta": {
     "source": "tools/correction_proposer.py",
-    "generated_at": "2026-06-05T20:17:59Z",
+    "generated_at": "2026-06-06T07:01:05Z",
     "rule_version": 1,
     "mode": "deterministic"
   }

@@ -1,14 +1,14 @@
 {
   "scheduling_algorithm": "SRTF",
   "params": {
-    "alpha_percent": 50,
+    "alpha_percent": 20,
     "initial": 10,
     "min": 1,
     "max": 100000
   },
   "applied_params": {
     "source": "llm_guard",
-    "alpha_percent": 50,
+    "alpha_percent": 20,
     "initial": 10,
     "min": 1,
     "max": 100000,
@@ -17,20 +17,20 @@
       3,
       4,
       50,
-      2
+      6
     ]
   },
   "process_count": 6,
   "completed_count": 5,
-  "total_execution_time": 15,
-  "avg_response_time": 0.2,
-  "avg_turnaround_time": 2.4,
-  "avg_waiting_time": 0.2,
-  "throughput": 0.333,
-  "max_waiting_time": 1,
+  "total_execution_time": 17,
+  "avg_response_time": 0.6,
+  "avg_turnaround_time": 3.0,
+  "avg_waiting_time": 0.6,
+  "throughput": 0.294,
+  "max_waiting_time": 2,
   "starvation_occurred": false,
   "starvation_pids": [],
-  "preemption_count": 12,
+  "preemption_count": 15,
   "per_process": [
     {
       "pid": 3,
@@ -44,44 +44,44 @@
     {
       "pid": 4,
       "arrival_time": 0,
-      "first_run_time": 0,
-      "finish_time": 3,
+      "first_run_time": 1,
+      "finish_time": 4,
+      "response_time": 1,
+      "turnaround_time": 4,
+      "waiting_time": 1
+    },
+    {
+      "pid": 5,
+      "arrival_time": 2,
+      "first_run_time": 4,
+      "finish_time": 5,
+      "response_time": 2,
+      "turnaround_time": 3,
+      "waiting_time": 2
+    },
+    {
+      "pid": 6,
+      "arrival_time": 5,
+      "first_run_time": 5,
+      "finish_time": 8,
       "response_time": 0,
       "turnaround_time": 3,
       "waiting_time": 0
     },
     {
-      "pid": 5,
-      "arrival_time": 2,
-      "first_run_time": 3,
-      "finish_time": 4,
-      "response_time": 1,
-      "turnaround_time": 2,
-      "waiting_time": 1
-    },
-    {
-      "pid": 6,
-      "arrival_time": 4,
-      "first_run_time": 4,
-      "finish_time": 6,
-      "response_time": 0,
-      "turnaround_time": 2,
-      "waiting_time": 0
-    },
-    {
       "pid": 7,
-      "arrival_time": 9,
-      "first_run_time": 9,
-      "finish_time": 13,
+      "arrival_time": 10,
+      "first_run_time": 10,
+      "finish_time": 14,
       "response_time": 0,
       "turnaround_time": 4,
       "waiting_time": 0
     },
     {
       "pid": 8,
-      "arrival_time": 14,
-      "first_run_time": 14,
-      "finish_time": 15,
+      "arrival_time": 15,
+      "first_run_time": 15,
+      "finish_time": 16,
       "response_time": 0,
       "turnaround_time": 1,
       "waiting_time": 0
@@ -89,10 +89,10 @@
   ],
   "judgment": "SUCCESS",
   "regret_score": 0.0,
-  "best_algorithm": "MLFQ",
+  "best_algorithm": "Priority",
   "workload_file": null,
   "recommended_params": {
-    "alpha_percent": 50,
+    "alpha_percent": 20,
     "initial": 10,
     "min": 1,
     "max": 100000
@@ -100,18 +100,18 @@
   "param_application_status": "fully_applied",
   "comparison": {
     "SRTF": {
-      "avg_waiting_time": 0.2,
-      "avg_response_time": 0.2,
-      "avg_turnaround_time": 2.4,
-      "throughput": 0.333,
-      "max_waiting_time": 1,
-      "preemption_count": 12,
+      "avg_waiting_time": 0.6,
+      "avg_response_time": 0.6,
+      "avg_turnaround_time": 3.0,
+      "throughput": 0.294,
+      "max_waiting_time": 2,
+      "preemption_count": 15,
       "starvation_occurred": false,
       "burst_prediction_error": null,
       "judgment": "SUCCESS",
       "applied_params": {
         "source": "llm_guard",
-        "alpha_percent": 50,
+        "alpha_percent": 20,
         "initial": 10,
         "min": 1,
         "max": 100000,
@@ -120,11 +120,11 @@
           3,
           4,
           50,
-          2
+          6
         ]
       },
       "recommended_params": {
-        "alpha_percent": 50,
+        "alpha_percent": 20,
         "initial": 10,
         "min": 1,
         "max": 100000
@@ -151,7 +151,7 @@
     "FCFS": {
       "avg_waiting_time": 0.4,
       "avg_response_time": 0.4,
-      "avg_turnaround_time": 2.8,
+      "avg_turnaround_time": 3.0,
       "throughput": 0.312,
       "max_waiting_time": 2,
       "preemption_count": 0,
@@ -163,12 +163,12 @@
       "param_application_status": "not_applicable"
     },
     "Priority": {
-      "avg_waiting_time": 0.5,
-      "avg_response_time": 0.5,
-      "avg_turnaround_time": 2.5,
-      "throughput": 0.312,
-      "max_waiting_time": 2,
-      "preemption_count": 13,
+      "avg_waiting_time": 0.4,
+      "avg_response_time": 0.2,
+      "avg_turnaround_time": 3.0,
+      "throughput": 0.294,
+      "max_waiting_time": 1,
+      "preemption_count": 16,
       "starvation_occurred": false,
       "burst_prediction_error": null,
       "judgment": "SUCCESS",
@@ -181,9 +181,9 @@
       "param_application_status": "fixed_default"
     },
     "MLFQ": {
-      "avg_waiting_time": 0.2,
-      "avg_response_time": 0.0,
-      "avg_turnaround_time": 2.4,
+      "avg_waiting_time": 0.25,
+      "avg_response_time": 0.25,
+      "avg_turnaround_time": 2.25,
       "throughput": 0.312,
       "max_waiting_time": 1,
       "preemption_count": 3,
@@ -204,18 +204,18 @@
       "param_application_status": "fixed_default"
     },
     "SJF": {
-      "avg_waiting_time": 0.4,
-      "avg_response_time": 0.4,
-      "avg_turnaround_time": 2.8,
+      "avg_waiting_time": 0.2,
+      "avg_response_time": 0.2,
+      "avg_turnaround_time": 2.4,
       "throughput": 0.312,
-      "max_waiting_time": 2,
+      "max_waiting_time": 1,
       "preemption_count": 0,
       "starvation_occurred": false,
       "burst_prediction_error": null,
       "judgment": "SUCCESS",
       "applied_params": {
         "source": "llm_guard",
-        "alpha_percent": 50,
+        "alpha_percent": 20,
         "initial": 10,
         "min": 1,
         "max": 100000,
@@ -224,7 +224,7 @@
           3,
           4,
           50,
-          2
+          6
         ]
       },
       "recommended_params": {},
@@ -232,7 +232,7 @@
     }
   },
   "target_metric": "avg_response_time",
-  "selected_metric_value": 0.2,
-  "best_metric_value": 0.0,
-  "explanation": "SUCCESS: SRTF on avg_response_time = 0.2 vs best (MLFQ) = 0.0; regret = 0.0% (<= 10%)."
+  "selected_metric_value": 0.6,
+  "best_metric_value": 0.2,
+  "explanation": "SUCCESS: SRTF on avg_response_time = 0.6 vs best (Priority) = 0.2; regret = 0.0% (<= 10%)."
 }

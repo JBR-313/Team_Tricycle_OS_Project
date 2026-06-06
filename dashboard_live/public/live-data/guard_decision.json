@@ -2,7 +2,7 @@
   "guard_result": "accepted",
   "algorithm": "SRTF",
   "params": {
-    "alpha_percent": 50,
+    "alpha_percent": 20,
     "initial": 10,
     "min": 1,
     "max": 100000
@@ -15,38 +15,38 @@
       "pid": 1,
       "predicted_burst": 5,
       "confidence": 0.85,
-      "basis": "Interactive label with early arrival suggests short burst"
+      "basis": "Interactive label and low priority (5) suggest short burst"
     },
     {
       "pid": 2,
       "predicted_burst": 3,
       "confidence": 0.85,
-      "basis": "Interactive label with medium arrival time suggests short burst"
+      "basis": "Interactive label and medium priority (2) suggest short burst"
     },
     {
       "pid": 3,
       "predicted_burst": 4,
       "confidence": 0.85,
-      "basis": "Interactive label with later arrival suggests short burst"
+      "basis": "Interactive label and priority (3) suggest short burst"
     },
     {
       "pid": 4,
       "predicted_burst": 50,
       "confidence": 0.75,
-      "basis": "CPU-bound label suggests longer burst"
+      "basis": "CPU-bound label and high priority (7) suggest longer burst"
     },
     {
       "pid": 5,
-      "predicted_burst": 2,
+      "predicted_burst": 6,
       "confidence": 0.85,
-      "basis": "Interactive label with latest arrival suggests very short burst"
+      "basis": "Interactive label and priority (4) suggest short burst"
     }
   ],
   "prediction_source": "llm",
   "reason": "Accepted: SRTF is suitable for response_time (compat=0.95, confidence=0.95).",
   "_meta": {
     "source": "tools/algorithm_guard.py",
-    "generated_at": "2026-06-05T20:17:19.753800+00:00",
+    "generated_at": "2026-06-06T07:00:26.540621+00:00",
     "recommendation_source": "recommendation.json"
   },
   "scheduling_algorithm": "SRTF",
