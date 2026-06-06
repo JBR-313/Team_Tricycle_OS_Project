@@ -86,5 +86,8 @@ metrics + publish + validate).
 ## 5. Out of scope for this audit
 
 - No new profiles added; no schedtest table changes.
-- No runtime correction implementation (still Partial / Future Work).
+- No runtime-correction changes here. (Runtime correction itself is
+  **implemented** as a host-side post-evaluation apply loop — see
+  `docs/implementation_status.md`; it is simply out of scope for this
+  profile-support audit.)
 - No UI changes.
