@@ -1,6 +1,26 @@
 # LLM Sched Copilot
 
-**The LLM-Assisted Scheduler for xv6**
+**The LLM-Assisted Scheduler for xv6** — **Direction B (LLM for OS).**
+
+An LLM (Upstage Solar Pro 3) acts as a *hint oracle* for a classical OS mechanism —
+CPU scheduling. The LLM proposes a scheduling algorithm, parameters, and per-process
+burst hints from visible workload features; an **Algorithm Guard** validates whether
+to follow them; and **xv6 (under QEMU) is the execution authority** — the LLM never
+picks the next process and is never on the kernel hot path. The OS component (six
+in-kernel scheduling algorithms, syscalls, processes, synchronization, IPC) is
+implemented by the team in `xv6-riscv/`, not merely hosting an LLM.
+
+### Project deliverables (course §5)
+
+| # | Deliverable | Location |
+|---|---|---|
+| 1 | Application (code + how-to-run + demo) | this repo · §10.3 below · `scripts/orchestrator.py` |
+| 2 | Technical Report | [`docs/technical_report.md`](docs/technical_report.md) |
+| 3 | Development Process Document | [`docs/development_process.md`](docs/development_process.md) |
+| 4 | Presentation Slides (English) | [`docs/presentation/`](docs/presentation/) |
+
+> **Demo media:** screenshots / a short GIF of the dashboard go in `docs/images/`
+> and are embedded in §8 (see `docs/images/README.md`).
 
 ---
 
@@ -522,6 +542,16 @@ FAIL         = LLM result is clearly worse than the best result
 
 The GUI is not the core scheduler.  
 It is the observability dashboard that visualizes the whole LLM-assisted scheduling process.
+
+### Demo
+
+![Dashboard — LLM recommendation, Algorithm Guard, and natural-language explanation](docs/images/dashboard_overview.png)
+
+*The LLM recommends **MLFQ** with parameters and reasoning; the **Algorithm Guard** validates it (ACCEPTED); the LLM **explains** the expected behavior, trade-offs, and risks in natural language.*
+
+![Dashboard — honest evaluation and algorithm comparison](docs/images/dashboard_evaluation.png)
+
+*Honest evaluation: here the LLM's MLFQ pick is judged **FAIL** against the measured-best **RR** on `avg_turnaround_time` — and the safety-net **correction** re-runs RR. The dashboard surfaces the LLM being wrong rather than hiding it, which is the project's core honesty contract.*
 
 The GUI shows (as `dashboard_live`, the primary React/Vite UI on
 `http://localhost:5174`):
