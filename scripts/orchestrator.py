@@ -1472,15 +1472,20 @@ def _run_correction_apply_loop(out_dir: Path, live_dir: Path, *, backend: str,
         return
     corrected_algo = normalize_algorithm_name(corrected_algo)
 
-    # Corrected params: the corrected algorithm's safe defaults (Guard-approved).
+    # Corrected params: reproduce the EXACT configuration that made this
+    # algorithm the best performer in the comparison. Non-selected comparison
+    # runs use kernel defaults — _schedtest_flags_for returns None for any algo
+    # that was not the LLM selection — so the correction MUST re-run with kernel
+    # defaults too. Passing tuned "safe defaults" here (e.g. RR quantum=10 from
+    # DEFAULT_PARAMS) would re-run a DIFFERENT configuration than the one that
+    # actually won (xv6 RR baseline quantum=1) and could never confirm the
+    # improvement — the re-run would just reproduce the FAIL it was correcting.
     try:
-        from algorithm_guard import DEFAULT_PARAMS  # type: ignore
         from correction_guard import validate as cg_validate  # type: ignore
     except ImportError:
         sys.path.insert(0, str(TOOLS_DIR))
-        from algorithm_guard import DEFAULT_PARAMS  # type: ignore
         from correction_guard import validate as cg_validate  # type: ignore
-    corrected_params = dict(DEFAULT_PARAMS.get(corrected_algo.upper(), {}))
+    corrected_params: dict = {}  # kernel baseline — matches the comparison winner
 
     # Re-validate the correction with the Correction Guard before applying.
     proposal = {
@@ -1552,6 +1557,7 @@ def _run_correction_apply_loop(out_dir: Path, live_dir: Path, *, backend: str,
         "corrected_algorithm": corrected_algo,
         "original_params": guard_params or {},
         "corrected_params": corrected_params,
+        "corrected_config": "kernel_baseline",  # reproduces the comparison winner
         "original_judgment": judgment,
         "corrected_judgment": corr_judgment,
         "target_metric": mkey,

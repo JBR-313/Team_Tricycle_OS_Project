@@ -130,20 +130,29 @@ corrected, Guard-approved algorithm/params, compares before/after, and records:
   "applied": true,
   "mode": "post_evaluation_correction",
   "trigger": "fail_judgment",
-  "original_algorithm": "SRTF",
-  "corrected_algorithm": "MLFQ",
-  "original_params": { "alpha_percent": 50, "initial": 10, "min": 1, "max": 100000 },
-  "corrected_params": { "queues": 3, "quantum": [2, 4, 8], "aging_threshold": 100, "boost_interval": 100 },
+  "original_algorithm": "MLFQ",
+  "corrected_algorithm": "RR",
+  "original_params": { "queues": 2, "quantum": [10, 50], "aging_threshold": 100, "boost_interval": 100 },
+  "corrected_params": {},
+  "corrected_config": "kernel_baseline",
   "original_judgment": "FAIL",
   "corrected_judgment": "SUCCESS",
-  "target_metric": "avg_response_time",
-  "original_metric_value": 0.67,
-  "corrected_metric_value": 0.0,
+  "target_metric": "avg_turnaround_time",
+  "original_metric_value": 16.75,
+  "corrected_metric_value": 8.75,
   "improved": true,
-  "reason": "SRTF judged FAIL on avg_response_time; MLFQ was the best performer — re-run to confirm.",
-  "trace_file": "trace_mlfq_corrected.jsonl"
+  "reason": "MLFQ judged FAIL on avg_turnaround_time; RR was the best performer — re-run to confirm.",
+  "trace_file": "trace_rr_corrected.jsonl"
 }
 ```
+
+`corrected_params` is **empty** with `corrected_config: "kernel_baseline"`: the
+correction re-runs the best-performing algorithm with the **same kernel-default
+configuration the comparison used** (non-selected comparison runs pass no
+dynamic flags). This guarantees the re-run reproduces the value that actually
+won — passing tuned "safe defaults" (e.g. RR `quantum=10`) would re-run a
+*different* configuration than the xv6 RR baseline (`quantum=1`) that won, and
+could never confirm the improvement.
 
 When no correction is warranted (the recommendation met the success criteria, or
 the simulator backend is used), the file is `{"applied": false, "reason": ...}`.
