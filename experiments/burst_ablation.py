@@ -29,13 +29,13 @@ recommendation. No future burst is ever placed in a prompt.
 
 Usage:
     # elicit fresh LLM predictions (needs UPSTAGE_API_KEY) and score everything
-    python3 tools/burst_ablation.py --advise
+    python3 experiments/burst_ablation.py --advise
 
     # re-score offline from the cached predictions (deterministic, no API)
-    python3 tools/burst_ablation.py
+    python3 experiments/burst_ablation.py
 
     # choose workloads explicitly
-    python3 tools/burst_ablation.py --advise --workloads burst_prediction_demo short_jobs
+    python3 experiments/burst_ablation.py --advise --workloads burst_prediction_demo short_jobs
 """
 
 from __future__ import annotations
@@ -45,19 +45,22 @@ import json
 import sys
 from pathlib import Path
 
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+# experiments/ tools live one level beside the core pipeline; add tools/ so the
+# core modules import by bare name whether run as a script or under pytest.
+sys.path.insert(0, str(PROJECT_ROOT / "tools"))
+
 try:  # package import (pytest / `python -m`)
     from tools.llm_advisor import build_user_prompt
     from tools.solar_client import SolarClient, SolarError
     from tools.workload_analyzer import analyze_workload, load_workload
-except ImportError:  # direct `python3 tools/burst_ablation.py`
+except ImportError:  # direct `python3 experiments/burst_ablation.py`
     from llm_advisor import build_user_prompt  # type: ignore[no-redef]
     from solar_client import SolarClient, SolarError  # type: ignore[no-redef]
     from workload_analyzer import (  # type: ignore[no-redef]
         analyze_workload,
         load_workload,
     )
-
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
 WORKLOADS_DIR = PROJECT_ROOT / "workloads"
 OUT_DIR = PROJECT_ROOT / "outputs" / "ablation"
 PRED_CACHE = OUT_DIR / "llm_predictions.json"

@@ -4,7 +4,7 @@ The LLM elicitation path needs an API key and is not exercised here; the scoring
 math and the baseline strategies are pure functions and fully covered offline.
 """
 
-from tools.burst_ablation import (
+from burst_ablation import (  # experiments/ on path via conftest
     EMA_INITIAL_DEFAULT,
     HEURISTIC_LONG,
     HEURISTIC_SHORT,
