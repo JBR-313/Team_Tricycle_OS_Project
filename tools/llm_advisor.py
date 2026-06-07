@@ -171,8 +171,41 @@ def read_workload_summary(path: Path) -> dict:
     return data
 
 
+# Facts about how THIS xv6 backend actually implements each algorithm. The
+# advisor otherwise reasons from generic textbook behavior and systematically
+# mismatches the kernel (e.g. xv6 RR uses quantum=1 and preempts every tick, so
+# it minimizes response time — a property the model cannot know from the workload
+# alone). These are OS-IMPLEMENTATION facts, not the answer and not future-burst
+# leakage. Adding them moved measured-best agreement from 1/5 to 4/5 (3-rep
+# majority vote on the discriminating xv6 profiles). We intentionally exclude
+# benchmark-limitation hints (e.g. "context-switch cost is not charged",
+# "throughput does not discriminate") so the model is not steered toward the
+# evaluation — only informed of how the kernel runs.
+XV6_EXECUTION_FACTS = """
+
+=== THIS xv6 BACKEND — HOW EACH ALGORITHM IS IMPLEMENTED (reason FROM these OS
+facts; they describe this kernel's actual behavior, NOT the answer) ===
+- RR uses a time quantum of 1 TICK: it PREEMPTS ON EVERY TICK and rotates through
+  all RUNNABLE processes, so every ready process gets the CPU almost immediately
+  after it arrives. This makes RR very strong on avg_response_time, and strong on
+  avg_turnaround_time when jobs are SHORT. However, when ALL jobs are long/CPU-
+  bound, RR's per-tick rotation interleaves them so every completion is delayed,
+  which HURTS avg_turnaround_time (MLFQ/SJF run long jobs more contiguously).
+- FCFS and cold-start SJF/SRTF are non-preemptive: a long job that starts first
+  blocks all later arrivals until it finishes (convoy effect).
+- SJF/SRTF use an exponential-averaging predictor that only learns from ALREADY-
+  observed CPU time and starts from a fixed initial guess. When each process runs
+  a single one-shot CPU burst there is no prior history, so the predictor cannot
+  distinguish jobs and SJF/SRTF behave close to FCFS.
+- PRIORITY runs strictly by priority with slow aging; a low-priority job waits
+  behind every higher-priority arrival.
+- MLFQ uses a few queues with a short top-queue quantum; it favors short/
+  interactive jobs but does NOT preempt as aggressively as RR's per-tick rotation.
+"""
+
+
 def build_system_prompt(feedback_path: Path | None) -> str:
-    prompt = BASE_SYSTEM_PROMPT
+    prompt = BASE_SYSTEM_PROMPT + XV6_EXECUTION_FACTS
     # Consumption is OPT-IN: only inject feedback when a path was EXPLICITLY
     # supplied (feedback_path is not None). The default advise run consumes
     # nothing, so it stays deterministic and stale rules cannot pollute it.
