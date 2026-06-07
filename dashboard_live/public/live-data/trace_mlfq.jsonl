@@ -1,48 +1,27 @@
-{"tick": null, "algo": "MLFQ", "event": "RUN_BEGIN", "source": "xv6", "kind": "schedtest", "seed": 42, "profile": "interactive", "nproc": 5}
-{"tick": null, "algo": "MLFQ", "event": "PROC_DEF", "source": "xv6", "kind": "schedtest", "pid": 4, "arrival": 0, "cpu_burst": 3, "priority": 10, "label": "interactive", "seed": 42, "profile": "interactive"}
-{"tick": null, "algo": "MLFQ", "event": "CHILD_START", "source": "xv6", "kind": "schedtest", "pid": 4, "priority": 10, "seed": 42, "profile": "interactive"}
-{"tick": null, "algo": "MLFQ", "event": "PROC_DEF", "source": "xv6", "kind": "schedtest", "pid": 5, "arrival": 2, "cpu_burst": 1, "priority": 10, "label": "interactive", "seed": 42, "profile": "interactive"}
-{"tick": null, "algo": "MLFQ", "event": "CHILD_START", "source": "xv6", "kind": "schedtest", "pid": 5, "priority": 10, "seed": 42, "profile": "interactive"}
-{"tick": null, "algo": "MLFQ", "event": "CHILD_EXIT", "source": "xv6", "kind": "schedtest", "pid": 5, "seed": 42, "profile": "interactive"}
-{"tick": null, "algo": "MLFQ", "event": "CHILD_EXIT", "source": "xv6", "kind": "schedtest", "pid": 4, "seed": 42, "profile": "interactive"}
-{"tick": null, "algo": "MLFQ", "event": "PROC_DEF", "source": "xv6", "kind": "schedtest", "pid": 6, "arrival": 5, "cpu_burst": 2, "priority": 10, "label": "interactive", "seed": 42, "profile": "interactive"}
-{"tick": null, "algo": "MLFQ", "event": "CHILD_START", "source": "xv6", "kind": "schedtest", "pid": 6, "priority": 10, "seed": 42, "profile": "interactive"}
-{"tick": null, "algo": "MLFQ", "event": "CHILD_EXIT", "source": "xv6", "kind": "schedtest", "pid": 6, "seed": 42, "profile": "interactive"}
-{"tick": null, "algo": "MLFQ", "event": "PROC_DEF", "source": "xv6", "kind": "schedtest", "pid": 7, "arrival": 10, "cpu_burst": 4, "priority": 10, "label": "cpu", "seed": 42, "profile": "interactive"}
-{"tick": null, "algo": "MLFQ", "event": "CHILD_START", "source": "xv6", "kind": "schedtest", "pid": 7, "priority": 10, "seed": 42, "profile": "interactive"}
-{"tick": null, "algo": "MLFQ", "event": "CHILD_EXIT", "source": "xv6", "kind": "schedtest", "pid": 7, "seed": 42, "profile": "interactive"}
-{"tick": null, "algo": "MLFQ", "event": "PROC_DEF", "source": "xv6", "kind": "schedtest", "pid": 8, "arrival": 15, "cpu_burst": 1, "priority": 10, "label": "interactive", "seed": 42, "profile": "interactive"}
-{"tick": null, "algo": "MLFQ", "event": "CHILD_START", "source": "xv6", "kind": "schedtest", "pid": 8, "priority": 10, "seed": 42, "profile": "interactive"}
-{"tick": null, "algo": "MLFQ", "event": "CHILD_EXIT", "source": "xv6", "kind": "schedtest", "pid": 8, "seed": 42, "profile": "interactive"}
-{"tick": null, "algo": "MLFQ", "event": "RUN_END", "source": "xv6", "kind": "schedtest", "seed": 42, "profile": "interactive"}
-{"tick": 0, "algo": "MLFQ", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 4, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
-{"tick": 2, "algo": "MLFQ", "event": "QUEUE_CHANGE", "source": "xv6", "kind": "sched", "pid": 4, "from_queue": 0, "to_queue": 1, "reason": "demotion", "seed": 42, "profile": "interactive"}
-{"tick": 2, "algo": "MLFQ", "event": "PREEMPT", "source": "xv6", "kind": "sched", "pid": 4, "state": "RUNNABLE", "queue": 1, "priority": 10, "reason": "quantum_expired", "seed": 42, "profile": "interactive"}
-{"tick": 2, "algo": "MLFQ", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 3, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
-{"tick": 2, "algo": "MLFQ", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 5, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
-{"tick": 3, "algo": "MLFQ", "event": "EXIT", "source": "xv6", "kind": "sched", "pid": 5, "state": "ZOMBIE", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
-{"tick": 3, "algo": "MLFQ", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 3, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
-{"tick": 3, "algo": "MLFQ", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 4, "state": "RUNNING", "queue": 1, "priority": 10, "seed": 42, "profile": "interactive"}
-{"tick": 3, "algo": "MLFQ", "event": "EXIT", "source": "xv6", "kind": "sched", "pid": 4, "state": "ZOMBIE", "queue": 1, "priority": 10, "seed": 42, "profile": "interactive"}
-{"tick": 4, "algo": "MLFQ", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 3, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
-{"tick": 5, "algo": "MLFQ", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 3, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
-{"tick": 5, "algo": "MLFQ", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 6, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
-{"tick": 7, "algo": "MLFQ", "event": "QUEUE_CHANGE", "source": "xv6", "kind": "sched", "pid": 6, "from_queue": 0, "to_queue": 1, "reason": "demotion", "seed": 42, "profile": "interactive"}
-{"tick": 7, "algo": "MLFQ", "event": "PREEMPT", "source": "xv6", "kind": "sched", "pid": 6, "state": "RUNNABLE", "queue": 1, "priority": 10, "reason": "quantum_expired", "seed": 42, "profile": "interactive"}
-{"tick": 7, "algo": "MLFQ", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 3, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
-{"tick": 7, "algo": "MLFQ", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 6, "state": "RUNNING", "queue": 1, "priority": 10, "seed": 42, "profile": "interactive"}
-{"tick": 7, "algo": "MLFQ", "event": "EXIT", "source": "xv6", "kind": "sched", "pid": 6, "state": "ZOMBIE", "queue": 1, "priority": 10, "seed": 42, "profile": "interactive"}
-{"tick": 8, "algo": "MLFQ", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 3, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
-{"tick": 9, "algo": "MLFQ", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 3, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
-{"tick": 10, "algo": "MLFQ", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 3, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
-{"tick": 10, "algo": "MLFQ", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 7, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
-{"tick": 12, "algo": "MLFQ", "event": "QUEUE_CHANGE", "source": "xv6", "kind": "sched", "pid": 7, "from_queue": 0, "to_queue": 1, "reason": "demotion", "seed": 42, "profile": "interactive"}
-{"tick": 12, "algo": "MLFQ", "event": "PREEMPT", "source": "xv6", "kind": "sched", "pid": 7, "state": "RUNNABLE", "queue": 1, "priority": 10, "reason": "quantum_expired", "seed": 42, "profile": "interactive"}
-{"tick": 12, "algo": "MLFQ", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 3, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
-{"tick": 12, "algo": "MLFQ", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 7, "state": "RUNNING", "queue": 1, "priority": 10, "seed": 42, "profile": "interactive"}
-{"tick": 14, "algo": "MLFQ", "event": "EXIT", "source": "xv6", "kind": "sched", "pid": 7, "state": "ZOMBIE", "queue": 1, "priority": 10, "seed": 42, "profile": "interactive"}
-{"tick": 14, "algo": "MLFQ", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 3, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
-{"tick": 15, "algo": "MLFQ", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 3, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
-{"tick": 15, "algo": "MLFQ", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 8, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
-{"tick": 16, "algo": "MLFQ", "event": "EXIT", "source": "xv6", "kind": "sched", "pid": 8, "state": "ZOMBIE", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
-{"tick": 16, "algo": "MLFQ", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 3, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
+{"tick": null, "algo": "MLFQ", "event": "RUN_BEGIN", "source": "xv6", "kind": "schedtest", "seed": 42, "profile": "cpu_bound", "nproc": 4}
+{"tick": null, "algo": "MLFQ", "event": "MLFQ_PARAMS", "source": "llm_guard", "kind": "schedtest", "queues": 2, "quantum": "10,50", "boost_interval": 100, "seed": 42, "profile": "cpu_bound"}
+{"tick": null, "algo": "MLFQ", "event": "PROC_DEF", "source": "xv6", "kind": "schedtest", "pid": 4, "arrival": 0, "cpu_burst": 8, "priority": 10, "label": "cpu", "seed": 42, "profile": "cpu_bound"}
+{"tick": null, "algo": "MLFQ", "event": "CHILD_START", "source": "xv6", "kind": "schedtest", "pid": 4, "priority": 10, "seed": 42, "profile": "cpu_bound"}
+{"tick": null, "algo": "MLFQ", "event": "CHILD_EXIT", "source": "xv6", "kind": "schedtest", "pid": 4, "seed": 42, "profile": "cpu_bound"}
+{"tick": null, "algo": "MLFQ", "event": "PROC_DEF", "source": "xv6", "kind": "schedtest", "pid": 5, "arrival": 1, "cpu_burst": 6, "priority": 10, "label": "cpu", "seed": 42, "profile": "cpu_bound"}
+{"tick": null, "algo": "MLFQ", "event": "CHILD_START", "source": "xv6", "kind": "schedtest", "pid": 5, "priority": 10, "seed": 42, "profile": "cpu_bound"}
+{"tick": null, "algo": "MLFQ", "event": "CHILD_EXIT", "source": "xv6", "kind": "schedtest", "pid": 5, "seed": 42, "profile": "cpu_bound"}
+{"tick": null, "algo": "MLFQ", "event": "PROC_DEF", "source": "xv6", "kind": "schedtest", "pid": 6, "arrival": 2, "cpu_burst": 7, "priority": 10, "label": "cpu", "seed": 42, "profile": "cpu_bound"}
+{"tick": null, "algo": "MLFQ", "event": "CHILD_START", "source": "xv6", "kind": "schedtest", "pid": 6, "priority": 10, "seed": 42, "profile": "cpu_bound"}
+{"tick": null, "algo": "MLFQ", "event": "CHILD_EXIT", "source": "xv6", "kind": "schedtest", "pid": 6, "seed": 42, "profile": "cpu_bound"}
+{"tick": null, "algo": "MLFQ", "event": "PROC_DEF", "source": "xv6", "kind": "schedtest", "pid": 7, "arrival": 3, "cpu_burst": 5, "priority": 10, "label": "cpu", "seed": 42, "profile": "cpu_bound"}
+{"tick": null, "algo": "MLFQ", "event": "CHILD_START", "source": "xv6", "kind": "schedtest", "pid": 7, "priority": 10, "seed": 42, "profile": "cpu_bound"}
+{"tick": null, "algo": "MLFQ", "event": "CHILD_EXIT", "source": "xv6", "kind": "schedtest", "pid": 7, "seed": 42, "profile": "cpu_bound"}
+{"tick": null, "algo": "MLFQ", "event": "RUN_END", "source": "xv6", "kind": "schedtest", "seed": 42, "profile": "cpu_bound"}
+{"tick": 0, "algo": "MLFQ", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 4, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "cpu_bound"}
+{"tick": 9, "algo": "MLFQ", "event": "EXIT", "source": "xv6", "kind": "sched", "pid": 4, "state": "ZOMBIE", "queue": 0, "priority": 10, "seed": 42, "profile": "cpu_bound"}
+{"tick": 9, "algo": "MLFQ", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 3, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "cpu_bound"}
+{"tick": 9, "algo": "MLFQ", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 5, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "cpu_bound"}
+{"tick": 15, "algo": "MLFQ", "event": "EXIT", "source": "xv6", "kind": "sched", "pid": 5, "state": "ZOMBIE", "queue": 0, "priority": 10, "seed": 42, "profile": "cpu_bound"}
+{"tick": 15, "algo": "MLFQ", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 3, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "cpu_bound"}
+{"tick": 15, "algo": "MLFQ", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 6, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "cpu_bound"}
+{"tick": 22, "algo": "MLFQ", "event": "EXIT", "source": "xv6", "kind": "sched", "pid": 6, "state": "ZOMBIE", "queue": 0, "priority": 10, "seed": 42, "profile": "cpu_bound"}
+{"tick": 22, "algo": "MLFQ", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 3, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "cpu_bound"}
+{"tick": 22, "algo": "MLFQ", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 7, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "cpu_bound"}
+{"tick": 27, "algo": "MLFQ", "event": "EXIT", "source": "xv6", "kind": "sched", "pid": 7, "state": "ZOMBIE", "queue": 0, "priority": 10, "seed": 42, "profile": "cpu_bound"}
+{"tick": 27, "algo": "MLFQ", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 3, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "cpu_bound"}

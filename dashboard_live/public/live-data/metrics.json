@@ -1,20 +1,31 @@
 {
-  "scheduling_algorithm": "RR",
+  "scheduling_algorithm": "MLFQ",
   "params": {
-    "quantum": 10
+    "queues": 2,
+    "quantum": [
+      10,
+      50
+    ],
+    "aging_threshold": 100,
+    "boost_interval": 100
   },
   "applied_params": {
-    "quantum": 10,
-    "source": "llm_guard"
+    "source": "llm_guard",
+    "queues": 2,
+    "quantum": [
+      10,
+      50
+    ],
+    "boost_interval": 100
   },
-  "process_count": 5,
-  "completed_count": 5,
-  "total_execution_time": 16,
-  "avg_response_time": 0.4,
-  "avg_turnaround_time": 2.8,
-  "avg_waiting_time": 0.4,
-  "throughput": 0.312,
-  "max_waiting_time": 2,
+  "process_count": 4,
+  "completed_count": 4,
+  "total_execution_time": 27,
+  "avg_response_time": 10.0,
+  "avg_turnaround_time": 16.75,
+  "avg_waiting_time": 10.0,
+  "throughput": 0.148,
+  "max_waiting_time": 19,
   "starvation_occurred": false,
   "starvation_pids": [],
   "preemption_count": 0,
@@ -23,100 +34,125 @@
       "pid": 4,
       "arrival_time": 0,
       "first_run_time": 0,
-      "finish_time": 4,
+      "finish_time": 9,
       "response_time": 0,
-      "turnaround_time": 4,
+      "turnaround_time": 9,
       "waiting_time": 0
     },
     {
       "pid": 5,
-      "arrival_time": 2,
-      "first_run_time": 4,
-      "finish_time": 5,
-      "response_time": 2,
-      "turnaround_time": 3,
-      "waiting_time": 2
+      "arrival_time": 1,
+      "first_run_time": 9,
+      "finish_time": 15,
+      "response_time": 8,
+      "turnaround_time": 14,
+      "waiting_time": 8
     },
     {
       "pid": 6,
-      "arrival_time": 5,
-      "first_run_time": 5,
-      "finish_time": 7,
-      "response_time": 0,
-      "turnaround_time": 2,
-      "waiting_time": 0
+      "arrival_time": 2,
+      "first_run_time": 15,
+      "finish_time": 22,
+      "response_time": 13,
+      "turnaround_time": 20,
+      "waiting_time": 13
     },
     {
       "pid": 7,
-      "arrival_time": 10,
-      "first_run_time": 10,
-      "finish_time": 14,
-      "response_time": 0,
-      "turnaround_time": 4,
-      "waiting_time": 0
-    },
-    {
-      "pid": 8,
-      "arrival_time": 15,
-      "first_run_time": 15,
-      "finish_time": 16,
-      "response_time": 0,
-      "turnaround_time": 1,
-      "waiting_time": 0
+      "arrival_time": 3,
+      "first_run_time": 22,
+      "finish_time": 27,
+      "response_time": 19,
+      "turnaround_time": 24,
+      "waiting_time": 19
     }
   ],
-  "judgment": "SUCCESS",
-  "regret_score": 0.0,
-  "best_algorithm": "MLFQ",
+  "judgment": "FAIL",
+  "regret_score": 0.914,
+  "best_algorithm": "RR",
   "workload_file": null,
   "recommended_params": {
-    "quantum": 10
+    "queues": 2,
+    "quantum": [
+      10,
+      50
+    ],
+    "aging_threshold": 100,
+    "boost_interval": 100
   },
   "param_application_status": "fully_applied",
   "comparison": {
-    "RR": {
-      "avg_waiting_time": 0.4,
-      "avg_response_time": 0.4,
-      "avg_turnaround_time": 2.8,
-      "throughput": 0.312,
-      "max_waiting_time": 2,
+    "MLFQ": {
+      "avg_waiting_time": 10.0,
+      "avg_response_time": 10.0,
+      "avg_turnaround_time": 16.75,
+      "throughput": 0.148,
+      "max_waiting_time": 19,
       "preemption_count": 0,
+      "starvation_occurred": false,
+      "burst_prediction_error": null,
+      "judgment": "FAIL",
+      "applied_params": {
+        "source": "llm_guard",
+        "queues": 2,
+        "quantum": [
+          10,
+          50
+        ],
+        "boost_interval": 100
+      },
+      "recommended_params": {
+        "queues": 2,
+        "quantum": [
+          10,
+          50
+        ],
+        "aging_threshold": 100,
+        "boost_interval": 100
+      },
+      "param_application_status": "fully_applied"
+    },
+    "RR": {
+      "avg_waiting_time": 5.75,
+      "avg_response_time": 1.75,
+      "avg_turnaround_time": 8.75,
+      "throughput": 0.333,
+      "max_waiting_time": 6,
+      "preemption_count": 12,
       "starvation_occurred": false,
       "burst_prediction_error": null,
       "judgment": "SUCCESS",
       "applied_params": {
-        "quantum": 10,
-        "source": "llm_guard"
+        "quantum": 1,
+        "source": "xv6_default"
       },
-      "recommended_params": {
-        "quantum": 10
-      },
-      "param_application_status": "fully_applied"
+      "recommended_params": {},
+      "param_application_status": "fixed_default"
     },
     "FCFS": {
-      "avg_waiting_time": 0.4,
-      "avg_response_time": 0.4,
-      "avg_turnaround_time": 2.8,
-      "throughput": 0.312,
-      "max_waiting_time": 2,
+      "avg_waiting_time": 10.0,
+      "avg_response_time": 10.0,
+      "avg_turnaround_time": 16.75,
+      "throughput": 0.148,
+      "max_waiting_time": 19,
       "preemption_count": 0,
       "starvation_occurred": false,
       "burst_prediction_error": null,
-      "judgment": "SUCCESS",
+      "judgment": "FAIL",
       "applied_params": {},
       "recommended_params": {},
       "param_application_status": "not_applicable"
     },
     "Priority": {
-      "avg_waiting_time": 0.5,
-      "avg_response_time": 0.5,
-      "avg_turnaround_time": 2.5,
-      "throughput": 0.25,
-      "max_waiting_time": 2,
-      "preemption_count": 12,
+      "avg_waiting_time": 14.0,
+      "avg_response_time": 11.67,
+      "avg_turnaround_time": 19.0,
+      "throughput": 0.125,
+      "max_waiting_time": 19,
+      "preemption_count": 24,
       "starvation_occurred": false,
       "burst_prediction_error": null,
-      "judgment": "SUCCESS",
+      "judgment": "FAIL",
       "applied_params": {
         "aging_threshold": 10,
         "priority_source": "schedtest_profile",
@@ -125,39 +161,16 @@
       "recommended_params": {},
       "param_application_status": "fixed_default"
     },
-    "MLFQ": {
-      "avg_waiting_time": 0.2,
-      "avg_response_time": 0.0,
-      "avg_turnaround_time": 2.2,
-      "throughput": 0.312,
-      "max_waiting_time": 1,
-      "preemption_count": 3,
-      "starvation_occurred": false,
-      "burst_prediction_error": null,
-      "judgment": "SUCCESS",
-      "applied_params": {
-        "queues": 3,
-        "quantum": [
-          2,
-          4,
-          8
-        ],
-        "boost_interval": 20,
-        "source": "xv6_default"
-      },
-      "recommended_params": {},
-      "param_application_status": "fixed_default"
-    },
     "SJF": {
-      "avg_waiting_time": 0.4,
-      "avg_response_time": 0.4,
-      "avg_turnaround_time": 2.8,
-      "throughput": 0.312,
-      "max_waiting_time": 2,
+      "avg_waiting_time": 10.0,
+      "avg_response_time": 10.0,
+      "avg_turnaround_time": 16.75,
+      "throughput": 0.148,
+      "max_waiting_time": 19,
       "preemption_count": 0,
       "starvation_occurred": false,
       "burst_prediction_error": null,
-      "judgment": "SUCCESS",
+      "judgment": "FAIL",
       "applied_params": {
         "source": "llm_guard"
       },
@@ -165,15 +178,15 @@
       "param_application_status": "fully_applied"
     },
     "SRTF": {
-      "avg_waiting_time": 0.4,
-      "avg_response_time": 0.4,
-      "avg_turnaround_time": 2.8,
-      "throughput": 0.312,
-      "max_waiting_time": 2,
-      "preemption_count": 12,
+      "avg_waiting_time": 13.33,
+      "avg_response_time": 13.33,
+      "avg_turnaround_time": 19.33,
+      "throughput": 0.111,
+      "max_waiting_time": 19,
+      "preemption_count": 27,
       "starvation_occurred": false,
       "burst_prediction_error": null,
-      "judgment": "SUCCESS",
+      "judgment": "FAIL",
       "applied_params": {
         "source": "llm_guard"
       },
@@ -181,8 +194,8 @@
       "param_application_status": "fully_applied"
     }
   },
-  "target_metric": "avg_response_time",
-  "selected_metric_value": 0.4,
-  "best_metric_value": 0.0,
-  "explanation": "SUCCESS: RR on avg_response_time = 0.4 vs best (MLFQ) = 0.0; regret = 0.0% (<= 10%)."
+  "target_metric": "avg_turnaround_time",
+  "selected_metric_value": 16.75,
+  "best_metric_value": 8.75,
+  "explanation": "FAIL: MLFQ on avg_turnaround_time = 16.75 vs best (RR) = 8.75; regret = 91.4% (> 25%)."
 }

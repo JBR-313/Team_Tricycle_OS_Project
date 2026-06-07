@@ -1,4 +1,3 @@
-{"tick": null, "algo": "RR", "event": "RUN_BEGIN", "source": "xv6", "kind": "schedtest", "seed": 42, "profile": "cpu_bound", "nproc": 4}
 {"tick": null, "algo": "RR", "event": "PROC_DEF", "source": "xv6", "kind": "schedtest", "pid": 4, "arrival": 0, "cpu_burst": 8, "priority": 10, "label": "cpu", "seed": 42, "profile": "cpu_bound"}
 {"tick": null, "algo": "RR", "event": "CHILD_START", "source": "xv6", "kind": "schedtest", "pid": 4, "priority": 10, "seed": 42, "profile": "cpu_bound"}
 {"tick": null, "algo": "RR", "event": "PROC_DEF", "source": "xv6", "kind": "schedtest", "pid": 5, "arrival": 1, "cpu_burst": 6, "priority": 10, "label": "cpu", "seed": 42, "profile": "cpu_bound"}
@@ -12,6 +11,8 @@
 {"tick": null, "algo": "RR", "event": "CHILD_EXIT", "source": "xv6", "kind": "schedtest", "pid": 7, "seed": 42, "profile": "cpu_bound"}
 {"tick": null, "algo": "RR", "event": "CHILD_EXIT", "source": "xv6", "kind": "schedtest", "pid": 6, "seed": 42, "profile": "cpu_bound"}
 {"tick": null, "algo": "RR", "event": "RUN_END", "source": "xv6", "kind": "schedtest", "seed": 42, "profile": "cpu_bound"}
+{"tick": 0, "algo": "RR", "event": "PREEMPT", "source": "xv6", "kind": "sched", "pid": 3, "state": "RUNNABLE", "queue": 0, "priority": 10, "reason": "quantum_expired", "seed": 42, "profile": "cpu_bound"}
+{"tick": 0, "algo": "RR", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 3, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "cpu_bound"}
 {"tick": 0, "algo": "RR", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 4, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "cpu_bound"}
 {"tick": 1, "algo": "RR", "event": "PREEMPT", "source": "xv6", "kind": "sched", "pid": 4, "state": "RUNNABLE", "queue": 0, "priority": 10, "reason": "quantum_expired", "seed": 42, "profile": "cpu_bound"}
 {"tick": 1, "algo": "RR", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 3, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "cpu_bound"}

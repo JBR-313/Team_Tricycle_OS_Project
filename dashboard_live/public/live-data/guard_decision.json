@@ -1,21 +1,27 @@
 {
   "guard_result": "accepted",
-  "algorithm": "RR",
+  "algorithm": "MLFQ",
   "params": {
-    "quantum": 10
+    "queues": 2,
+    "quantum": [
+      10,
+      50
+    ],
+    "aging_threshold": 100,
+    "boost_interval": 100
   },
-  "target_metric": "avg_response_time",
-  "compatibility_score": 0.9,
+  "target_metric": "avg_turnaround_time",
+  "compatibility_score": 0.8,
   "confidence_score": 0.95,
   "predicted_bursts": [],
   "prediction_source": null,
-  "reason": "Accepted: RR is suitable for response_time (compat=0.90, confidence=0.95).",
+  "reason": "Accepted: MLFQ is suitable for turnaround_time (compat=0.80, confidence=0.95).",
   "_meta": {
     "source": "tools/algorithm_guard.py",
-    "generated_at": "2026-06-07T06:30:30.120684+00:00",
+    "generated_at": "2026-06-07T09:41:46.981607+00:00",
     "recommendation_source": "recommendation.json"
   },
-  "scheduling_algorithm": "RR",
-  "original_recommendation": "RR",
+  "scheduling_algorithm": "MLFQ",
+  "original_recommendation": "MLFQ",
   "fallback_used": false
 }

@@ -1,31 +1,31 @@
 {
   "backend": "xv6",
   "seed": 42,
-  "workload_type": "interactive",
-  "llm_selected_algorithm": "RR",
+  "workload_type": "cpu_bound",
+  "llm_selected_algorithm": "MLFQ",
   "algorithms_executed": [
+    "MLFQ",
     "RR",
     "FCFS",
     "Priority",
-    "MLFQ",
     "SJF",
     "SRTF"
   ],
-  "generated_at": "2026-06-07T06:31:07Z",
+  "generated_at": "2026-06-07T09:42:28Z",
   "orchestrator_version": "1.0.0",
   "mode": "xv6-log",
-  "updated_at": "2026-06-07T06:31:07Z",
-  "version": 55,
-  "workload": "xv6_interactive",
+  "updated_at": "2026-06-07T09:42:28Z",
+  "version": 57,
+  "workload": "xv6_cpu_bound",
   "algorithms": [
+    "MLFQ",
     "RR",
     "FCFS",
     "Priority",
-    "MLFQ",
     "SJF",
     "SRTF"
   ],
-  "recommended_algorithm": "RR",
-  "target_metric": "avg_response_time",
+  "recommended_algorithm": "MLFQ",
+  "target_metric": "avg_turnaround_time",
   "feedback_consumed": false
 }
