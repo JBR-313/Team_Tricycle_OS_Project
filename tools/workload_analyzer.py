@@ -200,10 +200,10 @@ def save_summary(summary, output_path: Path):
 
 
 def main():
-    if len(sys.argv) != 2:
+    if len(sys.argv) not in (2, 3):
         print(
             "Usage: python workload_analyzer.py "
-            "<workload.json>"
+            "<workload.json> [output_summary.json]"
         )
         sys.exit(1)
 
@@ -235,7 +235,12 @@ def main():
     # Output path
     # -------------------------------------------------
     outputs_dir = project_root / "outputs"
-    output_path = outputs_dir / "workload_summary.json"
+    # Optional 2nd arg redirects the summary output (e.g. tests writing to a
+    # tmp dir) so a plain analyzer run never clobbers the tracked default file.
+    output_path = (
+        Path(sys.argv[2]) if len(sys.argv) == 3
+        else outputs_dir / "workload_summary.json"
+    )
 
     # -------------------------------------------------
     # Run analysis

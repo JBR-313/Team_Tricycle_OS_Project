@@ -60,12 +60,14 @@ def test_analyzer_does_not_leak_actual_bursts(tmp_path):
     if target is None:
         pytest.skip("no workload carries actual_bursts")
 
+    # Write the summary to a tmp path (2nd arg) so the test never clobbers the
+    # tracked outputs/workload_summary.json.
+    summary_path = tmp_path / "workload_summary.json"
     rc = subprocess.run(
-        [sys.executable, str(ROOT / "tools" / "workload_analyzer.py"), str(target)],
+        [sys.executable, str(ROOT / "tools" / "workload_analyzer.py"),
+         str(target), str(summary_path)],
         capture_output=True, text=True,
     )
-    # The analyzer writes a fixed outputs/workload_summary.json.
-    summary_path = ROOT / "outputs" / "workload_summary.json"
     assert summary_path.is_file(), f"analyzer produced no summary (rc={rc.returncode})"
     summary = json.loads(summary_path.read_text())
 
