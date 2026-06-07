@@ -1,8 +1,8 @@
 /**
  * useRun — shared run-pipeline hook.
  *
- * Extracted from RunControls so the header compact RUN button (Page 1
- * second-revision goal §3) reuses the same execution path as before.
+ * Extracted from the original RunControls form (since removed) so the header
+ * compact RUN button reuses the same execution path as before.
  * The big form was removed from Page 1; defaults below are hardcoded
  * for the demo-safe path. If finer control is needed later we can
  * surface a dev-only modal — the hook is the seam.

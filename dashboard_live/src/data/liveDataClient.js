@@ -47,7 +47,7 @@ export async function loadSnapshotsManifest() {
 
 // Optional preview-only runtime-correction artifacts written by
 // scripts/orchestrator.py:_run_correction_preview. Each loader silently
-// returns null on 404 so the dashboard's RuntimeCorrectionPreview card
+// returns null on 404 so the dashboard's RuntimeCorrectionCard
 // can hide itself when the preview is not available for the current
 // run / snapshot. These files are NOT on the strict contract schema.
 async function _maybeJson(path) {
