@@ -9,7 +9,7 @@
     "aging_threshold": 100,
     "boost_interval": 100
   },
-  "reason": "The workload is 80% interactive with short CPU bursts and low CPU-bound ratio, requiring fast response times. MLFQ with two queues (short quantum for interactive, longer for CPU-bound) and aging prevents starvation while favoring interactive processes.",
+  "reason": "The workload is 80% interactive with short CPU bursts and low CPU-bound ratio, requiring fast response times. MLFQ with two queues (10ms for interactive, 50ms for CPU-bound) and aging prevents starvation while favoring short jobs. The burst_count_distribution shows all processes have exactly one CPU burst, making MLFQ's feedback mechanism effective for interactive workloads.",
   "target_metric": "avg_response_time",
   "confidence": 0.95,
   "predicted_bursts": [],
@@ -17,7 +17,7 @@
   "_meta": {
     "source": "tools/llm_advisor.py",
     "model": "solar-pro3",
-    "generated_at": "2026-06-06T22:23:36.752840+00:00",
+    "generated_at": "2026-06-07T00:05:38.717145+00:00",
     "workload_summary": "/home/seonguk/projects/Team_Tricycle_OS_Project/outputs/live/workload_summary.json"
   }
 }

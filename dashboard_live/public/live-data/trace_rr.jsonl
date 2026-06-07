@@ -1,3 +1,5 @@
+{"tick": null, "algo": "RR", "event": "RUN_BEGIN", "source": "xv6", "kind": "schedtest", "seed": 42, "profile": "interactive", "nproc": 5}
+{"tick": null, "algo": "RR", "event": "PROC_DEF", "source": "xv6", "kind": "schedtest", "pid": 4, "arrival": 0, "cpu_burst": 3, "priority": 10, "label": "interactive", "seed": 42, "profile": "interactive"}
 {"tick": null, "algo": "RR", "event": "CHILD_START", "source": "xv6", "kind": "schedtest", "pid": 4, "priority": 10, "seed": 42, "profile": "interactive"}
 {"tick": null, "algo": "RR", "event": "PROC_DEF", "source": "xv6", "kind": "schedtest", "pid": 5, "arrival": 2, "cpu_burst": 1, "priority": 10, "label": "interactive", "seed": 42, "profile": "interactive"}
 {"tick": null, "algo": "RR", "event": "CHILD_START", "source": "xv6", "kind": "schedtest", "pid": 5, "priority": 10, "seed": 42, "profile": "interactive"}
@@ -13,8 +15,6 @@
 {"tick": null, "algo": "RR", "event": "CHILD_START", "source": "xv6", "kind": "schedtest", "pid": 8, "priority": 10, "seed": 42, "profile": "interactive"}
 {"tick": null, "algo": "RR", "event": "CHILD_EXIT", "source": "xv6", "kind": "schedtest", "pid": 8, "seed": 42, "profile": "interactive"}
 {"tick": null, "algo": "RR", "event": "RUN_END", "source": "xv6", "kind": "schedtest", "seed": 42, "profile": "interactive"}
-{"tick": 0, "algo": "RR", "event": "PREEMPT", "source": "xv6", "kind": "sched", "pid": 3, "state": "RUNNABLE", "queue": 0, "priority": 10, "reason": "quantum_expired", "seed": 42, "profile": "interactive"}
-{"tick": 0, "algo": "RR", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 3, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
 {"tick": 0, "algo": "RR", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 4, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
 {"tick": 1, "algo": "RR", "event": "PREEMPT", "source": "xv6", "kind": "sched", "pid": 4, "state": "RUNNABLE", "queue": 0, "priority": 10, "reason": "quantum_expired", "seed": 42, "profile": "interactive"}
 {"tick": 1, "algo": "RR", "event": "DISPATCH", "source": "xv6", "kind": "sched", "pid": 3, "state": "RUNNING", "queue": 0, "priority": 10, "seed": 42, "profile": "interactive"}
