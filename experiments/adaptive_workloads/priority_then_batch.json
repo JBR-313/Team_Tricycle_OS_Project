@@ -1,0 +1,16 @@
+{
+  "id": "priority_then_batch",
+  "description": "Non-stationary by REGIME, not by preemption frequency: Phase A = urgent high-priority jobs that happen to be LONG (PRIORITY must run them first; SJF/FCFS get it wrong); Phase B = equal-priority batch with varied bursts (SJF minimises waiting; PRIORITY degenerates to FCFS and blocks behind a long job). The per-phase best algorithms (PRIORITY vs SJF) neither preempt excessively, so any adaptation headroom should SURVIVE a context-switch cost — unlike the RR-vs-FCFS kind. Default start = PRIORITY (right for Phase A), switch once to SJF for Phase B.",
+  "target_metric": "avg_waiting_time",
+  "processes": [
+    {"pid": 1, "arrival_time": 0,  "actual_bursts": [12], "priority": 1},
+    {"pid": 2, "arrival_time": 0,  "actual_bursts": [10], "priority": 1},
+    {"pid": 3, "arrival_time": 1,  "actual_bursts": [2],  "priority": 8},
+    {"pid": 4, "arrival_time": 2,  "actual_bursts": [2],  "priority": 8},
+    {"pid": 5, "arrival_time": 30, "actual_bursts": [10], "priority": 5},
+    {"pid": 6, "arrival_time": 31, "actual_bursts": [2],  "priority": 5},
+    {"pid": 7, "arrival_time": 32, "actual_bursts": [2],  "priority": 5},
+    {"pid": 8, "arrival_time": 33, "actual_bursts": [8],  "priority": 5},
+    {"pid": 9, "arrival_time": 34, "actual_bursts": [2],  "priority": 5}
+  ]
+}

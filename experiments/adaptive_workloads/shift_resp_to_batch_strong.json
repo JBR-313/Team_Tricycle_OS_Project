@@ -1,0 +1,18 @@
+{
+  "id": "shift_resp_to_batch_strong",
+  "description": "Stronger non-stationary variant: a longer Phase A burst of tiny interactive jobs behind a medium job, then a heavier Phase B convoy of equal long jobs. Amplifies the RR-vs-FCFS conflict to widen the adaptation headroom.",
+  "target_metric": "avg_turnaround_time",
+  "processes": [
+    {"pid": 1,  "arrival_time": 0,  "actual_bursts": [8],  "priority": 5},
+    {"pid": 2,  "arrival_time": 1,  "actual_bursts": [1],  "priority": 5},
+    {"pid": 3,  "arrival_time": 2,  "actual_bursts": [1],  "priority": 5},
+    {"pid": 4,  "arrival_time": 3,  "actual_bursts": [1],  "priority": 5},
+    {"pid": 5,  "arrival_time": 4,  "actual_bursts": [1],  "priority": 5},
+    {"pid": 6,  "arrival_time": 5,  "actual_bursts": [1],  "priority": 5},
+    {"pid": 7,  "arrival_time": 6,  "actual_bursts": [1],  "priority": 5},
+    {"pid": 8,  "arrival_time": 18, "actual_bursts": [16], "priority": 5},
+    {"pid": 9,  "arrival_time": 19, "actual_bursts": [16], "priority": 5},
+    {"pid": 10, "arrival_time": 20, "actual_bursts": [16], "priority": 5},
+    {"pid": 11, "arrival_time": 21, "actual_bursts": [16], "priority": 5}
+  ]
+}

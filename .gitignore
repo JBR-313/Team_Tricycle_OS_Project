@@ -28,6 +28,11 @@ outputs/*
 !outputs/learning/
 outputs/learning/*
 !outputs/learning/RESULTS.md
+# Adaptive (observe-then-adapt) negative-result evidence — keep the RESULTS doc;
+# the bulky json + xv6 probe logs stay ignored (regeneratable).
+!outputs/adaptive/
+outputs/adaptive/*
+!outputs/adaptive/RESULTS.md
 
 # Defensive: catch stray logs outside outputs/. Tracked files (e.g.
 # logs/foo.log if someone deliberately git-added one) are unaffected.

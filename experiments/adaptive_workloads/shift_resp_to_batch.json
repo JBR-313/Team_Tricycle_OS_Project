@@ -1,0 +1,15 @@
+{
+  "id": "shift_resp_to_batch",
+  "description": "Non-stationary: Phase A = short interactive jobs blocked by one medium job (responsiveness matters → RR/SRTF beat FCFS); Phase B = several equal LONG CPU-bound jobs (sequential completion matters → FCFS beats RR's interleaving). No single static algorithm is best for both phases, so observe-then-adapt (RR→FCFS) should beat the best static.",
+  "target_metric": "avg_turnaround_time",
+  "processes": [
+    {"pid": 1, "arrival_time": 0,  "actual_bursts": [6],  "priority": 5},
+    {"pid": 2, "arrival_time": 1,  "actual_bursts": [1],  "priority": 5},
+    {"pid": 3, "arrival_time": 2,  "actual_bursts": [1],  "priority": 5},
+    {"pid": 4, "arrival_time": 3,  "actual_bursts": [1],  "priority": 5},
+    {"pid": 5, "arrival_time": 4,  "actual_bursts": [1],  "priority": 5},
+    {"pid": 6, "arrival_time": 12, "actual_bursts": [14], "priority": 5},
+    {"pid": 7, "arrival_time": 13, "actual_bursts": [14], "priority": 5},
+    {"pid": 8, "arrival_time": 14, "actual_bursts": [14], "priority": 5}
+  ]
+}

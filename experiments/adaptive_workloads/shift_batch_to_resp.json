@@ -1,0 +1,15 @@
+{
+  "id": "shift_batch_to_resp",
+  "description": "Reverse non-stationary: Phase A = equal long CPU-bound jobs (FCFS-friendly, RR thrashes turnaround); Phase B = a burst of short interactive jobs that should not wait behind anything (RR/SRTF-friendly). Tests the FCFS->RR adaptation direction.",
+  "target_metric": "avg_turnaround_time",
+  "processes": [
+    {"pid": 1, "arrival_time": 0,  "actual_bursts": [14], "priority": 5},
+    {"pid": 2, "arrival_time": 1,  "actual_bursts": [14], "priority": 5},
+    {"pid": 3, "arrival_time": 2,  "actual_bursts": [14], "priority": 5},
+    {"pid": 4, "arrival_time": 30, "actual_bursts": [1],  "priority": 5},
+    {"pid": 5, "arrival_time": 31, "actual_bursts": [1],  "priority": 5},
+    {"pid": 6, "arrival_time": 32, "actual_bursts": [1],  "priority": 5},
+    {"pid": 7, "arrival_time": 33, "actual_bursts": [1],  "priority": 5},
+    {"pid": 8, "arrival_time": 34, "actual_bursts": [1],  "priority": 5}
+  ]
+}

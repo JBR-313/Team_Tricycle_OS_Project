@@ -129,7 +129,9 @@ class Tracer:
 # ── Simulator core ──────────────────────────────────────────────────────────
 class Simulator:
     def __init__(self, processes: list[Process], algo: str, params: dict,
-                 prediction_source: str = "ema"):
+                 prediction_source: str = "ema",
+                 switch_plan: Optional[dict] = None,
+                 switch_cost: int = 0):
         """
         prediction_source:
           - "ema"  (default): seed predicted_burst from predictor.initial, refine
@@ -138,6 +140,15 @@ class Simulator:
                               (Process.llm_predicted_bursts[burst_idx]) when
                               available; fall back to EMA otherwise. Still
                               refines via EMA after each observed burst.
+
+        switch_plan (Adaptive ODA — observe-then-adapt):
+          - None (default): no mid-run change; identical to the static model.
+          - {"at": tick, "to": algo, "params": {...}}: at the first tick >= `at`,
+            reconfigure the running scheduler ONCE to `to`/`params`. Process state
+            (remaining work, predicted_burst, queue level) carries over naturally,
+            which mirrors a real kernel switching algorithm mid-run. The LLM is
+            NOT in the hot path: the plan is decided once, off-line, from observed
+            history — see experiments/adaptive_sched_eval.py.
         """
         self.procs   = processes
         self.algo    = algo.upper()
@@ -148,6 +159,14 @@ class Simulator:
         self.dispatch_tick = 0
         self.preemption_count = 0
         self.prediction_source = prediction_source
+        self.switch_plan = switch_plan
+        self._switched = False
+        # Context-switch cost (ticks burned on each dispatch to a DIFFERENT
+        # process). 0 = the original cost-free model (default; tests unchanged).
+        # A positive cost is what penalises high-preemption algorithms (RR) in
+        # the real kernel and is absent from the idealised simulator.
+        self.switch_cost = int(switch_cost)
+        self._last_ran: Optional[int] = None
 
         # SJF/SRTF burst predictor (xv6-kernel-compatible defaults; params may
         # be overridden by the guard for predictive algorithms).
@@ -168,6 +187,37 @@ class Simulator:
             self.n_queues  = params.get("queues", 3)
             self.aging_thr = params.get("aging_threshold", 30)
         self.time_in_slice = 0
+
+    # ── adaptive mid-run switch (ODA) ────────────────────────────────────────
+    def _reconfigure(self, algo: str, params: Optional[dict]):
+        """Swap the active Scheduling Algorithm + its params mid-run. Process
+        state is untouched (carries over), matching a real kernel switch."""
+        params = params or {}
+        self.algo = algo.upper()
+        self.params = params
+        if self.algo == "RR":
+            q = params.get("quantum", 2)
+            self.quantum = q[0] if isinstance(q, list) else q
+        elif self.algo == "MLFQ":
+            self.quanta    = params.get("quantum", [2, 4, 8])
+            self.n_queues  = params.get("queues", 3)
+            self.aging_thr = params.get("aging_threshold", 30)
+        self.time_in_slice = 0
+
+    def _maybe_switch(self):
+        if self.switch_plan and not self._switched \
+                and self.tick >= int(self.switch_plan.get("at", 0)):
+            self._switched = True
+            old = self.algo
+            # re-queue whatever is running so it is re-picked under the new algo
+            if self.current is not None:
+                self.current.state = "RUNNABLE"
+                self.current.ctime = self.tick
+                self.current = None
+            self._reconfigure(self.switch_plan.get("to", old),
+                              self.switch_plan.get("params"))
+            self.tracer.emit(self.tick, "ALGO_SWITCH", -1,
+                             from_algo=old, to_algo=self.algo)
 
     # ── predictor helpers ────────────────────────────────────────────────────
     def _seed_predicted(self, p: Process):
@@ -277,6 +327,13 @@ class Simulator:
 
     # ── dispatch / preempt helpers ───────────────────────────────────────────
     def _dispatch(self, p: Process):
+        # Context-switch cost: burn `switch_cost` ticks when dispatching a
+        # DIFFERENT process than last ran (no progress, time advances).
+        if self.switch_cost and self._last_ran is not None and p.pid != self._last_ran:
+            for _ in range(self.switch_cost):
+                self.tracer.emit(self.tick, "CTX_SWITCH_COST", p.pid)
+                self.tick += 1
+        self._last_ran = p.pid
         p.state = "RUNNING"
         self.current = p
         self.dispatch_tick = self.tick
@@ -331,6 +388,7 @@ class Simulator:
             self._seed_predicted(p)
 
         while not self._all_done() and self.tick < max_ticks:
+            self._maybe_switch()
             self._arrive()
 
             # increment wait ticks for all RUNNABLE
