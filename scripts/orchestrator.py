@@ -1032,10 +1032,17 @@ def _applied_from_guard(algo: str, guard_params: dict,
                 ap["boost_interval"] = guard_params["boost_interval"]
             return ap
     elif au in ("SJF", "SRTF"):
-        ap = {"source": "llm_guard"}
+        # The EMA params only come from the Guard when SJF/SRTF was the selected
+        # algorithm (guard_params then carries alpha_percent). Otherwise
+        # _build_predictor_args fell back to the kernel predictor defaults
+        # {50,10,1,100}; labelling those "llm_guard" would be dishonest. The
+        # per-process burst_hints, when present, are genuine LLM priors either way.
+        guard_supplied = "alpha_percent" in (guard_params or {})
+        ap = {"source": "llm_guard" if guard_supplied else "xv6_default"}
         ap.update(ema)
         if hints:
             ap["burst_hints"] = hints
+            ap["burst_hints_source"] = "llm_guard"
         return ap
     return None
 
@@ -1737,6 +1744,16 @@ def main() -> int:
                 print(f"[orchestrator] xv6 backend: analyzing mirror workload "
                       f"{_rel(mirror)} for profile {xv6_profile!r}")
             workload_type, workload_path = xv6_profile, mirror
+        else:
+            # No mirror on disk: the analyzer would read the ORIGINAL workload
+            # while run_xv6_backend collapses execution to 'mixed' — a silent
+            # divergence (burst priors misaligned to the forked processes). All
+            # XV6_PROFILES ship a mirror, so this only fires if a profile was
+            # added without one. Fail loud rather than diverge quietly.
+            print(f"[orchestrator] WARNING: no mirror JSON for xv6 profile "
+                  f"{xv6_profile!r} (looked up {XV6_MIRROR_MAP.get(xv6_profile)}); "
+                  f"analyzer will read {_rel(workload_path)} but xv6 executes "
+                  f"'mixed' — burst priors may be misaligned. Add a mirror JSON.")
 
     workload_stem = workload_path.stem
 
