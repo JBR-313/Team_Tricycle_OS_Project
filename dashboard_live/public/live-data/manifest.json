@@ -2,30 +2,30 @@
   "backend": "xv6",
   "seed": 42,
   "workload_type": "interactive",
-  "llm_selected_algorithm": "MLFQ",
+  "llm_selected_algorithm": "RR",
   "algorithms_executed": [
-    "MLFQ",
     "RR",
     "FCFS",
     "Priority",
+    "MLFQ",
     "SJF",
     "SRTF"
   ],
-  "generated_at": "2026-06-07T00:06:15Z",
+  "generated_at": "2026-06-07T06:31:07Z",
   "orchestrator_version": "1.0.0",
   "mode": "xv6-log",
-  "updated_at": "2026-06-07T00:06:15Z",
-  "version": 54,
+  "updated_at": "2026-06-07T06:31:07Z",
+  "version": 55,
   "workload": "xv6_interactive",
   "algorithms": [
-    "MLFQ",
     "RR",
     "FCFS",
     "Priority",
+    "MLFQ",
     "SJF",
     "SRTF"
   ],
-  "recommended_algorithm": "MLFQ",
+  "recommended_algorithm": "RR",
   "target_metric": "avg_response_time",
   "feedback_consumed": false
 }

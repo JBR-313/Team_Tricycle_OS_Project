@@ -1,22 +1,11 @@
 {
-  "scheduling_algorithm": "MLFQ",
+  "scheduling_algorithm": "RR",
   "params": {
-    "queues": 2,
-    "quantum": [
-      10,
-      50
-    ],
-    "aging_threshold": 100,
-    "boost_interval": 100
+    "quantum": 10
   },
   "applied_params": {
-    "source": "llm_guard",
-    "queues": 2,
-    "quantum": [
-      10,
-      50
-    ],
-    "boost_interval": 100
+    "quantum": 10,
+    "source": "llm_guard"
   },
   "process_count": 5,
   "completed_count": 5,
@@ -78,20 +67,14 @@
   ],
   "judgment": "SUCCESS",
   "regret_score": 0.0,
-  "best_algorithm": "RR",
+  "best_algorithm": "MLFQ",
   "workload_file": null,
   "recommended_params": {
-    "queues": 2,
-    "quantum": [
-      10,
-      50
-    ],
-    "aging_threshold": 100,
-    "boost_interval": 100
+    "quantum": 10
   },
   "param_application_status": "fully_applied",
   "comparison": {
-    "MLFQ": {
+    "RR": {
       "avg_waiting_time": 0.4,
       "avg_response_time": 0.4,
       "avg_turnaround_time": 2.8,
@@ -102,41 +85,13 @@
       "burst_prediction_error": null,
       "judgment": "SUCCESS",
       "applied_params": {
-        "source": "llm_guard",
-        "queues": 2,
-        "quantum": [
-          10,
-          50
-        ],
-        "boost_interval": 100
+        "quantum": 10,
+        "source": "llm_guard"
       },
       "recommended_params": {
-        "queues": 2,
-        "quantum": [
-          10,
-          50
-        ],
-        "aging_threshold": 100,
-        "boost_interval": 100
+        "quantum": 10
       },
       "param_application_status": "fully_applied"
-    },
-    "RR": {
-      "avg_waiting_time": 0.4,
-      "avg_response_time": 0.2,
-      "avg_turnaround_time": 2.6,
-      "throughput": 0.312,
-      "max_waiting_time": 1,
-      "preemption_count": 11,
-      "starvation_occurred": false,
-      "burst_prediction_error": null,
-      "judgment": "SUCCESS",
-      "applied_params": {
-        "quantum": 1,
-        "source": "xv6_default"
-      },
-      "recommended_params": {},
-      "param_application_status": "fixed_default"
     },
     "FCFS": {
       "avg_waiting_time": 0.4,
@@ -153,18 +108,41 @@
       "param_application_status": "not_applicable"
     },
     "Priority": {
-      "avg_waiting_time": 0.4,
-      "avg_response_time": 0.4,
-      "avg_turnaround_time": 3.0,
-      "throughput": 0.312,
+      "avg_waiting_time": 0.5,
+      "avg_response_time": 0.5,
+      "avg_turnaround_time": 2.5,
+      "throughput": 0.25,
       "max_waiting_time": 2,
-      "preemption_count": 13,
+      "preemption_count": 12,
       "starvation_occurred": false,
       "burst_prediction_error": null,
       "judgment": "SUCCESS",
       "applied_params": {
         "aging_threshold": 10,
         "priority_source": "schedtest_profile",
+        "source": "xv6_default"
+      },
+      "recommended_params": {},
+      "param_application_status": "fixed_default"
+    },
+    "MLFQ": {
+      "avg_waiting_time": 0.2,
+      "avg_response_time": 0.0,
+      "avg_turnaround_time": 2.2,
+      "throughput": 0.312,
+      "max_waiting_time": 1,
+      "preemption_count": 3,
+      "starvation_occurred": false,
+      "burst_prediction_error": null,
+      "judgment": "SUCCESS",
+      "applied_params": {
+        "queues": 3,
+        "quantum": [
+          2,
+          4,
+          8
+        ],
+        "boost_interval": 20,
         "source": "xv6_default"
       },
       "recommended_params": {},
@@ -187,12 +165,12 @@
       "param_application_status": "fully_applied"
     },
     "SRTF": {
-      "avg_waiting_time": 0.2,
-      "avg_response_time": 0.2,
-      "avg_turnaround_time": 2.4,
+      "avg_waiting_time": 0.4,
+      "avg_response_time": 0.4,
+      "avg_turnaround_time": 2.8,
       "throughput": 0.312,
-      "max_waiting_time": 1,
-      "preemption_count": 11,
+      "max_waiting_time": 2,
+      "preemption_count": 12,
       "starvation_occurred": false,
       "burst_prediction_error": null,
       "judgment": "SUCCESS",
@@ -205,6 +183,6 @@
   },
   "target_metric": "avg_response_time",
   "selected_metric_value": 0.4,
-  "best_metric_value": 0.2,
-  "explanation": "SUCCESS: MLFQ on avg_response_time = 0.4 vs best (RR) = 0.2; regret = 0.0% (<= 10%)."
+  "best_metric_value": 0.0,
+  "explanation": "SUCCESS: RR on avg_response_time = 0.4 vs best (MLFQ) = 0.0; regret = 0.0% (<= 10%)."
 }
