@@ -83,6 +83,65 @@ static struct workload WORKLOADS[] = {
       {5,  3, 5, "cpu"},
       {6,  2, 5, "cpu"},
   }},
+  // ---- Larger DISCRIMINATING profiles (feedback-loop train/test set) --------
+  // Bursts are an order of magnitude above the 1-tick RR quantum and up to 12
+  // procs, so algorithms separate by MANY ticks (not sub-tick noise). Each
+  // isolates one phenomenon. Priorities use the kernel convention: LOWER number
+  // = higher priority (sched_priority picks min priority; aging decrements it).
+  { "convoy_tail", 7, {        // one long head job blocks a tail of short jobs
+      {0, 20, 5, "cpu"},
+      {1,  3, 5, "interactive"},
+      {2,  2, 5, "interactive"},
+      {3,  3, 5, "interactive"},
+      {4,  2, 5, "interactive"},
+      {5,  3, 5, "interactive"},
+      {6,  2, 5, "interactive"},
+  }},
+  { "cpu_quad", 4, {           // four long CPU-bound jobs (turnaround target)
+      {0, 18, 4, "cpu"},
+      {1, 14, 5, "cpu"},
+      {2, 16, 6, "cpu"},
+      {3, 12, 5, "cpu"},
+  }},
+  { "burst_storm", 10, {       // many short interactive jobs racing two CPU hogs
+      {0,  2, 5, "interactive"},
+      {1,  3, 5, "interactive"},
+      {1,  2, 5, "interactive"},
+      {2,  8, 5, "cpu"},
+      {3,  2, 5, "interactive"},
+      {4,  3, 5, "interactive"},
+      {5,  2, 5, "interactive"},
+      {6,  3, 5, "interactive"},
+      {8,  9, 5, "cpu"},
+      {10, 2, 5, "interactive"},
+  }},
+  { "prio_starve", 7, {        // low-priority(9) long victim vs high-priority(1) stream
+      {0, 20, 9, "cpu"},
+      {0,  4, 1, "cpu"},
+      {2,  4, 1, "cpu"},
+      {4,  4, 1, "cpu"},
+      {6,  4, 2, "cpu"},
+      {8,  4, 2, "cpu"},
+      {10, 4, 1, "cpu"},
+  }},
+  { "bimodal", 8, {            // interleaved very-short and long jobs (SJF target)
+      {0,  2, 5, "interactive"},
+      {0, 16, 5, "cpu"},
+      {1,  3, 5, "interactive"},
+      {2, 14, 5, "cpu"},
+      {3,  2, 5, "interactive"},
+      {4,  3, 5, "interactive"},
+      {5, 12, 5, "cpu"},
+      {6,  2, 5, "interactive"},
+  }},
+  { "preempt_stream", 6, {     // long job; short jobs arrive mid-flight (SRTF preempts)
+      {0, 24, 5, "cpu"},
+      {3,  3, 5, "interactive"},
+      {7,  3, 5, "interactive"},
+      {11, 3, 5, "interactive"},
+      {15, 3, 5, "interactive"},
+      {19, 3, 5, "interactive"},
+  }},
 };
 #define NWORKLOADS (sizeof(WORKLOADS) / sizeof(WORKLOADS[0]))
 

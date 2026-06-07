@@ -1,0 +1,89 @@
+{
+  "id": "xv6_preempt_stream",
+  "description": "Mirror of the schedtest `preempt_stream` curated table (user/schedtest.c). Process order == fork order so LLM burst priors align to xv6 by index. Single CPU burst per process (one-shot run_burst). Discriminating (bursts >> 1-tick RR quantum) for the feedback train/test set.",
+  "target_metric": "avg_response_time",
+  "expected_best_algorithm": "MLFQ",
+  "expected_behavior": "Measured best on avg_response_time is MLFQ (xv6-measured).",
+  "schema_version": 2,
+  "processes": [
+    {
+      "pid": 1,
+      "arrival_time": 0,
+      "cpu_bursts": [
+        24
+      ],
+      "io_bursts": [],
+      "priority": 5,
+      "label": "cpu",
+      "actual_bursts": [
+        24
+      ]
+    },
+    {
+      "pid": 2,
+      "arrival_time": 3,
+      "cpu_bursts": [
+        3
+      ],
+      "io_bursts": [],
+      "priority": 5,
+      "label": "interactive",
+      "actual_bursts": [
+        3
+      ]
+    },
+    {
+      "pid": 3,
+      "arrival_time": 7,
+      "cpu_bursts": [
+        3
+      ],
+      "io_bursts": [],
+      "priority": 5,
+      "label": "interactive",
+      "actual_bursts": [
+        3
+      ]
+    },
+    {
+      "pid": 4,
+      "arrival_time": 11,
+      "cpu_bursts": [
+        3
+      ],
+      "io_bursts": [],
+      "priority": 5,
+      "label": "interactive",
+      "actual_bursts": [
+        3
+      ]
+    },
+    {
+      "pid": 5,
+      "arrival_time": 15,
+      "cpu_bursts": [
+        3
+      ],
+      "io_bursts": [],
+      "priority": 5,
+      "label": "interactive",
+      "actual_bursts": [
+        3
+      ]
+    },
+    {
+      "pid": 6,
+      "arrival_time": 19,
+      "cpu_bursts": [
+        3
+      ],
+      "io_bursts": [],
+      "priority": 5,
+      "label": "interactive",
+      "actual_bursts": [
+        3
+      ]
+    }
+  ],
+  "expected_best_source": "xv6-measured"
+}

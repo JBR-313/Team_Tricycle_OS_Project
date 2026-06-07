@@ -74,7 +74,10 @@ QEMU_OPTS = [
 ]
 # schedtest only knows these curated profiles; fall back to mixed otherwise.
 XV6_PROFILES = {"interactive", "cpu_bound", "mixed", "priority_sensitive",
-                "interactive_storm", "batch_convoy"}
+                "interactive_storm", "batch_convoy",
+                # Larger discriminating profiles (feedback train/test set).
+                "convoy_tail", "cpu_quad", "burst_storm", "prio_starve",
+                "bimodal", "preempt_stream"}
 QEMU_BOOT_WAIT = 4.0      # seconds to wait for the shell prompt before typing
 QEMU_RUN_TIMEOUT = 60.0   # max seconds to wait for RUN_END before giving up
 
@@ -89,6 +92,14 @@ PROFILE_MAP = {
     # since for the xv6 backend the analyzed processes must equal the forked ones.
     "interactive_storm":  ROOT / "workloads" / "xv6_interactive_storm.json",
     "batch_convoy":       ROOT / "workloads" / "xv6_batch_convoy.json",
+    # Larger discriminating xv6 profiles (feedback train/test set); their
+    # canonical file IS the mirror (xv6 analyzes exactly what it forks).
+    "convoy_tail":        ROOT / "workloads" / "xv6_convoy_tail.json",
+    "cpu_quad":           ROOT / "workloads" / "xv6_cpu_quad.json",
+    "burst_storm":        ROOT / "workloads" / "xv6_burst_storm.json",
+    "prio_starve":        ROOT / "workloads" / "xv6_prio_starve.json",
+    "bimodal":            ROOT / "workloads" / "xv6_bimodal.json",
+    "preempt_stream":     ROOT / "workloads" / "xv6_preempt_stream.json",
     "short_jobs":         ROOT / "workloads" / "short_jobs.json",
     "starvation_risk":    ROOT / "workloads" / "starvation_risk.json",
     # v2 workload IDs (matches the `id` field in each workload JSON;
@@ -123,6 +134,12 @@ XV6_MIRROR_MAP = {
     "priority_sensitive": ROOT / "workloads" / "xv6_priority_sensitive.json",
     "interactive_storm":  ROOT / "workloads" / "xv6_interactive_storm.json",
     "batch_convoy":       ROOT / "workloads" / "xv6_batch_convoy.json",
+    "convoy_tail":        ROOT / "workloads" / "xv6_convoy_tail.json",
+    "cpu_quad":           ROOT / "workloads" / "xv6_cpu_quad.json",
+    "burst_storm":        ROOT / "workloads" / "xv6_burst_storm.json",
+    "prio_starve":        ROOT / "workloads" / "xv6_prio_starve.json",
+    "bimodal":            ROOT / "workloads" / "xv6_bimodal.json",
+    "preempt_stream":     ROOT / "workloads" / "xv6_preempt_stream.json",
 }
 
 # Trace files written by the simulator (lowercase canonical names).

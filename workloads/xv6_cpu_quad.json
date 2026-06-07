@@ -1,0 +1,63 @@
+{
+  "id": "xv6_cpu_quad",
+  "description": "Mirror of the schedtest `cpu_quad` curated table (user/schedtest.c). Process order == fork order so LLM burst priors align to xv6 by index. Single CPU burst per process (one-shot run_burst). Discriminating (bursts >> 1-tick RR quantum) for the feedback train/test set.",
+  "target_metric": "avg_turnaround_time",
+  "expected_best_algorithm": "MLFQ",
+  "expected_behavior": "Measured best on avg_turnaround_time is MLFQ (xv6-measured).",
+  "schema_version": 2,
+  "processes": [
+    {
+      "pid": 1,
+      "arrival_time": 0,
+      "cpu_bursts": [
+        18
+      ],
+      "io_bursts": [],
+      "priority": 4,
+      "label": "cpu",
+      "actual_bursts": [
+        18
+      ]
+    },
+    {
+      "pid": 2,
+      "arrival_time": 1,
+      "cpu_bursts": [
+        14
+      ],
+      "io_bursts": [],
+      "priority": 5,
+      "label": "cpu",
+      "actual_bursts": [
+        14
+      ]
+    },
+    {
+      "pid": 3,
+      "arrival_time": 2,
+      "cpu_bursts": [
+        16
+      ],
+      "io_bursts": [],
+      "priority": 6,
+      "label": "cpu",
+      "actual_bursts": [
+        16
+      ]
+    },
+    {
+      "pid": 4,
+      "arrival_time": 3,
+      "cpu_bursts": [
+        12
+      ],
+      "io_bursts": [],
+      "priority": 5,
+      "label": "cpu",
+      "actual_bursts": [
+        12
+      ]
+    }
+  ],
+  "expected_best_source": "xv6-measured"
+}

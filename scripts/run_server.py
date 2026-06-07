@@ -47,6 +47,9 @@ ORCHESTRATOR = ROOT / "scripts" / "orchestrator.py"
 XV6_PROFILES = {
     "interactive", "cpu_bound", "mixed", "priority_sensitive",
     "interactive_storm", "batch_convoy",
+    # Larger discriminating profiles (feedback train/test set).
+    "convoy_tail", "cpu_quad", "burst_storm", "prio_starve",
+    "bimodal", "preempt_stream",
 }
 SIM_PROFILES = XV6_PROFILES | {
     # Simulator-only profiles (no curated schedtest.c table). These resolve in

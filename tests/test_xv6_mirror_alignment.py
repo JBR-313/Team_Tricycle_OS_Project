@@ -22,6 +22,13 @@ MIRROR_FOR = {
     "priority_sensitive": "xv6_priority_sensitive",
     "interactive_storm":  "xv6_interactive_storm",
     "batch_convoy":       "xv6_batch_convoy",
+    # Larger discriminating profiles (feedback train/test set).
+    "convoy_tail":        "xv6_convoy_tail",
+    "cpu_quad":           "xv6_cpu_quad",
+    "burst_storm":        "xv6_burst_storm",
+    "prio_starve":        "xv6_prio_starve",
+    "bimodal":            "xv6_bimodal",
+    "preempt_stream":     "xv6_preempt_stream",
 }
 
 _HEADER_RE = re.compile(r'\{\s*"([A-Za-z_][A-Za-z0-9_]*)"\s*,\s*(\d+)\s*,\s*\{')

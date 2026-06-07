@@ -1,0 +1,102 @@
+{
+  "id": "xv6_prio_starve",
+  "description": "Mirror of the schedtest `prio_starve` curated table (user/schedtest.c). Process order == fork order so LLM burst priors align to xv6 by index. Single CPU burst per process (one-shot run_burst). Discriminating (bursts >> 1-tick RR quantum) for the feedback train/test set.",
+  "target_metric": "avg_waiting_time",
+  "expected_best_algorithm": "RR",
+  "expected_behavior": "Measured best on avg_waiting_time is RR (xv6-measured).",
+  "schema_version": 2,
+  "processes": [
+    {
+      "pid": 1,
+      "arrival_time": 0,
+      "cpu_bursts": [
+        20
+      ],
+      "io_bursts": [],
+      "priority": 9,
+      "label": "cpu",
+      "actual_bursts": [
+        20
+      ]
+    },
+    {
+      "pid": 2,
+      "arrival_time": 0,
+      "cpu_bursts": [
+        4
+      ],
+      "io_bursts": [],
+      "priority": 1,
+      "label": "cpu",
+      "actual_bursts": [
+        4
+      ]
+    },
+    {
+      "pid": 3,
+      "arrival_time": 2,
+      "cpu_bursts": [
+        4
+      ],
+      "io_bursts": [],
+      "priority": 1,
+      "label": "cpu",
+      "actual_bursts": [
+        4
+      ]
+    },
+    {
+      "pid": 4,
+      "arrival_time": 4,
+      "cpu_bursts": [
+        4
+      ],
+      "io_bursts": [],
+      "priority": 1,
+      "label": "cpu",
+      "actual_bursts": [
+        4
+      ]
+    },
+    {
+      "pid": 5,
+      "arrival_time": 6,
+      "cpu_bursts": [
+        4
+      ],
+      "io_bursts": [],
+      "priority": 2,
+      "label": "cpu",
+      "actual_bursts": [
+        4
+      ]
+    },
+    {
+      "pid": 6,
+      "arrival_time": 8,
+      "cpu_bursts": [
+        4
+      ],
+      "io_bursts": [],
+      "priority": 2,
+      "label": "cpu",
+      "actual_bursts": [
+        4
+      ]
+    },
+    {
+      "pid": 7,
+      "arrival_time": 10,
+      "cpu_bursts": [
+        4
+      ],
+      "io_bursts": [],
+      "priority": 1,
+      "label": "cpu",
+      "actual_bursts": [
+        4
+      ]
+    }
+  ],
+  "expected_best_source": "xv6-measured"
+}
