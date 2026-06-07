@@ -8,7 +8,7 @@ Initial burst prediction quality, scored against held-out ground truth. `actual_
 |---|---|---|---|
 | EMA cold-start (no LLM) | 7.623 | 0.5 | 5 |
 | Heuristic (fixed rule) | 4.642 | 0.72 | 5 |
-| **LLM prior (reasoning)** | 16.486 | 0.901 | 5 |
+| **LLM prior (reasoning)** | 16.406 | 0.901 | 5 |
 
 ## Reading this
 
@@ -46,7 +46,7 @@ Initial burst prediction quality, scored against held-out ground truth. `actual_
 |---|---|---|
 | EMA cold-start (no LLM) | 8.4 | 0.5 |
 | Heuristic (fixed rule) | 8.4 | 0.5 |
-| **LLM prior (reasoning)** | 2.8 | 0.722 |
+| **LLM prior (reasoning)** | 2.4 | 0.722 |
 
 ## staggered_short_arrival (8 procs)
 

@@ -390,7 +390,7 @@
           "pairwise_order_accuracy": 0.5
         },
         "llm": {
-          "mae": 2.8,
+          "mae": 2.4,
           "pairwise_order_accuracy": 0.722
         }
       },
@@ -407,28 +407,28 @@
           "actual_first_burst": 2,
           "ema_cold": 10.0,
           "heuristic": 10.0,
-          "llm": 1.0
+          "llm": 2.0
         },
         {
           "pid": 3,
           "actual_first_burst": 1,
           "ema_cold": 10.0,
           "heuristic": 10.0,
-          "llm": 1.0
+          "llm": 2.0
         },
         {
           "pid": 4,
           "actual_first_burst": 3,
           "ema_cold": 10.0,
           "heuristic": 10.0,
-          "llm": 1.0
+          "llm": 2.0
         },
         {
           "pid": 5,
           "actual_first_burst": 2,
           "ema_cold": 10.0,
           "heuristic": 10.0,
-          "llm": 1.0
+          "llm": 2.0
         }
       ]
     },
@@ -521,7 +521,7 @@
       "workloads_scored": 5
     },
     "llm": {
-      "mean_mae": 16.486,
+      "mean_mae": 16.406,
       "mean_pairwise_order_accuracy": 0.901,
       "workloads_scored": 5
     }

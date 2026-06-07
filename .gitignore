@@ -20,8 +20,14 @@ outputs/*
 !outputs/_demo_fixtures/
 # Burst-prediction ablation evidence (report + reproducibility cache) is a
 # committed presentation deliverable, like the demo fixtures above. Regenerate
-# with `python3 tools/burst_ablation.py [--advise]`.
+# with `python3 experiments/burst_ablation.py [--advise]`.
 !outputs/ablation/
+# Retrieval-learning RESULTS.md is likewise committed evidence; the bulky LLM
+# response cache + raw json under outputs/learning/ stay ignored (regeneratable
+# via experiments/recommendation_eval.py).
+!outputs/learning/
+outputs/learning/*
+!outputs/learning/RESULTS.md
 
 # Defensive: catch stray logs outside outputs/. Tracked files (e.g.
 # logs/foo.log if someone deliberately git-added one) are unaffected.

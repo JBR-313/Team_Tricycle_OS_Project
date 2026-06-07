@@ -1,0 +1,468 @@
+{
+  "rows": [
+    {
+      "name": "convoy_effect",
+      "id": "convoy_effect",
+      "n": 11,
+      "by_algo": {
+        "SJF": {
+          "ema_cold": {
+            "avg_waiting_time": 20.45,
+            "avg_turnaround_time": 24.0,
+            "avg_response_time": 21.36
+          },
+          "heuristic": {
+            "avg_waiting_time": 20.45,
+            "avg_turnaround_time": 24.0,
+            "avg_response_time": 21.36
+          },
+          "llm": {
+            "avg_waiting_time": 20.45,
+            "avg_turnaround_time": 24.0,
+            "avg_response_time": 21.36
+          }
+        },
+        "SRTF": {
+          "ema_cold": {
+            "avg_waiting_time": 20.45,
+            "avg_turnaround_time": 24.0,
+            "avg_response_time": 21.36
+          },
+          "heuristic": {
+            "avg_waiting_time": 5.82,
+            "avg_turnaround_time": 9.45,
+            "avg_response_time": 5.0
+          },
+          "llm": {
+            "avg_waiting_time": 5.82,
+            "avg_turnaround_time": 9.45,
+            "avg_response_time": 5.0
+          }
+        }
+      },
+      "target_metric": "avg_waiting_time"
+    },
+    {
+      "name": "bursty_long_tail",
+      "id": "bursty_long_tail",
+      "n": 5,
+      "by_algo": {
+        "SJF": {
+          "ema_cold": {
+            "avg_waiting_time": 13.4,
+            "avg_turnaround_time": 18.8,
+            "avg_response_time": 14.2
+          },
+          "heuristic": {
+            "avg_waiting_time": 13.4,
+            "avg_turnaround_time": 18.8,
+            "avg_response_time": 14.2
+          },
+          "llm": {
+            "avg_waiting_time": 13.4,
+            "avg_turnaround_time": 18.8,
+            "avg_response_time": 14.2
+          }
+        },
+        "SRTF": {
+          "ema_cold": {
+            "avg_waiting_time": 13.4,
+            "avg_turnaround_time": 18.8,
+            "avg_response_time": 14.2
+          },
+          "heuristic": {
+            "avg_waiting_time": 13.4,
+            "avg_turnaround_time": 18.8,
+            "avg_response_time": 14.2
+          },
+          "llm": {
+            "avg_waiting_time": 1.4,
+            "avg_turnaround_time": 6.8,
+            "avg_response_time": 0.6
+          }
+        }
+      },
+      "target_metric": "avg_response_time"
+    },
+    {
+      "name": "staggered_short_arrival",
+      "id": "staggered_short_arrival",
+      "n": 8,
+      "by_algo": {
+        "SJF": {
+          "ema_cold": {
+            "avg_waiting_time": 6.12,
+            "avg_turnaround_time": 9.0,
+            "avg_response_time": 7.0
+          },
+          "heuristic": {
+            "avg_waiting_time": 6.12,
+            "avg_turnaround_time": 9.0,
+            "avg_response_time": 7.0
+          },
+          "llm": {
+            "avg_waiting_time": 6.12,
+            "avg_turnaround_time": 9.0,
+            "avg_response_time": 7.0
+          }
+        },
+        "SRTF": {
+          "ema_cold": {
+            "avg_waiting_time": 6.12,
+            "avg_turnaround_time": 9.0,
+            "avg_response_time": 7.0
+          },
+          "heuristic": {
+            "avg_waiting_time": 6.12,
+            "avg_turnaround_time": 9.0,
+            "avg_response_time": 7.0
+          },
+          "llm": {
+            "avg_waiting_time": 1.62,
+            "avg_turnaround_time": 4.62,
+            "avg_response_time": 0.88
+          }
+        }
+      },
+      "target_metric": "avg_response_time"
+    },
+    {
+      "name": "burst_prediction_demo",
+      "id": "burst_prediction_demo",
+      "n": 8,
+      "by_algo": {
+        "SJF": {
+          "ema_cold": {
+            "avg_waiting_time": 26.25,
+            "avg_turnaround_time": 34.5,
+            "avg_response_time": 27.12
+          },
+          "heuristic": {
+            "avg_waiting_time": 21.5,
+            "avg_turnaround_time": 29.75,
+            "avg_response_time": 22.38
+          },
+          "llm": {
+            "avg_waiting_time": 21.75,
+            "avg_turnaround_time": 30.0,
+            "avg_response_time": 22.62
+          }
+        },
+        "SRTF": {
+          "ema_cold": {
+            "avg_waiting_time": 26.25,
+            "avg_turnaround_time": 34.5,
+            "avg_response_time": 27.12
+          },
+          "heuristic": {
+            "avg_waiting_time": 21.5,
+            "avg_turnaround_time": 29.75,
+            "avg_response_time": 22.38
+          },
+          "llm": {
+            "avg_waiting_time": 21.75,
+            "avg_turnaround_time": 30.0,
+            "avg_response_time": 22.62
+          }
+        }
+      },
+      "target_metric": "avg_waiting_time"
+    },
+    {
+      "name": "short_jobs",
+      "id": "short_jobs_clustered",
+      "n": 25,
+      "by_algo": {
+        "SJF": {
+          "ema_cold": {
+            "avg_waiting_time": 10.24,
+            "avg_turnaround_time": 12.12,
+            "avg_response_time": 11.2
+          },
+          "heuristic": {
+            "avg_waiting_time": 12.92,
+            "avg_turnaround_time": 14.76,
+            "avg_response_time": 13.84
+          },
+          "llm": {
+            "avg_waiting_time": 12.08,
+            "avg_turnaround_time": 13.88,
+            "avg_response_time": 12.96
+          }
+        },
+        "SRTF": {
+          "ema_cold": {
+            "avg_waiting_time": 10.24,
+            "avg_turnaround_time": 12.12,
+            "avg_response_time": 11.2
+          },
+          "heuristic": {
+            "avg_waiting_time": 12.92,
+            "avg_turnaround_time": 14.76,
+            "avg_response_time": 13.84
+          },
+          "llm": {
+            "avg_waiting_time": 12.08,
+            "avg_turnaround_time": 13.88,
+            "avg_response_time": 12.96
+          }
+        }
+      },
+      "target_metric": "avg_waiting_time"
+    },
+    {
+      "name": "xv6_convoy_tail",
+      "id": "xv6_convoy_tail",
+      "n": 7,
+      "by_algo": {
+        "SJF": {
+          "ema_cold": {
+            "avg_waiting_time": 18.86,
+            "avg_turnaround_time": 23.71,
+            "avg_response_time": 19.71
+          },
+          "heuristic": {
+            "avg_waiting_time": 18.86,
+            "avg_turnaround_time": 23.71,
+            "avg_response_time": 19.71
+          },
+          "llm": {
+            "avg_waiting_time": 18.86,
+            "avg_turnaround_time": 23.71,
+            "avg_response_time": 19.71
+          }
+        },
+        "SRTF": {
+          "ema_cold": {
+            "avg_waiting_time": 18.86,
+            "avg_turnaround_time": 23.71,
+            "avg_response_time": 19.71
+          },
+          "heuristic": {
+            "avg_waiting_time": 18.86,
+            "avg_turnaround_time": 23.71,
+            "avg_response_time": 19.71
+          },
+          "llm": {
+            "avg_waiting_time": 18.86,
+            "avg_turnaround_time": 23.71,
+            "avg_response_time": 19.71
+          }
+        }
+      },
+      "target_metric": "avg_turnaround_time"
+    },
+    {
+      "name": "xv6_bimodal",
+      "id": "xv6_bimodal",
+      "n": 8,
+      "by_algo": {
+        "SJF": {
+          "ema_cold": {
+            "avg_waiting_time": 22.12,
+            "avg_turnaround_time": 28.75,
+            "avg_response_time": 23.0
+          },
+          "heuristic": {
+            "avg_waiting_time": 22.12,
+            "avg_turnaround_time": 28.75,
+            "avg_response_time": 23.0
+          },
+          "llm": {
+            "avg_waiting_time": 22.12,
+            "avg_turnaround_time": 28.75,
+            "avg_response_time": 23.0
+          }
+        },
+        "SRTF": {
+          "ema_cold": {
+            "avg_waiting_time": 22.12,
+            "avg_turnaround_time": 28.75,
+            "avg_response_time": 23.0
+          },
+          "heuristic": {
+            "avg_waiting_time": 22.12,
+            "avg_turnaround_time": 28.75,
+            "avg_response_time": 23.0
+          },
+          "llm": {
+            "avg_waiting_time": 22.12,
+            "avg_turnaround_time": 28.75,
+            "avg_response_time": 23.0
+          }
+        }
+      },
+      "target_metric": "avg_waiting_time"
+    },
+    {
+      "name": "xv6_preempt_stream",
+      "id": "xv6_preempt_stream",
+      "n": 6,
+      "by_algo": {
+        "SJF": {
+          "ema_cold": {
+            "avg_waiting_time": 15.0,
+            "avg_turnaround_time": 21.33,
+            "avg_response_time": 15.83
+          },
+          "heuristic": {
+            "avg_waiting_time": 15.0,
+            "avg_turnaround_time": 21.33,
+            "avg_response_time": 15.83
+          },
+          "llm": {
+            "avg_waiting_time": 15.0,
+            "avg_turnaround_time": 21.33,
+            "avg_response_time": 15.83
+          }
+        },
+        "SRTF": {
+          "ema_cold": {
+            "avg_waiting_time": 15.0,
+            "avg_turnaround_time": 21.33,
+            "avg_response_time": 15.83
+          },
+          "heuristic": {
+            "avg_waiting_time": 15.0,
+            "avg_turnaround_time": 21.33,
+            "avg_response_time": 15.83
+          },
+          "llm": {
+            "avg_waiting_time": 15.0,
+            "avg_turnaround_time": 21.33,
+            "avg_response_time": 15.83
+          }
+        }
+      },
+      "target_metric": "avg_response_time"
+    },
+    {
+      "name": "xv6_burst_storm",
+      "id": "xv6_burst_storm",
+      "n": 10,
+      "by_algo": {
+        "SJF": {
+          "ema_cold": {
+            "avg_waiting_time": 9.8,
+            "avg_turnaround_time": 13.3,
+            "avg_response_time": 10.7
+          },
+          "heuristic": {
+            "avg_waiting_time": 9.8,
+            "avg_turnaround_time": 13.3,
+            "avg_response_time": 10.7
+          },
+          "llm": {
+            "avg_waiting_time": 9.8,
+            "avg_turnaround_time": 13.3,
+            "avg_response_time": 10.7
+          }
+        },
+        "SRTF": {
+          "ema_cold": {
+            "avg_waiting_time": 9.8,
+            "avg_turnaround_time": 13.3,
+            "avg_response_time": 10.7
+          },
+          "heuristic": {
+            "avg_waiting_time": 9.8,
+            "avg_turnaround_time": 13.3,
+            "avg_response_time": 10.7
+          },
+          "llm": {
+            "avg_waiting_time": 9.8,
+            "avg_turnaround_time": 13.3,
+            "avg_response_time": 10.7
+          }
+        }
+      },
+      "target_metric": "avg_response_time"
+    },
+    {
+      "name": "xv6_prio_starve",
+      "id": "xv6_prio_starve",
+      "n": 7,
+      "by_algo": {
+        "SJF": {
+          "ema_cold": {
+            "avg_waiting_time": 20.57,
+            "avg_turnaround_time": 26.71,
+            "avg_response_time": 21.43
+          },
+          "heuristic": {
+            "avg_waiting_time": 20.57,
+            "avg_turnaround_time": 26.71,
+            "avg_response_time": 21.43
+          },
+          "llm": {
+            "avg_waiting_time": 6.86,
+            "avg_turnaround_time": 13.0,
+            "avg_response_time": 7.71
+          }
+        },
+        "SRTF": {
+          "ema_cold": {
+            "avg_waiting_time": 20.57,
+            "avg_turnaround_time": 26.71,
+            "avg_response_time": 21.43
+          },
+          "heuristic": {
+            "avg_waiting_time": 20.57,
+            "avg_turnaround_time": 26.71,
+            "avg_response_time": 21.43
+          },
+          "llm": {
+            "avg_waiting_time": 6.86,
+            "avg_turnaround_time": 13.0,
+            "avg_response_time": 7.71
+          }
+        }
+      },
+      "target_metric": "avg_waiting_time"
+    }
+  ],
+  "summary": {
+    "SJF.avg_waiting_time": {
+      "mean_pct_improvement": 6.58,
+      "llm_better": 2,
+      "ties": 7,
+      "llm_worse": 1,
+      "n": 10
+    },
+    "SJF.avg_turnaround_time": {
+      "mean_pct_improvement": 4.99,
+      "llm_better": 2,
+      "ties": 7,
+      "llm_worse": 1,
+      "n": 10
+    },
+    "SJF.avg_response_time": {
+      "mean_pct_improvement": 6.49,
+      "llm_better": 2,
+      "ties": 7,
+      "llm_worse": 1,
+      "n": 10
+    },
+    "SRTF.avg_waiting_time": {
+      "mean_pct_improvement": 30.04,
+      "llm_better": 5,
+      "ties": 4,
+      "llm_worse": 1,
+      "n": 10
+    },
+    "SRTF.avg_turnaround_time": {
+      "mean_pct_improvement": 22.3,
+      "llm_better": 5,
+      "ties": 4,
+      "llm_worse": 1,
+      "n": 10
+    },
+    "SRTF.avg_response_time": {
+      "mean_pct_improvement": 32.47,
+      "llm_better": 5,
+      "ties": 4,
+      "llm_worse": 1,
+      "n": 10
+    }
+  }
+}
