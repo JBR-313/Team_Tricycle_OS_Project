@@ -420,7 +420,9 @@ def decide(
     Returns (result, messages) where result is one of:
       - "accepted"              : all checks passed
       - "accepted_with_warning" : passes but with caveats
-      - "rejected"              : compat or confidence below reject threshold
+      - "rejected"              : compatibility below reject threshold (or an
+                                  unsupported algorithm/metric). Confidence is
+                                  informational and never rejects.
     """
     messages: list[str] = []
     rejected = False
