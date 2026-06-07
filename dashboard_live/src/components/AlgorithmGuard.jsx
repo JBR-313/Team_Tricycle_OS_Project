@@ -75,11 +75,23 @@ export default function AlgorithmGuard({ guardDecision: g, show = true }) {
   const fallbackAlgo  = g.fallback_algorithm
   const predictionSrc = g.prediction_source  // 'llm' | 'ema' | null
 
-  // Checklist — exactly three short lines per acceptance criteria.
-  // No compat / confidence / 0.95 text anywhere.
+  // Checklist — three short lines, each DERIVED from guard_decision (no
+  // hardcoded green). The first line reflects whether the algorithm the LLM
+  // actually recommended is one the kernel implements; an unsupported pick
+  // shows a warning rather than a false ✓.
+  const SUPPORTED = ['RR', 'FCFS', 'PRIORITY', 'MLFQ', 'SJF', 'SRTF']
+  const recAlgo = String(g.original_recommendation || algo || '').toUpperCase()
+  const algoImplemented = SUPPORTED.includes(recAlgo)
   const checklist = [
-    [`Algorithm implemented${algo ? ` (${algo})` : ''}`, true],
-    ['Parameters in range', true],
+    [algoImplemented
+      ? `Algorithm implemented${algo ? ` (${algo})` : ''}`
+      : `Recommended algo unsupported${recAlgo ? ` (${recAlgo})` : ''} → fallback`,
+      algoImplemented],
+    // The guard always validates and normalises params (clamping out-of-range
+    // values to safe defaults), so Role C always receives valid params — this
+    // line states that guarantee honestly rather than asserting the LLM's raw
+    // params happened to be in range.
+    ['Parameters validated by guard', true],
     [fallbackUsed
       ? `Fallback used → ${fallbackAlgo || '—'}`
       : 'No fallback used', !fallbackUsed],
