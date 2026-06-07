@@ -72,7 +72,7 @@ flowchart TD
         Starvation · Poor RT · Long CPU-bound domination"]
 
         R5["🔄 Runtime Correction Proposer
-        tools/runtime_correction.py · LLM
+        tools/correction_proposer.py · LLM
         ─────────────────
         Proposes correction → Algorithm Guard → Next Scheduling Point"]
 
@@ -94,7 +94,7 @@ flowchart TD
         Natural-language explanation of trace + metrics"]
 
         A2["📝 Feedback Rule Generator
-        tools/feedback_generator.py · LLM
+        tools/llm_advisor.py · LLM
         ─────────────────
         Generates rules when LLM recommendation failed"]
 
@@ -150,12 +150,12 @@ subgraph RUNNING_TOOLS["🟩 Running"]
     TP["trace_parser.py"]
     ME["metrics.py"]
     ED["event_detector.py"]
-    RC["runtime_correction.py"]
+    RC["correction_proposer.py"]
 end
 
 subgraph AFTER_TOOLS["🟦 After Running"]
     TE["trace_explainer.py"]
-    FG["feedback_generator.py"]
+    FG["llm_advisor.py"]
     DB["dashboard.py"]
 end
 
@@ -240,11 +240,11 @@ class WS,REC,GD,TR,MT,RE,COR,TEX,FB data
 | `recommendation.json` | JSON object | `llm_advisor.py` | `algorithm_guard.py`, dashboard |
 | `guard_decision.json` | JSON object | `algorithm_guard.py` | xv6 / `scheduler_simulator.py` |
 | `trace.jsonl` | JSON Lines | xv6 / `scheduler_simulator.py` | `trace_parser.py`, `trace_explainer.py`, dashboard |
-| `metrics.json` | JSON object | `metrics.py` | `trace_explainer.py`, `feedback_generator.py`, dashboard |
-| `runtime_events.json` | JSON object | `event_detector.py` | `runtime_correction.py`, dashboard |
-| `correction.json` | JSON object | `runtime_correction.py` | `algorithm_guard.py` → xv6 / simulator |
+| `metrics.json` | JSON object | `metrics.py` | `trace_explainer.py`, `llm_advisor.py`, dashboard |
+| `runtime_events.json` | JSON object | `event_detector.py` | `correction_proposer.py`, dashboard |
+| `correction.json` | JSON object | `correction_proposer.py` | `algorithm_guard.py` → xv6 / simulator |
 | `trace_explanation.json` | JSON object | `trace_explainer.py` | dashboard |
-| `feedback_rules.md` | Markdown | `feedback_generator.py` | `llm_advisor.py` (next run, fail only) |
+| `feedback_rules.md` | Markdown | `llm_advisor.py` | `llm_advisor.py` (next run, fail only) |
 
 ---
 
@@ -360,7 +360,7 @@ flowchart TD
         기아 · 응답 시간 불량 · CPU 독점 감지"]
 
         R5["🔄 런타임 보정 제안기
-        tools/runtime_correction.py · LLM
+        tools/correction_proposer.py · LLM
         ─────────────────
         보정 제안 → 알고리즘 가드 → Next Scheduling Point 적용"]
 
@@ -382,7 +382,7 @@ flowchart TD
         트레이스 + 메트릭을 자연어로 설명"]
 
         A2["📝 피드백 규칙 생성기
-        tools/feedback_generator.py · LLM
+        tools/llm_advisor.py · LLM
         ─────────────────
         LLM 추천 실패 시 규칙 생성"]
 
@@ -425,11 +425,11 @@ flowchart TD
 | `recommendation.json` | JSON 객체 | `llm_advisor.py` | `algorithm_guard.py`, 대시보드 |
 | `guard_decision.json` | JSON 객체 | `algorithm_guard.py` | xv6 / `scheduler_simulator.py` |
 | `trace.jsonl` | JSON Lines | xv6 / `scheduler_simulator.py` | `trace_parser.py`, `trace_explainer.py`, 대시보드 |
-| `metrics.json` | JSON 객체 | `metrics.py` | `trace_explainer.py`, `feedback_generator.py`, 대시보드 |
-| `runtime_events.json` | JSON 객체 | `event_detector.py` | `runtime_correction.py`, 대시보드 |
-| `correction.json` | JSON 객체 | `runtime_correction.py` | `algorithm_guard.py` → xv6 / 시뮬레이터 |
+| `metrics.json` | JSON 객체 | `metrics.py` | `trace_explainer.py`, `llm_advisor.py`, 대시보드 |
+| `runtime_events.json` | JSON 객체 | `event_detector.py` | `correction_proposer.py`, 대시보드 |
+| `correction.json` | JSON 객체 | `correction_proposer.py` | `algorithm_guard.py` → xv6 / 시뮬레이터 |
 | `trace_explanation.json` | JSON 객체 | `trace_explainer.py` | 대시보드 |
-| `feedback_rules.md` | 마크다운 | `feedback_generator.py` | `llm_advisor.py` (다음 실행, fail 시에만) |
+| `feedback_rules.md` | 마크다운 | `llm_advisor.py` | `llm_advisor.py` (다음 실행, fail 시에만) |
 
 ---
 

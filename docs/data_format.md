@@ -190,7 +190,7 @@ See `docs/trace_format.md` for the full event type specification.
 
 **Format**: JSON object  
 **Producer**: `tools/metrics.py`  
-**Consumer**: `tools/trace_explainer.py`, `tools/feedback_generator.py`, dashboard
+**Consumer**: `tools/trace_explainer.py`, `tools/llm_advisor.py`, dashboard
 
 ```json
 {
@@ -285,7 +285,7 @@ workload PIDs `1…N` and `process_count` matches on both sides — no offset, n
 
 **Format**: JSON object  
 **Producer**: `tools/event_detector.py`  
-**Consumer**: `tools/runtime_correction.py`, dashboard
+**Consumer**: `tools/correction_proposer.py`, dashboard
 
 ```json
 {
@@ -313,7 +313,7 @@ Possible event types: `"starvation_warning"`, `"poor_response_time"`, `"too_many
 ## outputs/correction.json
 
 **Format**: JSON object  
-**Producer**: `tools/runtime_correction.py` (via LLM)  
+**Producer**: `tools/correction_proposer.py` (via LLM)  
 **Consumer**: `tools/algorithm_guard.py` → xv6 / `tools/scheduler_simulator.py`
 
 ```json

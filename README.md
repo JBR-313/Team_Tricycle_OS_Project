@@ -45,6 +45,22 @@ The main question of this project is:
 
 > Can an LLM help choose, tune, correct, and explain xv6 Scheduling Algorithms using workload summaries and Scheduling Trace Logs?
 
+### Repository layout
+
+The repo is organised so the **core pipeline** is front-and-centre; everything
+else is supporting material.
+
+| Path | Role |
+|---|---|
+| `xv6-riscv/` | The kernel — **the execution authority**. xv6 runs the Scheduling Algorithm; the LLM never does. |
+| `scripts/orchestrator.py` | Host-side **control plane** that drives the whole pipeline (the diagram above). |
+| `tools/` | **Core pipeline modules**: workload analyzer · LLM advisor · Algorithm Guard · simulator · trace parser · metrics · event detector · correction proposer/guard · trace explainer. |
+| `workloads/` | Workload definitions (`*.json`) the pipeline schedules. |
+| `dashboard_live/` | GUI **observability** dashboard (React) that visualises a run. |
+| `experiments/` | **Research / evidence** tools that *measure* the LLM's value (burst ablation, retrieval learning). Not part of the running pipeline — see [`experiments/README.md`](experiments/README.md). |
+| `tests/` | Offline pytest + vitest suites. |
+| `docs/` | Design notes, data contracts, and the [demo runbook](docs/final_demo_runbook.md). |
+
 ---
 
 ## 2. System Principle
