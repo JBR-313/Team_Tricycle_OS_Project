@@ -283,6 +283,7 @@ def build_processes(events):
     """
     procs = {}
     cpu_used = {}
+    defined = set()  # pids actually defined as workload processes (ARRIVE/PROC_DEF)
     current = None  # the run in progress: {"pid", "tick", "queue"}
 
     def ensure(pid):
@@ -309,6 +310,7 @@ def build_processes(events):
 
         if event == "ARRIVE":
             p = ensure(pid)
+            defined.add(pid)
             if p["arrival_time"] is None:
                 p["arrival_time"] = tick
 
@@ -318,6 +320,7 @@ def build_processes(events):
             # produce response/turnaround/waiting metrics (simulator path uses
             # ARRIVE events and is unaffected).
             p = ensure(pid)
+            defined.add(pid)
             if p["arrival_time"] is None:
                 p["arrival_time"] = ev["arrival"]
 
@@ -352,6 +355,15 @@ def build_processes(events):
                 p["exit_turnaround"] = ev["turnaround"]
             if "waiting" in ev:
                 p["exit_waiting"] = ev["waiting"]
+
+    # Drop pids that were never DEFINED as workload processes (e.g. the xv6
+    # schedtest harness pid, which only ever appears in DISPATCH). They would
+    # otherwise leak in as all-null rows and inflate process_count. Guard on a
+    # non-empty `defined` set so any trace lacking ARRIVE/PROC_DEF is unaffected.
+    if defined:
+        for pid in [p for p in procs if p not in defined]:
+            del procs[pid]
+            cpu_used.pop(pid, None)
 
     return procs, cpu_used
 

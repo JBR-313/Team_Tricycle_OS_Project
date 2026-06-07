@@ -1253,16 +1253,43 @@ def run_feedback_generator(out_dir: Path, live_dir: Path, *,
 
 # ── metadata + export (after running) ──────────────────────────────────────────
 
+def _stamp_fixture_provenance(target: Path, fixture: Path) -> None:
+    """Mark a JSON file that was backfilled from a demo fixture so it can never
+    masquerade as this run's own output. Best-effort: non-JSON or unreadable
+    files are left untouched (the [meta] log line already flagged the fallback)."""
+    try:
+        data = json.loads(target.read_text(encoding="utf-8"))
+    except Exception:
+        return
+    if isinstance(data, dict):
+        data["metadata_source"] = "demo_fallback"
+        data["_provenance"] = {
+            "source": "demo_fixture_fallback",
+            "note": "This file was missing for this run and was backfilled from "
+                    "a committed demo fixture. It does NOT reflect this run.",
+            "fixture": str(fixture),
+        }
+        target.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n",
+                          encoding="utf-8")
+
+
 def ensure_metadata_files(out_dir: Path, dry_run: bool):
-    """Safety net: copy any missing metadata file from outputs/_demo_fixtures."""
+    """Safety net: copy any missing metadata file from outputs/_demo_fixtures.
+
+    Backfilled files are stamped with metadata_source=demo_fallback so a missing
+    metadata file can never be silently presented as this run's real output.
+    Measured results (metrics.json / trace_*.jsonl) are intentionally NOT in
+    META_FILES, so they can never be backfilled this way."""
     for fname in META_FILES:
         target = out_dir / fname
         if not target.exists():
             src = DEMO_DIR / fname
             if src.exists():
-                print(f"  [meta] using demo fallback for {fname}")
+                print(f"  [meta] using demo fallback for {fname} "
+                      f"(stamped metadata_source=demo_fallback)")
                 if not dry_run:
                     shutil.copy2(src, target)
+                    _stamp_fixture_provenance(target, src)
             else:
                 print(f"  [WARN] no source for {fname}")
 

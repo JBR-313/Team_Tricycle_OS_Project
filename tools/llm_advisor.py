@@ -171,9 +171,12 @@ def read_workload_summary(path: Path) -> dict:
     return data
 
 
-def build_system_prompt(feedback_path: Path) -> str:
+def build_system_prompt(feedback_path: Path | None) -> str:
     prompt = BASE_SYSTEM_PROMPT
-    if feedback_path.is_file():
+    # Consumption is OPT-IN: only inject feedback when a path was EXPLICITLY
+    # supplied (feedback_path is not None). The default advise run consumes
+    # nothing, so it stays deterministic and stale rules cannot pollute it.
+    if feedback_path is not None and feedback_path.is_file():
         rules = feedback_path.read_text(encoding="utf-8").strip()
         if rules:
             prompt += (
@@ -679,7 +682,7 @@ def run_feedback(metrics_spec: str, rules_out: Path, rec_path: Path) -> int:
 # ---------------------------------------------------------------------------
 
 
-def run_advise(in_path: Path, out_path: Path, feedback_path: Path) -> int:
+def run_advise(in_path: Path, out_path: Path, feedback_path: Path | None) -> int:
     summary = read_workload_summary(in_path)
     system_prompt = build_system_prompt(feedback_path)
     user_prompt = build_user_prompt(summary)
@@ -748,9 +751,11 @@ def main() -> int:
     parser.add_argument(
         "--feedback",
         dest="feedback_path",
-        default=str(PROJECT_ROOT / "outputs" / "feedback_rules.md"),
-        help="path to feedback_rules.md "
-        "(advise: input if it exists; feedback: output)",
+        default=None,
+        help="path to feedback_rules.md. advise: OPT-IN input — feedback is "
+        "consumed ONLY when this flag is explicitly passed (default: no "
+        "consumption). feedback: output path (defaults to "
+        "outputs/feedback_rules.md when omitted).",
     )
     parser.add_argument(
         "--metrics",
@@ -769,14 +774,18 @@ def main() -> int:
     args = parser.parse_args()
 
     if args.mode == "feedback":
+        # feedback GENERATION: --feedback is the OUTPUT path; default when omitted.
+        fb_out = Path(args.feedback_path) if args.feedback_path else (
+            PROJECT_ROOT / "outputs" / "feedback_rules.md"
+        )
         return run_feedback(
             args.metrics_path,  # string: file, dir, or glob — resolved inside
-            Path(args.feedback_path),
+            fb_out,
             Path(args.rec_context_path),
         )
-    return run_advise(
-        Path(args.in_path), Path(args.out_path), Path(args.feedback_path)
-    )
+    # advise: consumption is OPT-IN — only when --feedback explicitly supplied.
+    fb_in = Path(args.feedback_path) if args.feedback_path else None
+    return run_advise(Path(args.in_path), Path(args.out_path), fb_in)
 
 
 if __name__ == "__main__":

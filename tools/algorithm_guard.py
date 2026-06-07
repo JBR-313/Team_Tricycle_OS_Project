@@ -127,7 +127,8 @@ COMPATIBILITY_MATRIX = {
 # Reject if score is below this; warn if below WARN threshold.
 COMPAT_REJECT_THRESHOLD = 0.4
 COMPAT_WARN_THRESHOLD = 0.6
-CONFIDENCE_REJECT_THRESHOLD = 0.3
+# Confidence is INFORMATIONAL ONLY and never rejects (we validate input format,
+# not the model's self-reported confidence). Kept solely to emit a soft warning.
 CONFIDENCE_WARN_THRESHOLD = 0.5
 
 # Per-algorithm parameter ranges (min, max) and safe defaults.
@@ -441,16 +442,19 @@ def decide(
                 f"(score={compat_score})."
             )
 
-    # Confidence
+    # Confidence — INFORMATIONAL ONLY. The guard validates the INPUT FORMAT
+    # (schema, algorithm support, parameter ranges, metric compatibility), NOT
+    # the model's self-reported confidence. A low confidence number must never
+    # by itself reject an otherwise-valid recommendation (an honestly-uncertain
+    # but correct pick would be thrown away). We surface it as a warning for
+    # observability only; it does NOT set `rejected`.
     if confidence is None:
         messages.append("Confidence not specified; assumed 0.5.")
-    elif confidence < CONFIDENCE_REJECT_THRESHOLD:
-        messages.append(
-            f"Confidence too low ({confidence} < {CONFIDENCE_REJECT_THRESHOLD})."
-        )
-        rejected = True
     elif confidence < CONFIDENCE_WARN_THRESHOLD:
-        messages.append(f"Low confidence ({confidence}); proceed cautiously.")
+        messages.append(
+            f"Low confidence ({confidence}); informational only — "
+            f"not a rejection criterion."
+        )
 
     if rejected:
         return "rejected", messages

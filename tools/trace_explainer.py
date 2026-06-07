@@ -111,12 +111,22 @@ def load_trace(path: Path) -> list[dict]:
 
 
 def summarize_trace(events: list[dict]) -> dict:
-    """Compress a trace into a small digest the LLM can read cheaply."""
+    """Compress a trace into a small digest the LLM can read cheaply.
+
+    Trace events use the keys ``algo`` and ``tick`` (NOT ``algorithm``/``time``)
+    in BOTH backends.  The two backends differ in how arrival is recorded:
+      - simulator emits an ``ARRIVE`` event carrying the arrival ``tick``;
+      - xv6 emits a ``PROC_DEF`` event whose ``tick`` is null and whose arrival
+        lives in a dedicated ``arrival`` field.
+    A process is only "real" if it was defined via ARRIVE or PROC_DEF; this also
+    filters the xv6 schedtest harness pid, which only ever appears in DISPATCH.
+    """
     counts = Counter(e.get("event") for e in events)
-    algos = {e.get("algorithm") for e in events if e.get("algorithm")}
+    algos = {e.get("algo") for e in events if e.get("algo")}
 
     # Per-process timeline: arrival, first dispatch (response), exit.
     procs: dict = {}
+    defined: set = set()
     for e in events:
         pid = e.get("pid")
         if pid is None:
@@ -124,16 +134,22 @@ def summarize_trace(events: list[dict]) -> dict:
         p = procs.setdefault(
             pid, {"arrive": None, "first_run": None, "exit": None}
         )
-        ev, t = e.get("event"), e.get("time")
-        if ev == "ARRIVE" and p["arrive"] is None:
-            p["arrive"] = t
+        ev, t = e.get("event"), e.get("tick")
+        if ev == "ARRIVE":
+            defined.add(pid)
+            if p["arrive"] is None:
+                p["arrive"] = t
+        elif ev == "PROC_DEF":
+            defined.add(pid)
+            if p["arrive"] is None:
+                p["arrive"] = e.get("arrival")
         elif ev == "DISPATCH" and p["first_run"] is None:
             p["first_run"] = t
         elif ev == "EXIT":
             p["exit"] = t
 
     timeline = []
-    for pid in sorted(procs):
+    for pid in sorted(p for p in procs if p in defined):
         p = procs[pid]
         resp = (
             p["first_run"] - p["arrive"]
