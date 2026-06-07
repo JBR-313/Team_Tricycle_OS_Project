@@ -989,7 +989,7 @@ fails fast with a clear error rather than silently faking a response.
 - detect starvation and poor response time
 - request LLM correction
 - validate correction
-- apply correction from the next scheduling point
+- apply correction as a host-side post-evaluation re-run (a second xv6 run with the corrected algorithm), not from inside the kernel
 - compare before/after metrics
 
 ### Phase 5 — Trace Explainer and Feedback Rule Generator
@@ -1014,7 +1014,7 @@ fails fast with a clear error rather than silently faking a response.
 - The LLM does not directly choose the next process.
 - The LLM does not directly modify xv6 kernel state.
 - Runtime correction is applied only after validation.
-- Runtime correction takes effect from the next scheduling point.
+- Runtime correction takes effect as a host-side post-evaluation re-run, not mid-run inside the kernel.
 - Future CPU bursts are not given to the LLM as answers.
 - Controlled workloads may be used for reproducible experiments.
 - **xv6 runs single-CPU (`CPUS=1`).** The kernel reads scheduler globals

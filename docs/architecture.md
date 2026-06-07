@@ -80,7 +80,7 @@ Trace Parser
 Metrics Evaluator          Event Detector
     ↓  metrics.json              ↓  runtime_events.json
                         Runtime Correction Proposer
-                            ↓  correction.json → Algorithm Guard → next scheduling point
+                            ↓  correction.json → Algorithm Guard → host-side re-run → correction_applied.json
 ```
 
 **xv6 Scheduling Algorithm Execution** is the final target. The kernel executes the Scheduling Algorithm received from Algorithm Guard.
@@ -95,7 +95,7 @@ Metrics Evaluator          Event Detector
 
 **Event Detector** watches the trace for scheduling problems: starvation, poor response time, long CPU-bound domination, high waiting time.
 
-**Runtime Correction Proposer** summarizes the detected event and asks the LLM for a correction. The correction is validated by Algorithm Guard. It is applied from the next scheduling point. The LLM is not called at every timer tick.
+**Runtime Correction Proposer** summarizes the detected event and asks the LLM for a correction. The correction is validated by Algorithm Guard. It is applied as a host-side post-evaluation re-run (a second xv6 run with the corrected algorithm), not injected mid-run inside the kernel. The LLM is not called at every timer tick.
 
 ---
 
@@ -143,7 +143,7 @@ LLM Scheduling Algorithm Advisor  (next run)
 - The LLM does not directly choose the next process.
 - The LLM does not directly modify xv6 kernel state.
 - Runtime correction is applied only after validation by Algorithm Guard.
-- Runtime correction takes effect from the next scheduling point.
+- Runtime correction takes effect as a host-side post-evaluation re-run, not mid-run inside the kernel.
 - Future CPU bursts are not given to the LLM as input.
 
 ---

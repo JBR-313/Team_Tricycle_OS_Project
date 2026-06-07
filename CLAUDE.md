@@ -49,7 +49,7 @@ Runtime correction proposals are also validated by Algorithm Guard.
 Rejected output falls back to a safe Scheduling Algorithm.
 
 ## Runtime Correction
-Runtime correction is applied from the next scheduling point.
+Runtime correction is applied as a host-side post-evaluation re-run: a second, ordinary xv6 run with the corrected Guard-approved algorithm/params, then a before/after comparison written to `correction_applied.json`. The LLM never runs in the kernel hot path and the correction is NOT injected mid-run "from the next scheduling point" inside the kernel.
 The LLM is not called at every timer tick.
 Event Detector watches the Scheduling Trace Log and triggers correction only when a scheduling problem is detected.
 
@@ -67,7 +67,7 @@ workloads/*.json          → workload_summary.json → recommendation.json
 recommendation.json       → guard_decision.json
 guard_decision.json       → trace.jsonl
 trace.jsonl               → metrics.json + runtime_events.json
-runtime_events.json       → correction.json → guard → next scheduling point
+runtime_events.json       → correction.json → guard → host-side re-run → correction_applied.json
 trace.jsonl + metrics.json → trace_explanation.json
 metrics.json              → outputs/live/feedback_rules.md (fail only; GENERATION)
 feedback_rules.md         → advise prompt (CONSUMPTION; opt-in via --use-feedback)

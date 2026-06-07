@@ -82,8 +82,8 @@ flowchart TD
         R2  -->|"parsed records"| R3
         R2  -->|"parsed records"| R4
         R4  -->|"runtime_events.json"| R5
-        R5  -->|"correction.json → Guard → next scheduling point"| R0A
-        R5  -->|"correction.json → Guard → next scheduling point"| R0B
+        R5  -->|"correction.json → Guard → host-side re-run"| R0A
+        R5  -->|"correction.json → Guard → host-side re-run"| R0B
     end
 
     subgraph AFTER ["🟦 AFTER RUNNING"]
@@ -274,7 +274,7 @@ throughput      = completed_process_count / total_execution_time
 - **LLM is not the scheduler.** It outputs `recommendation.json` and `correction.json` only.
 - **xv6 is the execution authority.** All Scheduling Algorithm execution happens inside xv6 (or the simulator as a fallback).
 - **Algorithm Guard** validates every LLM output — recommendation and runtime correction — before it is applied.
-- **Runtime correction** is applied from the next scheduling point, not mid-tick.
+- **Runtime correction** is applied as a host-side post-evaluation re-run (a second xv6 run with the corrected algorithm), not injected mid-run inside the kernel.
 - **Future CPU bursts** must not be given to the LLM as input.
 - **Feedback loop** fires only on `FAIL` evaluation.
 - **RR baseline** must always be preserved as a comparison reference.
