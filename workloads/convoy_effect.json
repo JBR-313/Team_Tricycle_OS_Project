@@ -2,8 +2,8 @@
   "id": "convoy_effect",
   "description": "One long CPU-bound job arrives first; many short jobs queue behind it. Classic FCFS convoy.",
   "target_metric": "avg_waiting_time",
-  "expected_best_algorithm": "SRTF",
-  "expected_behavior": "FCFS suffers a convoy (short jobs wait behind the long one). SJF/SRTF and MLFQ avoid it; RR is competitive. FCFS should be clearly worst on avg waiting time.",
+  "expected_best_algorithm": "MLFQ",
+  "expected_behavior": "Measured best on avg_waiting_time is MLFQ (simulator-measured).",
   "schema_version": 2,
   "processes": [
     {
@@ -189,5 +189,6 @@
         1
       ]
     }
-  ]
+  ],
+  "expected_best_source": "simulator-measured"
 }

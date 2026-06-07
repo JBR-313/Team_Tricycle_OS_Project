@@ -3,7 +3,7 @@
   "description": "6 processes mixing interactive (short bursts) and cpu_bound (long bursts); response-time benchmark for MLFQ.",
   "target_metric": "avg_response_time",
   "expected_best_algorithm": "MLFQ",
-  "expected_behavior": "MLFQ favors short interactive jobs while allowing CPU-bound jobs progress via demotion + aging.",
+  "expected_behavior": "Measured best on avg_response_time is MLFQ (simulator-measured).",
   "schema_version": 2,
   "processes": [
     {
@@ -110,5 +110,6 @@
         8
       ]
     }
-  ]
+  ],
+  "expected_best_source": "simulator-measured"
 }

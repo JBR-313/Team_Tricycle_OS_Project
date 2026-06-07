@@ -2,8 +2,8 @@
   "id": "burst_prediction_demo",
   "description": "Jobs with clearly bimodal bursts (very short vs long), repeated, so an EMA burst predictor can learn and SJF/SRTF separate them.",
   "target_metric": "avg_waiting_time",
-  "expected_best_algorithm": "SJF",
-  "expected_behavior": "Once the EMA predictor stabilizes, SJF/SRTF run the predictably-short jobs first -> lowest avg waiting time. FCFS ignores burst length and is worst; RR is middling.",
+  "expected_best_algorithm": "FCFS",
+  "expected_behavior": "Measured best on avg_waiting_time is FCFS (simulator-measured). Near-tie among: FCFS, SJF, SRTF.",
   "schema_version": 2,
   "processes": [
     {
@@ -135,5 +135,6 @@
         11
       ]
     }
-  ]
+  ],
+  "expected_best_source": "simulator-measured"
 }

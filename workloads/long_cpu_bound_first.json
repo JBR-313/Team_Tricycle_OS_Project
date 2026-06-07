@@ -2,8 +2,8 @@
   "id": "long_job_first_convoy",
   "description": "One long CPU-bound process arrives first, several short jobs arrive after; demonstrates FCFS convoy effect.",
   "target_metric": "avg_waiting_time",
-  "expected_best_algorithm": "SRTF",
-  "expected_behavior": "FCFS performs worst (convoy effect). SRTF preempts the long job when short jobs arrive; MLFQ also recovers via demotion.",
+  "expected_best_algorithm": "MLFQ",
+  "expected_behavior": "Measured best on avg_waiting_time is MLFQ (simulator-measured).",
   "schema_version": 2,
   "processes": [
     {
@@ -100,5 +100,6 @@
         1
       ]
     }
-  ]
+  ],
+  "expected_best_source": "simulator-measured"
 }

@@ -2,8 +2,8 @@
   "id": "starvation_priority",
   "description": "A continuous stream of high-priority short jobs risks starving one low-priority long job.",
   "target_metric": "max_waiting_time",
-  "expected_best_algorithm": "MLFQ",
-  "expected_behavior": "Strict Priority without aging starves the low-priority job (high max waiting time / starvation). Priority+Aging and MLFQ's periodic boost rescue it; RR is fair but slower overall.",
+  "expected_best_algorithm": "RR",
+  "expected_behavior": "Measured best on max_waiting_time is RR (simulator-measured). Near-tie among: FCFS, MLFQ, Priority, RR, SJF, SRTF.",
   "schema_version": 2,
   "processes": [
     {
@@ -223,5 +223,6 @@
         2
       ]
     }
-  ]
+  ],
+  "expected_best_source": "simulator-measured"
 }

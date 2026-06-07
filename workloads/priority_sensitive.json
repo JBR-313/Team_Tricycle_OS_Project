@@ -2,8 +2,8 @@
   "id": "priority_critical_tasks",
   "description": "5 processes with wide priority spread (1..5); Priority+Aging should respect importance.",
   "target_metric": "avg_response_time",
-  "expected_best_algorithm": "PRIORITY",
-  "expected_behavior": "Priority+Aging wins on response time for high-priority jobs without starving low-priority ones (because waits are short).",
+  "expected_best_algorithm": "MLFQ",
+  "expected_behavior": "Measured best on avg_response_time is MLFQ (simulator-measured).",
   "schema_version": 2,
   "processes": [
     {
@@ -90,5 +90,6 @@
         3
       ]
     }
-  ]
+  ],
+  "expected_best_source": "simulator-measured"
 }

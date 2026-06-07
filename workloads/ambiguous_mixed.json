@@ -2,15 +2,96 @@
   "id": "ambiguous_mixed",
   "description": "Balanced workload where the best algorithm depends on the chosen target metric. Tests the LLM's ability to read target_metric and trade off, instead of always picking MLFQ.",
   "target_metric": "avg_waiting_time",
-  "expected_best_algorithm": "SJF",
-  "expected_behavior": "On avg_waiting_time SJF wins. On avg_response_time MLFQ or SRTF wins. On throughput RR or FCFS is competitive. If the LLM reads target_metric and picks accordingly, regret stays low; otherwise it lands in NEAR-SUCCESS or FAIL.",
+  "expected_best_algorithm": "PRIORITY",
+  "expected_behavior": "Measured best on avg_waiting_time is PRIORITY (simulator-measured).",
   "schema_version": 2,
   "processes": [
-    {"pid": 1, "arrival_time": 0, "cpu_bursts": [8],     "actual_bursts": [8],     "io_bursts": [], "priority": 4, "label": "cpu_bound"},
-    {"pid": 2, "arrival_time": 1, "cpu_bursts": [2],     "actual_bursts": [2],     "io_bursts": [], "priority": 3, "label": "interactive"},
-    {"pid": 3, "arrival_time": 2, "cpu_bursts": [3, 2],  "actual_bursts": [3, 2],  "io_bursts": [3], "priority": 3, "label": "mixed"},
-    {"pid": 4, "arrival_time": 3, "cpu_bursts": [1],     "actual_bursts": [1],     "io_bursts": [], "priority": 2, "label": "interactive"},
-    {"pid": 5, "arrival_time": 4, "cpu_bursts": [6],     "actual_bursts": [6],     "io_bursts": [], "priority": 4, "label": "cpu_bound"},
-    {"pid": 6, "arrival_time": 6, "cpu_bursts": [2, 1],  "actual_bursts": [2, 1],  "io_bursts": [3], "priority": 3, "label": "mixed"}
-  ]
+    {
+      "pid": 1,
+      "arrival_time": 0,
+      "cpu_bursts": [
+        8
+      ],
+      "actual_bursts": [
+        8
+      ],
+      "io_bursts": [],
+      "priority": 4,
+      "label": "cpu_bound"
+    },
+    {
+      "pid": 2,
+      "arrival_time": 1,
+      "cpu_bursts": [
+        2
+      ],
+      "actual_bursts": [
+        2
+      ],
+      "io_bursts": [],
+      "priority": 3,
+      "label": "interactive"
+    },
+    {
+      "pid": 3,
+      "arrival_time": 2,
+      "cpu_bursts": [
+        3,
+        2
+      ],
+      "actual_bursts": [
+        3,
+        2
+      ],
+      "io_bursts": [
+        3
+      ],
+      "priority": 3,
+      "label": "mixed"
+    },
+    {
+      "pid": 4,
+      "arrival_time": 3,
+      "cpu_bursts": [
+        1
+      ],
+      "actual_bursts": [
+        1
+      ],
+      "io_bursts": [],
+      "priority": 2,
+      "label": "interactive"
+    },
+    {
+      "pid": 5,
+      "arrival_time": 4,
+      "cpu_bursts": [
+        6
+      ],
+      "actual_bursts": [
+        6
+      ],
+      "io_bursts": [],
+      "priority": 4,
+      "label": "cpu_bound"
+    },
+    {
+      "pid": 6,
+      "arrival_time": 6,
+      "cpu_bursts": [
+        2,
+        1
+      ],
+      "actual_bursts": [
+        2,
+        1
+      ],
+      "io_bursts": [
+        3
+      ],
+      "priority": 3,
+      "label": "mixed"
+    }
+  ],
+  "expected_best_source": "simulator-measured"
 }

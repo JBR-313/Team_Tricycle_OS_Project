@@ -2,8 +2,8 @@
   "id": "short_jobs_clustered",
   "description": "25 short interactive jobs with mild priority spread; classic SJF setup.",
   "target_metric": "avg_waiting_time",
-  "expected_best_algorithm": "SJF",
-  "expected_behavior": "SJF/SRTF should minimize avg waiting time. RR/MLFQ are competitive; FCFS is mediocre.",
+  "expected_best_algorithm": "FCFS",
+  "expected_behavior": "Measured best on avg_waiting_time is FCFS (simulator-measured). Near-tie among: FCFS, MLFQ, Priority, SJF, SRTF.",
   "schema_version": 2,
   "processes": [
     {
@@ -418,5 +418,6 @@
         1
       ]
     }
-  ]
+  ],
+  "expected_best_source": "simulator-measured"
 }

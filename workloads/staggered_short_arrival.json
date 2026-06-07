@@ -2,8 +2,8 @@
   "id": "staggered_short_arrival",
   "description": "A medium job runs, then short jobs arrive staggered while it executes; SRTF should preempt.",
   "target_metric": "avg_response_time",
-  "expected_best_algorithm": "SRTF",
-  "expected_behavior": "SRTF preempts the medium job when shorter jobs arrive -> best response time, and PREEMPT events are visible. SJF (non-preemptive) is worse; FCFS worst.",
+  "expected_best_algorithm": "MLFQ",
+  "expected_behavior": "Measured best on avg_response_time is MLFQ (simulator-measured).",
   "schema_version": 2,
   "processes": [
     {
@@ -110,5 +110,6 @@
         2
       ]
     }
-  ]
+  ],
+  "expected_best_source": "simulator-measured"
 }

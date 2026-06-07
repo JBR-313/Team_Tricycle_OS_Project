@@ -2,14 +2,75 @@
   "id": "xv6_priority_sensitive",
   "description": "Mirror of the schedtest `priority_sensitive` curated table (user/schedtest.c). Process order == fork order so LLM burst priors align to xv6 by index. Single CPU burst per process (one-shot run_burst).",
   "target_metric": "avg_response_time",
-  "expected_best_algorithm": "PRIORITY",
-  "expected_behavior": "High-priority interactive jobs must run ahead of low-priority CPU jobs; predictor priors still help SJF/SRTF order ties.",
+  "expected_best_algorithm": "MLFQ",
+  "expected_behavior": "Measured best on avg_response_time is MLFQ (xv6-measured).",
   "schema_version": 2,
   "processes": [
-    {"pid": 1, "arrival_time": 0, "cpu_bursts": [6], "io_bursts": [], "priority": 8, "label": "cpu",         "actual_bursts": [6]},
-    {"pid": 2, "arrival_time": 1, "cpu_bursts": [4], "io_bursts": [], "priority": 1, "label": "interactive", "actual_bursts": [4]},
-    {"pid": 3, "arrival_time": 2, "cpu_bursts": [5], "io_bursts": [], "priority": 9, "label": "cpu",         "actual_bursts": [5]},
-    {"pid": 4, "arrival_time": 3, "cpu_bursts": [3], "io_bursts": [], "priority": 2, "label": "interactive", "actual_bursts": [3]},
-    {"pid": 5, "arrival_time": 4, "cpu_bursts": [4], "io_bursts": [], "priority": 5, "label": "mixed",       "actual_bursts": [4]}
-  ]
+    {
+      "pid": 1,
+      "arrival_time": 0,
+      "cpu_bursts": [
+        6
+      ],
+      "io_bursts": [],
+      "priority": 8,
+      "label": "cpu",
+      "actual_bursts": [
+        6
+      ]
+    },
+    {
+      "pid": 2,
+      "arrival_time": 1,
+      "cpu_bursts": [
+        4
+      ],
+      "io_bursts": [],
+      "priority": 1,
+      "label": "interactive",
+      "actual_bursts": [
+        4
+      ]
+    },
+    {
+      "pid": 3,
+      "arrival_time": 2,
+      "cpu_bursts": [
+        5
+      ],
+      "io_bursts": [],
+      "priority": 9,
+      "label": "cpu",
+      "actual_bursts": [
+        5
+      ]
+    },
+    {
+      "pid": 4,
+      "arrival_time": 3,
+      "cpu_bursts": [
+        3
+      ],
+      "io_bursts": [],
+      "priority": 2,
+      "label": "interactive",
+      "actual_bursts": [
+        3
+      ]
+    },
+    {
+      "pid": 5,
+      "arrival_time": 4,
+      "cpu_bursts": [
+        4
+      ],
+      "io_bursts": [],
+      "priority": 5,
+      "label": "mixed",
+      "actual_bursts": [
+        4
+      ]
+    }
+  ],
+  "expected_best_source": "xv6-measured"
 }

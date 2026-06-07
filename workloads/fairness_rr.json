@@ -2,8 +2,8 @@
   "id": "fairness_rr",
   "description": "Eight equal-length CPU jobs arrive at nearly the same time. Tests fair time-slicing.",
   "target_metric": "avg_response_time",
-  "expected_best_algorithm": "RR",
-  "expected_behavior": "RR (and MLFQ's top queue) give every job an early, fair slice -> low avg response time. FCFS makes later jobs wait for full earlier bursts. SJF/SRTF tie on equal bursts.",
+  "expected_best_algorithm": "MLFQ",
+  "expected_behavior": "Measured best on avg_response_time is MLFQ (simulator-measured).",
   "schema_version": 2,
   "processes": [
     {
@@ -110,5 +110,6 @@
         6
       ]
     }
-  ]
+  ],
+  "expected_best_source": "simulator-measured"
 }

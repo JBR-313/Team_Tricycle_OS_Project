@@ -3,14 +3,111 @@
   "description": "Three pure CPU-bound jobs alongside three I/O-bursty jobs. MLFQ should demote the CPU-bound and keep response time low for the I/O-bursty interactive class.",
   "target_metric": "avg_response_time",
   "expected_best_algorithm": "MLFQ",
-  "expected_behavior": "MLFQ demotes the CPU-bound jobs into the lower queues after their quantum expires, leaving the top queue free for the short I/O-bursty jobs. RR is fair but slower on response time; FCFS suffers convoy on the CPU jobs.",
+  "expected_behavior": "Measured best on avg_response_time is MLFQ (simulator-measured).",
   "schema_version": 2,
   "processes": [
-    {"pid": 1, "arrival_time": 0,  "cpu_bursts": [20],         "actual_bursts": [20],         "io_bursts": [],  "priority": 5, "label": "cpu_bound"},
-    {"pid": 2, "arrival_time": 1,  "cpu_bursts": [18],         "actual_bursts": [18],         "io_bursts": [],  "priority": 5, "label": "cpu_bound"},
-    {"pid": 3, "arrival_time": 2,  "cpu_bursts": [22],         "actual_bursts": [22],         "io_bursts": [],  "priority": 5, "label": "cpu_bound"},
-    {"pid": 4, "arrival_time": 3,  "cpu_bursts": [1, 1, 1, 1], "actual_bursts": [1, 1, 1, 1], "io_bursts": [4, 4, 4], "priority": 3, "label": "interactive"},
-    {"pid": 5, "arrival_time": 4,  "cpu_bursts": [2, 1, 2],    "actual_bursts": [2, 1, 2],    "io_bursts": [5, 5],    "priority": 3, "label": "interactive"},
-    {"pid": 6, "arrival_time": 5,  "cpu_bursts": [1, 2, 1],    "actual_bursts": [1, 2, 1],    "io_bursts": [4, 4],    "priority": 3, "label": "interactive"}
-  ]
+    {
+      "pid": 1,
+      "arrival_time": 0,
+      "cpu_bursts": [
+        20
+      ],
+      "actual_bursts": [
+        20
+      ],
+      "io_bursts": [],
+      "priority": 5,
+      "label": "cpu_bound"
+    },
+    {
+      "pid": 2,
+      "arrival_time": 1,
+      "cpu_bursts": [
+        18
+      ],
+      "actual_bursts": [
+        18
+      ],
+      "io_bursts": [],
+      "priority": 5,
+      "label": "cpu_bound"
+    },
+    {
+      "pid": 3,
+      "arrival_time": 2,
+      "cpu_bursts": [
+        22
+      ],
+      "actual_bursts": [
+        22
+      ],
+      "io_bursts": [],
+      "priority": 5,
+      "label": "cpu_bound"
+    },
+    {
+      "pid": 4,
+      "arrival_time": 3,
+      "cpu_bursts": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "actual_bursts": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "io_bursts": [
+        4,
+        4,
+        4
+      ],
+      "priority": 3,
+      "label": "interactive"
+    },
+    {
+      "pid": 5,
+      "arrival_time": 4,
+      "cpu_bursts": [
+        2,
+        1,
+        2
+      ],
+      "actual_bursts": [
+        2,
+        1,
+        2
+      ],
+      "io_bursts": [
+        5,
+        5
+      ],
+      "priority": 3,
+      "label": "interactive"
+    },
+    {
+      "pid": 6,
+      "arrival_time": 5,
+      "cpu_bursts": [
+        1,
+        2,
+        1
+      ],
+      "actual_bursts": [
+        1,
+        2,
+        1
+      ],
+      "io_bursts": [
+        4,
+        4
+      ],
+      "priority": 3,
+      "label": "interactive"
+    }
+  ],
+  "expected_best_source": "simulator-measured"
 }

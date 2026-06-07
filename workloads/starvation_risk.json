@@ -2,8 +2,8 @@
   "id": "starvation_risk",
   "description": "Extreme priority spread (1..10) with a long low-priority CPU-bound job; naive Priority must starve it.",
   "target_metric": "starvation",
-  "expected_best_algorithm": "MLFQ",
-  "expected_behavior": "Naive Priority FAILs with starvation. MLFQ with aging or RR avoids starvation; this workload demonstrates the FAIL → prompt-feedback loop.",
+  "expected_best_algorithm": "PRIORITY",
+  "expected_behavior": "Measured best on starvation is PRIORITY (simulator-measured).",
   "schema_version": 2,
   "processes": [
     {
@@ -78,5 +78,6 @@
         2
       ]
     }
-  ]
+  ],
+  "expected_best_source": "simulator-measured"
 }

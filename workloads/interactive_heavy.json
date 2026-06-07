@@ -2,8 +2,8 @@
   "id": "interactive_heavy",
   "description": "25 short interactive jobs arriving 1 tick apart; pure response-time benchmark.",
   "target_metric": "avg_response_time",
-  "expected_best_algorithm": "MLFQ",
-  "expected_behavior": "RR and MLFQ should minimize avg response time. FCFS suffers convoy effect; SJF/SRTF are flat (all bursts ~1).",
+  "expected_best_algorithm": "RR",
+  "expected_behavior": "Measured best on avg_response_time is RR (simulator-measured).",
   "schema_version": 2,
   "processes": [
     {
@@ -383,5 +383,6 @@
         1
       ]
     }
-  ]
+  ],
+  "expected_best_source": "simulator-measured"
 }

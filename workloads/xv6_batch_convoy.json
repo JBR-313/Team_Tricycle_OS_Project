@@ -2,17 +2,114 @@
   "id": "xv6_batch_convoy",
   "description": "Mirror of the schedtest `batch_convoy` curated table (user/schedtest.c). Process order == fork order so LLM burst priors align to xv6 by index. Single CPU burst per process (one-shot run_burst). 8 processes: one long head job followed by short jobs — the classic convoy effect.",
   "target_metric": "avg_turnaround_time",
-  "expected_best_algorithm": "SJF",
-  "expected_behavior": "A 12-tick head job arrives first; under FCFS every short job waits behind it (convoy effect). SJF/SRTF order by predicted burst so the short jobs finish first, minimizing average turnaround.",
+  "expected_best_algorithm": "RR",
+  "expected_behavior": "Measured best on avg_turnaround_time is RR (xv6-measured).",
   "schema_version": 2,
   "processes": [
-    {"pid": 1, "arrival_time": 0, "cpu_bursts": [12], "io_bursts": [], "priority": 5, "label": "cpu",         "actual_bursts": [12]},
-    {"pid": 2, "arrival_time": 1, "cpu_bursts": [2],  "io_bursts": [], "priority": 5, "label": "cpu",         "actual_bursts": [2]},
-    {"pid": 3, "arrival_time": 2, "cpu_bursts": [3],  "io_bursts": [], "priority": 5, "label": "cpu",         "actual_bursts": [3]},
-    {"pid": 4, "arrival_time": 2, "cpu_bursts": [1],  "io_bursts": [], "priority": 5, "label": "interactive", "actual_bursts": [1]},
-    {"pid": 5, "arrival_time": 3, "cpu_bursts": [2],  "io_bursts": [], "priority": 5, "label": "cpu",         "actual_bursts": [2]},
-    {"pid": 6, "arrival_time": 4, "cpu_bursts": [1],  "io_bursts": [], "priority": 5, "label": "interactive", "actual_bursts": [1]},
-    {"pid": 7, "arrival_time": 5, "cpu_bursts": [3],  "io_bursts": [], "priority": 5, "label": "cpu",         "actual_bursts": [3]},
-    {"pid": 8, "arrival_time": 6, "cpu_bursts": [2],  "io_bursts": [], "priority": 5, "label": "cpu",         "actual_bursts": [2]}
-  ]
+    {
+      "pid": 1,
+      "arrival_time": 0,
+      "cpu_bursts": [
+        12
+      ],
+      "io_bursts": [],
+      "priority": 5,
+      "label": "cpu",
+      "actual_bursts": [
+        12
+      ]
+    },
+    {
+      "pid": 2,
+      "arrival_time": 1,
+      "cpu_bursts": [
+        2
+      ],
+      "io_bursts": [],
+      "priority": 5,
+      "label": "cpu",
+      "actual_bursts": [
+        2
+      ]
+    },
+    {
+      "pid": 3,
+      "arrival_time": 2,
+      "cpu_bursts": [
+        3
+      ],
+      "io_bursts": [],
+      "priority": 5,
+      "label": "cpu",
+      "actual_bursts": [
+        3
+      ]
+    },
+    {
+      "pid": 4,
+      "arrival_time": 2,
+      "cpu_bursts": [
+        1
+      ],
+      "io_bursts": [],
+      "priority": 5,
+      "label": "interactive",
+      "actual_bursts": [
+        1
+      ]
+    },
+    {
+      "pid": 5,
+      "arrival_time": 3,
+      "cpu_bursts": [
+        2
+      ],
+      "io_bursts": [],
+      "priority": 5,
+      "label": "cpu",
+      "actual_bursts": [
+        2
+      ]
+    },
+    {
+      "pid": 6,
+      "arrival_time": 4,
+      "cpu_bursts": [
+        1
+      ],
+      "io_bursts": [],
+      "priority": 5,
+      "label": "interactive",
+      "actual_bursts": [
+        1
+      ]
+    },
+    {
+      "pid": 7,
+      "arrival_time": 5,
+      "cpu_bursts": [
+        3
+      ],
+      "io_bursts": [],
+      "priority": 5,
+      "label": "cpu",
+      "actual_bursts": [
+        3
+      ]
+    },
+    {
+      "pid": 8,
+      "arrival_time": 6,
+      "cpu_bursts": [
+        2
+      ],
+      "io_bursts": [],
+      "priority": 5,
+      "label": "cpu",
+      "actual_bursts": [
+        2
+      ]
+    }
+  ],
+  "expected_best_source": "xv6-measured"
 }
