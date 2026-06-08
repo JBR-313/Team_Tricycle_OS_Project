@@ -1,0 +1,100 @@
+{
+  "n": 8,
+  "family_match_rate": 1.0,
+  "guard_pass_rate": 1.0,
+  "rows": [
+    {
+      "intent": "Interactive desktop session. Users type commands and expect \u2026",
+      "accept": [
+        "MLFQ",
+        "RR"
+      ],
+      "picked": "RR",
+      "target_metric": "avg_response_time",
+      "guard_valid": true,
+      "schema_err": null,
+      "family_match": true
+    },
+    {
+      "intent": "Overnight batch analytics: a handful of long, CPU-bound jobs\u2026",
+      "accept": [
+        "FCFS",
+        "SJF"
+      ],
+      "picked": "FCFS",
+      "target_metric": "throughput",
+      "guard_valid": true,
+      "schema_err": null,
+      "family_match": true
+    },
+    {
+      "intent": "A mix of many short interactive tasks and a couple of long b\u2026",
+      "accept": [
+        "MLFQ"
+      ],
+      "picked": "MLFQ",
+      "target_metric": "avg_response_time",
+      "guard_valid": true,
+      "schema_err": null,
+      "family_match": true
+    },
+    {
+      "intent": "Jobs have strict importance levels set by an admin. Importan\u2026",
+      "accept": [
+        "MLFQ",
+        "PRIORITY"
+      ],
+      "picked": "PRIORITY",
+      "target_metric": "avg_turnaround_time",
+      "guard_valid": true,
+      "schema_err": null,
+      "family_match": true
+    },
+    {
+      "intent": "We can estimate how long each job will run. Run the shortest\u2026",
+      "accept": [
+        "SJF"
+      ],
+      "picked": "SJF",
+      "target_metric": "avg_waiting_time",
+      "guard_valid": true,
+      "schema_err": null,
+      "family_match": true
+    },
+    {
+      "intent": "Short jobs keep arriving over time and should be able to int\u2026",
+      "accept": [
+        "SRTF"
+      ],
+      "picked": "SRTF",
+      "target_metric": "avg_waiting_time",
+      "guard_valid": true,
+      "schema_err": null,
+      "family_match": true
+    },
+    {
+      "intent": "A web server handling many small, latency-sensitive requests\u2026",
+      "accept": [
+        "MLFQ",
+        "RR"
+      ],
+      "picked": "RR",
+      "target_metric": "avg_response_time",
+      "guard_valid": true,
+      "schema_err": null,
+      "family_match": true
+    },
+    {
+      "intent": "All jobs are roughly equal length and arrive together. We ju\u2026",
+      "accept": [
+        "FCFS",
+        "RR"
+      ],
+      "picked": "FCFS",
+      "target_metric": "avg_turnaround_time",
+      "guard_valid": true,
+      "schema_err": null,
+      "family_match": true
+    }
+  ]
+}

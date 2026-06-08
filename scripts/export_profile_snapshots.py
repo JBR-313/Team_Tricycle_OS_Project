@@ -206,8 +206,8 @@ def restore_default(profile: str) -> bool:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Export per-profile xv6 snapshots for dashboard_live")
-    ap.add_argument("--backend", choices=["xv6", "simulator"], default="xv6",
-                    help="orchestrator backend (default: xv6 — the final demo path)")
+    ap.add_argument("--backend", choices=["xv6"], default="xv6",
+                    help="orchestrator backend (xv6 only; the simulator was removed)")
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--profiles", default=",".join(DEFAULT_PROFILES),
                     help="comma-separated profile names")

@@ -10,6 +10,33 @@ picks the next process and is never on the kernel hot path. The OS component (si
 in-kernel scheduling algorithms, syscalls, processes, synchronization, IPC) is
 implemented by the team in `xv6-riscv/`, not merely hosting an LLM.
 
+> ## Status & key findings (final)
+>
+> **xv6 (under QEMU) is the sole, *reproducible* execution backend.** The Python
+> scheduler simulator was removed; determinism comes from a fixed virtual QEMU
+> clock (`-icount shift=3,sleep=off`) + fixed-iteration CPU bursts from a
+> tick-aligned start (see [`docs/GOAL.md`](docs/GOAL.md)). Run the whole pipeline
+> with `python3 scripts/orchestrator.py` (no backend flag).
+>
+> **What we measured on the real kernel (with negative controls):**
+> - **LLM *out of* the decision hot path — it loses.** As the quantitative
+>   decision-maker (which algorithm, when to switch mid-run, the next CPU burst),
+>   the LLM does **not** beat cheap classical methods. Burst prediction: leak-free,
+>   negative-controlled — the LLM ties a trivial heuristic on easy signal and
+>   *fails* on a fused two-feature signal ([`outputs/random_eval/RESULTS.md`](outputs/random_eval/RESULTS.md)).
+>   Mid-run adaptive switching: no robust headroom ([`outputs/adaptive/RESULTS.md`](outputs/adaptive/RESULTS.md)).
+> - **LLM *at* the human interface — it wins.** Mapping a natural-language workload
+>   intent → a valid scheduling config: **8/8** ([`outputs/intent_eval/RESULTS.md`](outputs/intent_eval/RESULTS.md),
+>   try it with `--intent "..."`); plus natural-language trace explanation. These
+>   tasks have **no classical substitute**.
+> - **Conclusion:** *put the LLM at the OS's human-facing layer, not its decision
+>   hot path* — exactly the architecture below (the LLM is not the scheduler; xv6
+>   is the execution authority).
+>
+> *Some deep reference sections below predate the simulator removal and may still
+> mention a "simulator backend" historically; the authoritative run path is
+> xv6-only as stated here.*
+
 ### Project deliverables (course §5)
 
 | # | Deliverable | Location |
@@ -31,7 +58,7 @@ This project turns that low-level behavior into a trace-verified scheduling work
 
 A host-side **Orchestrator** (`scripts/orchestrator.py`) is the control plane. It
 selects a workload, gets the LLM recommendation, validates it with the Algorithm
-Guard, runs the workload through a backend (xv6 or the simulator), parses the
+Guard, runs the workload on xv6 (under QEMU), parses the
 trace, computes metrics, and publishes the result to the dashboard. The
 Orchestrator is **not** the scheduler — it only coordinates the modules and the
 run order. xv6 remains the execution authority.
@@ -47,8 +74,7 @@ tools/llm_advisor.py (Solar Pro 3) → recommendation.json
         ↓
 tools/algorithm_guard.py          → guard_decision.json
         ↓
-backend:  QEMU/xv6 boot → schedtest run → xv6 scheduler logs
-          (or simulator: tools/scheduler_simulator.py)
+xv6:  QEMU boot → schedtest run (deterministic) → xv6 scheduler logs
         ↓
 tools/trace_parser.py             → normalized trace_<algo>.jsonl
         ↓
@@ -57,13 +83,18 @@ tools/metrics.py                  → metrics.json
 dashboard_live/public/live-data/  → dashboard_live
 ```
 
-The **final experiment path** is xv6 `schedtest` driven by the Orchestrator. The
-Python simulator is used for fast UI development and fallback comparison; it is
-not proof of real xv6 execution. See `docs/orchestrator_design.md`.
+The **only** execution path is xv6 `schedtest` driven by the Orchestrator, and it
+is **reproducible** run-to-run (deterministic QEMU clock + fixed-iteration bursts;
+see [`docs/GOAL.md`](docs/GOAL.md)). There is no simulator backend.
 
 The main question of this project is:
 
 > Can an LLM help choose, tune, correct, and explain xv6 Scheduling Algorithms using workload summaries and Scheduling Trace Logs?
+
+**Our measured answer (see Status box above):** for the quantitative *choices*
+(algorithm, mid-run switch, burst length) — no, classical methods win; for the
+*human-facing* tasks (turning English intent into a config, explaining traces) —
+yes. The LLM belongs at the interface, not in the decision hot path.
 
 ### Repository layout
 
@@ -92,24 +123,24 @@ The system separates responsibility clearly.
 | Orchestrator (`scripts/orchestrator.py`) | Host-side control plane. Sequences workload selection, LLM advice, guard, backend execution, parsing, metrics, and dashboard publish. Not the scheduler. |
 | LLM | Interprets workload, recommends Scheduling Algorithm, proposes correction, explains result |
 | Algorithm Guard | Checks whether the LLM output is valid and safe to apply |
-| xv6 (`schedtest.c` backend) | Executes the selected Scheduling Algorithm. The xv6 execution backend; runs inside QEMU and prints trace lines to the console. |
-| Scheduler Simulator (`scheduler_simulator.py`) | Dev / fallback ONLY. Host-side model of the algorithms; not real xv6 execution. |
+| xv6 (`schedtest.c` backend) | Executes the selected Scheduling Algorithm — the **sole execution authority**; runs inside QEMU (deterministic `-icount` clock) and prints trace lines to the console. |
 | Trace Monitor | Collects Scheduling Trace Logs and detects runtime events |
 | Metrics Evaluator | Verifies the scheduling result with numerical metrics |
 | GUI | Visualizes recommendation, execution, correction, metrics, and explanation |
 
 The LLM is a **decision support layer**, not the kernel scheduler.
 
-### Final Demo Pipeline — PRIMARY / FALLBACK / LEGACY
+### Execution Pipeline
 
-For the final demo, **xv6 + QEMU is the primary execution path**. Everything
-else is a dev/test fallback or kept for legacy safety.
+**xv6 + QEMU is the only execution path** (the simulator was removed). The offline
+fixtures remain only so the dashboard has something to show with no API key / no
+QEMU.
 
 ```
 Workload (workloads/*.json or schedtest profile)
    → LLM Advisor (Upstage Solar Pro 3, tools/llm_advisor.py)
        → Algorithm Guard (tools/algorithm_guard.py)
-           → xv6 + QEMU via scripts/orchestrator.py --backend xv6
+           → xv6 + QEMU via scripts/orchestrator.py
               (kernel/proc.c · user/schedtest.c · [SCHED]/[SCHEDTEST] logs)
                   → tools/trace_parser.py → trace_<algo>.jsonl
                       → tools/metrics.py → metrics.json (judgment, regret)
@@ -118,17 +149,13 @@ Workload (workloads/*.json or schedtest profile)
 
 | Path | Label | One-line | Audience-visible? |
 |---|---|---|---|
-| `xv6-riscv/` + `scripts/orchestrator.py --backend xv6` | **PRIMARY** | Real xv6 + QEMU execution via `schedtest`; the final demo path. | yes |
+| `xv6-riscv/` + `scripts/orchestrator.py` | **PRIMARY** | Real xv6 + QEMU execution via `schedtest`; reproducible. | yes |
 | `dashboard_live/` | **PRIMARY** | Live React/Vite observability dashboard. | yes |
-| `tools/scheduler_simulator.py` + `--backend simulator` | **FALLBACK (dev/test)** | Host-side Python model. Not proof of real xv6 execution; used for UI iteration and when QEMU is unavailable. | yes, with badge `SIMULATOR FALLBACK` |
-| `outputs/_demo_fixtures/` (offline demo fallback) | **FALLBACK (no API key / no QEMU)** | Committed fixture data so the dashboard still has something to show. Stamps `manifest.metadata_source = "demo_fallback"`. | yes, with badge `FALLBACK` |
-| `outputs/_demo_fixtures/` snapshots | reference | Canonical fixtures also live in `dashboard_live/public/live-data/snapshots/`. | no |
+| `outputs/_demo_fixtures/` (`--offline-fixture`) | **FALLBACK (no API key / no QEMU)** | Committed fixture data so the dashboard still has something to show. Stamps `manifest.metadata_source = "demo_fallback"`. | yes, with badge `FALLBACK` |
 
-> The dashboard header shows a backend badge — **`XV6 TRACE`** on the
-> primary path, **`SIMULATOR FALLBACK`** on the dev path, **`FALLBACK`**
-> when only the committed fixtures are in use. If you see anything other
-> than `XV6 TRACE` during the demo, name it out loud — the badge is there
-> precisely so the audience is not misled.
+> The dashboard header shows a backend badge — **`XV6 TRACE`** on the real path,
+> **`FALLBACK`** when only the committed fixtures are in use. If you see anything
+> other than `XV6 TRACE` during the demo, name it out loud.
 
 ### Component roles in the new flow
 
@@ -138,9 +165,9 @@ Workload (workloads/*.json or schedtest profile)
 - **`schedtest.c`** is the xv6 execution backend. It is a tiny xv6 user program:
   it sets a scheduling algorithm via a system call, forks children, and prints
   `[SCHED]` / `[SCHEDTEST]` lines. It cannot open a dashboard or call the LLM.
-- **`scheduler_simulator.py`** is the dev / fallback path. The Python simulator
-  is used for fast UI development and fallback comparison. The final experiment
-  path is xv6 `schedtest` driven by the host-side Orchestrator.
+- The execution path is xv6 `schedtest` driven by the host-side Orchestrator, and
+  it is the **only** one — the former Python simulator backend has been removed now
+  that the kernel run is reproducible (deterministic `-icount` clock).
 
 The LLM cannot:
 
@@ -731,8 +758,8 @@ The predictor is a **hybrid**: the LLM supplies an *initial* burst prior from
 visible features, and the xv6 kernel *refines* it with EMA from observed CPU
 time. The LLM never sees a true future burst; the kernel never calls the LLM.
 
-- **EMA refinement (always on):** `tau_next = (alpha * observed + (100-alpha) * tau_prev) / 100`. Updated when a CPU burst ends, using `observed` = already-consumed CPU only. Defaults `alpha=50%, initial=10, [min=1, max=100]`. Both backends now emit `[SCHED] event=PRED_UPDATE pid=… observed=… predicted_prev=… predicted_next=… alpha=…` (xv6: `kernel/proc.c update_burst_prediction()`, gated to SJF/SRTF; simulator: at end-of-burst).
-- **LLM initial prior (optional):** when the advisor produces `predicted_bursts: [{pid, predicted_burst, confidence, basis}]` (from visible features ONLY), Algorithm Guard clamps each value and the orchestrator forwards them to **both** backends. xv6 receives them via the `setbursthint(pid, predicted_burst)` syscall: `user/schedtest.c` applies each prior right after `fork()` (aligned to fork order through the curated `workloads/xv6_*.json` mirror), so the child's *first* SJF/SRTF decision uses the LLM prior instead of the generic `initial`. The simulator uses the same priors via `Simulator(prediction_source="llm")`.
+- **EMA refinement (always on):** `tau_next = (alpha * observed + (100-alpha) * tau_prev) / 100`. Updated when a CPU burst ends, using `observed` = already-consumed CPU only. Defaults `alpha=50%, initial=10, [min=1, max=100]`. xv6 emits `[SCHED] event=PRED_UPDATE pid=… observed=… predicted_prev=… predicted_next=… alpha=…` (`kernel/proc.c update_burst_prediction()`, gated to SJF/SRTF).
+- **LLM initial prior (optional):** when the advisor produces `predicted_bursts: [{pid, predicted_burst, confidence, basis}]` (from visible features ONLY), Algorithm Guard clamps each value and the orchestrator forwards them to xv6 via the `setbursthint(pid, predicted_burst)` syscall: `user/schedtest.c` applies each prior right after `fork()` (aligned to fork order through the curated `workloads/xv6_*.json` mirror), so the child's *first* SJF/SRTF decision uses the LLM prior instead of the generic `initial`.
 - **Trace evidence:** an xv6 SJF/SRTF run emits `[SCHEDTEST] event=PREDICTOR_PARAMS …`, one `[SCHEDTEST] event=BURST_HINT_APPLIED pid=… index=… predicted_burst=…` per process, and `[SCHED] event=PRED_UPDATE …` as EMA refines each prior from observed CPU. The honest claim: the LLM seeds the prior from visible features; xv6 is the execution authority and corrects it from real usage. If no priors arrive, the kernel falls back to its built-in `initial` and pure EMA.
 - **Why the LLM prior helps (ablation):** `experiments/burst_ablation.py` scores the LLM prior against a blind EMA cold-start and a fixed feature heuristic on held-out `actual_bursts` (read evaluator-side only, never in a prompt). Across 5 burst-relevant workloads the LLM prior nearly **doubles** blind EMA on pairwise *ordering* accuracy (≈0.90 vs 0.50) and beats the hand-coded heuristic (0.72) — and ordering is exactly what SJF/SRTF use to pick the next job. The LLM overshoots absolute *magnitude* (higher MAE), which is precisely what the EMA refinement above corrects: **the LLM ranks at cold-start, the kernel EMA calibrates magnitude.** Regenerate the report with `python3 experiments/burst_ablation.py [--advise]` → `outputs/ablation/burst_ablation.md`.
 
@@ -742,22 +769,29 @@ time. The LLM never sees a true future burst; the kernel never calls the LLM.
 # 1) Real LLM (Solar Pro 3) — set up once
 cp .env.example .env       # then edit: UPSTAGE_API_KEY=<your key>
 
-# 2a) Final demo path (xv6 + QEMU)
-python3 scripts/orchestrator.py --backend xv6       --seed 42 --workload interactive            --run-all
+# 2) Full pipeline on xv6 (the only backend; runs all six algorithms)
+python3 scripts/orchestrator.py --workload interactive
 #     (to just build+boot the raw kernel to a shell: `cd xv6-riscv && make qemu`
-#      — defaults to CPUS=1; Ctrl-A X to quit QEMU)
+#      — defaults to CPUS=1, deterministic -icount clock; Ctrl-A X to quit QEMU)
 
-# 2b) Dev/fallback path (no QEMU needed)
-python3 scripts/orchestrator.py --backend simulator --seed 42 --workload ambiguous_mixed        --run-all
+# 2b) Semantic lane — describe the workload in English; the LLM picks the config
+python3 scripts/orchestrator.py --intent "Interactive desktop; latency matters most." --workload interactive
 
-# 2c) No API key? Use the committed demo recommendation
-python3 scripts/orchestrator.py --backend simulator --seed 42 --workload bursty_long_tail        --run-all --offline-fixture
+# 2c) No API key? Use the committed demo recommendation as a fixture
+python3 scripts/orchestrator.py --workload interactive --offline-fixture
 
 # 3) Start the dashboard
 cd dashboard_live && npm install && npm run dev    # http://localhost:5174
 
-# 4) Optional — RUN button server (lets the dashboard trigger 2a/2b itself)
+# 4) Optional — RUN button server (lets the dashboard trigger a run itself)
 python3 scripts/run_server.py                       # http://127.0.0.1:8765
+```
+
+### Reproduce the evaluation evidence
+```bash
+python3 experiments/burst_random_eval.py --signal multi   # LLM vs heuristics vs EMA on xv6 (+ negative control)
+python3 experiments/intent_eval.py                        # natural-language intent → config (8/8)
+python3 experiments/xv6_determinism_probe.py              # confirm xv6 runs reproduce
 ```
 
 When `scripts/run_server.py` is up, the dashboard's **LLM tab** shows a RUN
@@ -766,28 +800,23 @@ RUNNING → PARSING → EVALUATING → DONE, and the views auto-reload. Without
 the server the RUN card hides and the dashboard is read-only over
 `live-data/`.
 
-**`--seed` is meaningful on the simulator.** Before each simulator run the
-orchestrator materialises a seed-jittered *instance* of the chosen workload
-(`tools/workload_jitter.py`): arrival times and burst lengths vary within a
-small band while the process count and per-process burst/io counts are
-preserved, so the workload keeps its character but every seed is a distinct
-instance. Same seed + profile → identical run (all six algorithms still race on
-that one instance); different seeds → different metrics, which is what lets you
-average across seeds. xv6 stays deterministic-by-profile (its curated
-`schedtest.c` tables are fixed in C with no PRNG), so on the xv6 backend the
-seed only labels the run. The profile dropdown also offers a **🎲 random**
-choice that rolls a fresh profile + seed on every press.
+**xv6 is deterministic-by-profile.** Its curated `schedtest.c` tables are fixed in
+C with no PRNG, and the QEMU run is reproducible (deterministic `-icount` clock +
+fixed-iteration bursts + tick-aligned start), so a given (profile, algorithm)
+reproduces exactly run-to-run — `--seed` only labels the run. To run an *arbitrary*
+workload (e.g. for the random-workload study) inject it with `schedtest --procs
+"arrival:burst:prio,..."` (see `experiments/burst_random_eval.py`).
 
-**Multi-seed robustness sweep.** Because each seed is a distinct instance, a
-single run is one sample, not proof the recommendation holds. `tools/seed_sweep.py`
-runs a workload across many seeds and reports, per algorithm, the target
-metric's **mean ± std** and how often each algorithm was best, so a pick can be
-defended statistically instead of anecdotally:
+**Statistical robustness (random workloads).** A single curated run is one sample.
+Because xv6 is now reproducible, statistical power comes from generating MANY
+random workloads and aggregating across them. `experiments/burst_random_eval.py`
+does exactly this — it runs each generated workload on xv6 under several prediction
+strategies and reports **mean ± 95% CI**, separately for a signal set and a
+negative-control set:
 
 ```bash
-python3 tools/seed_sweep.py --workload ambiguous_mixed --seeds 1-20
-# → outputs/seed_sweep/seed_sweep_ambiguous_mixed.{json,md}
-#   e.g. "Priority best in 20/20 seeds; avg_waiting 4.75 ± 0.75"
+python3 experiments/burst_random_eval.py --signal multi
+# → outputs/random_eval/RESULTS.md  (LLM vs heuristics vs blind EMA, with a control)
 ```
 
 It reuses the orchestrator's profile-alias map (so the dashboard's profile
@@ -826,7 +855,7 @@ misnamed should be fixed in the README, not faked):
 │   ├── workload_analyzer.py
 │   ├── llm_advisor.py      · solar_client.py
 │   ├── algorithm_guard.py  · schema_compat.py
-│   ├── scheduler_simulator.py          # FALLBACK (dev/test)
+│   ├── intent_advisor.py               # NL intent → config (semantic lane)
 │   ├── trace_parser.py     · metrics.py
 │   ├── event_detector.py
 │   ├── correction_proposer.py          # PREVIEW ONLY
@@ -856,17 +885,17 @@ misnamed should be fixed in the README, not faked):
 
 | Dashboard        | Role                                        | Command                              |
 |------------------|---------------------------------------------|--------------------------------------|
-| `dashboard_live` | **PRIMARY demo** — loads real generated JSON/JSONL (xv6 trace or simulator fallback); shows backend badge | `cd dashboard_live && npm run dev` |
+| `dashboard_live` | **PRIMARY demo** — loads real generated JSON/JSONL from xv6 traces; shows backend badge | `cd dashboard_live && npm run dev` |
 
 `dashboard_live` shows a backend indicator in the header: **XV6 TRACE** when the
-data came from real xv6 logs, **SIMULATOR FALLBACK** when it came from the
-simulator.
+data came from real xv6 logs, **FALLBACK** when only the committed offline
+fixtures are in use.
 
 ### Run dashboard_live (primary)
 
 ```bash
 # Step 1: generate live-data via the orchestrator (real xv6 + QEMU).
-python3 scripts/orchestrator.py --backend xv6 --seed 42 --workload interactive --run-all
+python3 scripts/orchestrator.py --workload interactive
 
 # Step 2: start dashboard
 cd dashboard_live
@@ -877,8 +906,8 @@ npm run dev     # http://localhost:5174
 Step 1 alternatives, if you need finer control:
 
 ```bash
-# Dev/fallback path (no QEMU needed):
-python3 scripts/orchestrator.py --backend simulator --seed 42 --workload interactive --run-all
+# No API key / no QEMU? Use the committed offline fixtures:
+python3 scripts/orchestrator.py --workload interactive --offline-fixture
 
 # Re-publish all four curated xv6 profile snapshots (interactive,
 # cpu_bound, mixed, priority_sensitive):
@@ -886,7 +915,7 @@ python3 scripts/export_profile_snapshots.py --backend xv6
 ```
 
 `dashboard_live` shows:
-- **Backend badge** (`XV6 TRACE` / `SIMULATOR FALLBACK` / `FALLBACK`) in the header status bar.
+- **Backend badge** (`XV6 TRACE` / `FALLBACK`) in the header status bar.
 - **Snapshot selector** — visible when `snapshots_manifest.json` exists. Switch between the four committed xv6 profile snapshots (`interactive`, `cpu_bound`, `mixed`, `priority_sensitive`); a purple `SNAPSHOT: <profile>` pill appears next to the dropdown when one is active. Default is the flat live-data root.
 - **Manifest version** (e.g. `v16`) to confirm data freshness.
 - **Last Updated** timestamp from `manifest.json`.
@@ -915,9 +944,12 @@ Concise current status:
 | Component | Status | Role |
 |-----------|--------|------|
 | xv6 scheduler — RR / FCFS / Priority+Aging / MLFQ / SJF / SRTF | **Implemented** | execution authority |
-| Orchestrator — xv6 backend (`scripts/orchestrator.py --backend xv6`) | **Implemented** | **final demo / experiment path** |
+| Orchestrator — xv6 backend (`scripts/orchestrator.py`) | **Implemented** | **the sole execution path** (deterministic) |
 | xv6 workload profiles — `interactive`, `cpu_bound`, `mixed`, `priority_sensitive` | **Implemented** | all 4 run on xv6 end-to-end ([audit](docs/xv6_profile_support.md)) |
-| Orchestrator — simulator backend (`--backend simulator`) | **Implemented** | dev / fallback only |
+| Orchestrator — simulator backend | **Removed** | xv6 is now the sole backend (deterministic); the Python simulator + its tests were deleted |
+| Determinism — `-icount` + fixed-iteration bursts + tick-aligned start | **Implemented** | xv6 runs reproduce run-to-run (`experiments/xv6_determinism_probe.py`, `docs/GOAL.md`) |
+| Intent advisor + `--intent` (NL → config) | **Implemented** | 8/8 rubric ([`outputs/intent_eval/RESULTS.md`](outputs/intent_eval/RESULTS.md)) |
+| Random-workload burst study (`--procs`, signal/control, CIs) | **Implemented** | [`outputs/random_eval/RESULTS.md`](outputs/random_eval/RESULTS.md) |
 | `scripts/export_profile_snapshots.py` + committed per-profile xv6 snapshots | **Implemented** | dashboard switches across `interactive` / `cpu_bound` / `mixed` / `priority_sensitive` without re-running QEMU |
 | `tools/validate_dashboard_contract.py` (`--strict --snapshots --preview …`) | **Implemented** | catches empty traces, missing manifest fields, cross-file algo disagreement; `--snapshots` extends per profile snapshot; `--preview` is opt-in and validates the runtime-correction preview artifacts (`preview_only=true`, `applied=false`, no `CORRECTION_APPLIED`). Default mode is unchanged — preview files remain optional and off the strict contract. |
 | `dashboard_live` (React + `public/live-data/`) | **Implemented** | **final demo UI** — backend badge + snapshot selector + manifest meta + per-row Judge |

@@ -154,6 +154,13 @@ static int g_alpha = -1, g_initial = -1, g_min = -1, g_max = -1;
 static int g_hints[MAXPROC];
 static int g_nhints = 0;
 
+// Custom workload injected at runtime via --procs (instead of the fixed C
+// tables).  This is what lets the host generate RANDOM workloads and run them on
+// the real kernel for the burst-prediction study (docs/GOAL_burst_eval.md).  The
+// spec order is preserved as fork order, so --hints priors align by index.
+static struct workload g_custom = { "custom", 0, {{0, 0, 0, 0}} };
+static int g_have_custom = 0;
+
 // LLM/Guard-validated DYNAMIC scheduler parameters (RR / Priority / MLFQ),
 // also supplied on the command line.  A value of -1 (or a zero count) means
 // "not supplied" and the kernel keeps its compile-time default for that
@@ -185,6 +192,38 @@ parse_int_csv(const char *s, int *out, int max)
   return n;
 }
 
+// Parse a custom workload spec "arrival:burst:prio,arrival:burst:prio,..." into
+// g_custom.  Missing/zero burst is clamped to 1 tick.  Up to MAXPROC processes.
+static void
+parse_procs(const char *s)
+{
+  int n = 0, fi = 0, have = 0;
+  int field[3] = {0, 0, 0};
+  while(1){
+    char c = *s;
+    if(c >= '0' && c <= '9'){
+      field[fi] = field[fi] * 10 + (c - '0');
+      have = 1;
+    } else if(c == ':'){
+      if(fi < 2) fi++;
+    } else if(c == ',' || c == '\0'){
+      if(have && n < MAXPROC){
+        g_custom.procs[n].arrival   = field[0];
+        g_custom.procs[n].cpu_burst = field[1] > 0 ? field[1] : 1;
+        g_custom.procs[n].priority  = field[2];
+        g_custom.procs[n].label     = "gen";
+        n++;
+      }
+      field[0] = field[1] = field[2] = 0;
+      fi = 0; have = 0;
+      if(c == '\0') break;
+    }
+    s++;
+  }
+  g_custom.n = n;
+  g_have_custom = (n > 0);
+}
+
 static int
 algo_mode(const char *s)
 {
@@ -206,18 +245,24 @@ find_workload(const char *name)
   return 0;
 }
 
-// Consume approximately ticks_to_run ticks of CPU time.  uptime() returns the
-// kernel tick counter; we spin doing small chunks of work between checks so the
-// timer interrupt can drive real scheduling decisions while we run.
+// Consume `ticks_to_run` ticks worth of CPU by doing a FIXED amount of
+// computation, NOT by spinning on uptime().  uptime() is the GLOBAL tick
+// counter, so the old wall-clock spin (a) counted ticks that elapsed while this
+// process was descheduled (a CPU burst is CPU work, not wall-clock) and (b)
+// overshot by up to one chunk depending on where the tick boundary happened to
+// fall relative to the loop — the dominant source of run-to-run metric jitter.
+// A fixed iteration count makes a burst a deterministic amount of work, which
+// is what a CPU burst actually is.  ITERS_PER_TICK is calibrated together with
+// QEMU `-icount shift=3` so one nominal burst tick ~= one real scheduler tick
+// of CPU; both are required for reproducible metrics (see docs/GOAL.md).
+#define ITERS_PER_TICK 2500000L
 static void
 run_burst(int ticks_to_run)
 {
-  int start = uptime();
-  volatile int x = 0;
-  while(uptime() - start < ticks_to_run){
-    for(int i = 0; i < 20000; i++)
-      x += i;
-  }
+  volatile long x = 0;
+  long total = (long)ticks_to_run * ITERS_PER_TICK;
+  for(long i = 0; i < total; i++)
+    x += i;
   (void)x;
 }
 
@@ -296,6 +341,16 @@ run_one(const char *algo, int mode, int seed, struct workload *wl)
   // declared arrival. (A previous attempt slept in the child after fork, but
   // the child still got DISPATCHED briefly before calling pause, which marked
   // first_run earlier than arrival and produced negative response_time.)
+  //
+  // Snap the reference clock to a FRESH tick boundary first.  The orchestrator
+  // types the `schedtest` command at a host wall-clock instant, so without this
+  // the run would begin at an arbitrary phase relative to the timer grid: the
+  // first quantum becomes a fractional tick and the whole preemptive schedule
+  // fails to reproduce run-to-run (even with QEMU -icount).  Busy-waiting one
+  // tick edge re-synchronises every run to the same phase deterministically.
+  int tsync = uptime();
+  while(uptime() == tsync)
+    ;
   int t0 = uptime();
 
   for(int i = 0; i < wl->n; i++){
@@ -428,11 +483,15 @@ main(int argc, char *argv[])
       g_max = atoi(argv[++i]);
     } else if(strcmp(argv[i], "--hints") == 0 && i + 1 < argc){
       g_nhints = parse_int_csv(argv[++i], g_hints, MAXPROC);
+    } else if(strcmp(argv[i], "--procs") == 0 && i + 1 < argc){
+      parse_procs(argv[++i]);
     }
     // else: unknown token ignored (keeps forward/backward compat tolerant)
   }
 
-  struct workload *wl = find_workload(profile);
+  // A --procs spec overrides the curated profile tables (random-workload study);
+  // otherwise look the profile up in the fixed C tables.
+  struct workload *wl = g_have_custom ? &g_custom : find_workload(profile);
   if(wl == 0){
     printf("schedtest: unknown profile: %s\n", profile);
     exit(1);

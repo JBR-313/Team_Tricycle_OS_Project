@@ -10,22 +10,21 @@ Runs the full host-side pipeline end-to-end:
                                  committed demo fixtures with --offline-fixture
                                  when running without UPSTAGE_API_KEY.)
         -> algorithm_guard     (guard_decision.json)
-        -> execution backend   (simulator OR real xv6 under QEMU)
+        -> execution on xv6    (real xv6 under QEMU — the sole execution authority)
         -> export to dashboard_live live-data + rich manifest.json
 
-Both backends are wired end-to-end:
-  - simulator: scheduler_simulator.py writes trace_*.jsonl + metrics.json.
-  - xv6: builds the kernel, boots QEMU, runs schedtest per algorithm (LLM-selected
-    first), captures the serial console to outputs/xv6_raw_<algo>_seed<seed>.log,
-    parses each via trace_parser.py (windowed to the run, ticks rebased), and
-    aggregates metrics.json across the traces.
+xv6 execution (the only backend):
+  builds the kernel, boots QEMU, runs schedtest per algorithm (LLM-selected
+  first), captures the serial console to outputs/xv6_raw_<algo>_seed<seed>.log,
+  parses each via trace_parser.py (windowed to the run, ticks rebased), and
+  aggregates metrics.json across the traces. Runs are reproducible: the kernel
+  is built with a deterministic QEMU clock (-icount shift=3,sleep=off) and
+  schedtest uses fixed-iteration CPU bursts from a tick-aligned start
+  (see docs/GOAL.md). The Python scheduler simulator backend was removed.
 
 Usage:
-    python3 scripts/orchestrator.py --backend simulator --seed 42 \\
-        --workload interactive --run-all
-    python3 scripts/orchestrator.py --backend xv6 --seed 42 \\
-        --workload interactive --run-all
-    python3 scripts/orchestrator.py --backend xv6 --algo mlfq --workload interactive
+    python3 scripts/orchestrator.py --seed 42 --workload interactive --run-all
+    python3 scripts/orchestrator.py --algo mlfq --workload interactive
 """
 
 from __future__ import annotations
@@ -71,6 +70,11 @@ QEMU_OPTS = [
     "-global", "virtio-mmio.force-legacy=false",
     "-drive", "file=fs.img,if=none,format=raw,id=x0",
     "-device", "virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0",
+    # Deterministic guest clock: drive the timer from a virtual instruction
+    # counter (fixed shift), NOT host wall-clock. This is what makes preemptive
+    # runs (RR/SRTF) reproduce run-to-run. shift=3 is a fixed (=deterministic)
+    # value; `shift=auto` would adapt to host speed and is NOT deterministic.
+    "-icount", "shift=3,sleep=off",
 ]
 # schedtest only knows these curated profiles; fall back to mixed otherwise.
 XV6_PROFILES = {"interactive", "cpu_bound", "mixed", "priority_sensitive",
@@ -103,8 +107,9 @@ PROFILE_MAP = {
     "short_jobs":         ROOT / "workloads" / "short_jobs.json",
     "starvation_risk":    ROOT / "workloads" / "starvation_risk.json",
     # v2 workload IDs (matches the `id` field in each workload JSON;
-    # see docs/workload_coverage_matrix.md). Simulator backend only — xv6
-    # schedtest still uses the legacy 4 curated profiles.
+    # see docs/workload_coverage_matrix.md). NOT directly executable on xv6 —
+    # schedtest only runs the curated XV6_PROFILES, so the orchestrator collapses
+    # any of these to 'mixed'. Kept for the analyzer and the experiments/ tools.
     "interactive_heavy":      ROOT / "workloads" / "interactive_heavy.json",
     "short_jobs_clustered":   ROOT / "workloads" / "short_jobs.json",
     "long_job_first_convoy":  ROOT / "workloads" / "long_cpu_bound_first.json",
@@ -114,8 +119,8 @@ PROFILE_MAP = {
     "ambiguous_mixed":        ROOT / "workloads" / "ambiguous_mixed.json",
     "pure_batch":             ROOT / "workloads" / "pure_batch.json",
     "bursty_long_tail":       ROOT / "workloads" / "bursty_long_tail.json",
-    # Scheduling-lab coverage workloads (simulator only; each isolates one
-    # canonical scheduling phenomenon — see docs/workload_coverage_matrix.md).
+    # Scheduling-lab coverage workloads (not xv6 curated profiles; each isolates
+    # one canonical scheduling phenomenon — see docs/workload_coverage_matrix.md).
     "convoy_effect":            ROOT / "workloads" / "convoy_effect.json",
     "fairness_rr":              ROOT / "workloads" / "fairness_rr.json",
     "staggered_short_arrival":  ROOT / "workloads" / "staggered_short_arrival.json",
@@ -142,7 +147,7 @@ XV6_MIRROR_MAP = {
     "preempt_stream":     ROOT / "workloads" / "xv6_preempt_stream.json",
 }
 
-# Trace files written by the simulator (lowercase canonical names).
+# Canonical per-algorithm trace file stems (lowercase).
 TRACE_ALGOS = [a.lower() for a in CANONICAL_ALGOS]
 
 META_FILES = (
@@ -277,7 +282,7 @@ def run_workload_analyzer(workload: Path, out_dir: Path, dry_run: bool):
 
 
 def run_advisor(out_dir: Path, dry_run: bool, *, offline_fixture: bool = False,
-                use_feedback: bool = False) -> bool:
+                use_feedback: bool = False, intent: str | None = None) -> bool:
     """Run llm_advisor (advise).
 
     Default behavior is STRICT: if the advisor fails (missing UPSTAGE_API_KEY,
@@ -297,39 +302,67 @@ def run_advisor(out_dir: Path, dry_run: bool, *, offline_fixture: bool = False,
     print("\n[2] LLM advisor")
     summary = out_dir / "workload_summary.json"
     rec_out = out_dir / "recommendation.json"
-    cmd = [
-        sys.executable, str(TOOLS_DIR / "llm_advisor.py"),
-        "--mode", "advise",
-        "--in", str(summary),
-        "--out", str(rec_out),
-    ]
-    if use_feedback:
-        feedback_file = out_dir / "feedback_rules.md"
-        cmd.extend(["--feedback", str(feedback_file)])
-        if feedback_file.is_file():
-            n = len(_parse_feedback_rules(feedback_file))
-            print(f"  --use-feedback ON: injecting {n} accumulated rule(s) "
-                  f"from {_rel(feedback_file)}")
-        else:
-            print(f"  --use-feedback ON: no rules file at {_rel(feedback_file)} "
-                  f"yet; advising with base prompt (no crash).")
-    if dry_run:
-        print(f"  cmd: {' '.join(cmd)}")
-        print("  [DRY-RUN] skipped")
-        return False
 
-    ok = False
-    try:
-        rc = subprocess.run(cmd, capture_output=False).returncode
-        ok = rc == 0 and rec_out.exists()
-        if not ok:
-            print(f"  [advisor] exited {rc}")
-    except Exception as exc:  # noqa: BLE001
-        print(f"  [advisor] exception: {exc}")
+    # Intent mode (the LLM's semantic lane, docs/GOAL_semantic.md): map a
+    # natural-language workload intent straight to a config, bypassing the numeric
+    # feature advisor. The rest of the pipeline (guard -> xv6 -> explain) is
+    # unchanged. No burst hints (the LLM never saw any process).
+    if intent:
+        print(f"  intent mode: natural-language → config")
+        print(f'    intent: "{intent.strip()[:80]}"')
+        if dry_run:
+            print("  [DRY-RUN] skipped")
+            return False
         ok = False
+        try:
+            sys.path.insert(0, str(TOOLS_DIR))
+            from intent_advisor import recommend_from_intent
+            from solar_client import SolarClient
+            rec = recommend_from_intent(intent, SolarClient())
+            rec_out.write_text(json.dumps(rec, indent=2) + "\n", encoding="utf-8")
+            print(f"  intent → {rec.get('algorithm')} "
+                  f"(target_metric={rec.get('target_metric')})")
+            ok = rec_out.exists()
+        except Exception as exc:  # noqa: BLE001
+            print(f"  [intent advisor] failed: {exc}")
+            ok = False
+        if ok:
+            return False
+        # fall through to the shared strict/offline-fixture fallback below.
+    else:
+        cmd = [
+            sys.executable, str(TOOLS_DIR / "llm_advisor.py"),
+            "--mode", "advise",
+            "--in", str(summary),
+            "--out", str(rec_out),
+        ]
+        if use_feedback:
+            feedback_file = out_dir / "feedback_rules.md"
+            cmd.extend(["--feedback", str(feedback_file)])
+            if feedback_file.is_file():
+                n = len(_parse_feedback_rules(feedback_file))
+                print(f"  --use-feedback ON: injecting {n} accumulated rule(s) "
+                      f"from {_rel(feedback_file)}")
+            else:
+                print(f"  --use-feedback ON: no rules file at {_rel(feedback_file)} "
+                      f"yet; advising with base prompt (no crash).")
+        if dry_run:
+            print(f"  cmd: {' '.join(cmd)}")
+            print("  [DRY-RUN] skipped")
+            return False
 
-    if ok:
-        return False
+        ok = False
+        try:
+            rc = subprocess.run(cmd, capture_output=False).returncode
+            ok = rc == 0 and rec_out.exists()
+            if not ok:
+                print(f"  [advisor] exited {rc}")
+        except Exception as exc:  # noqa: BLE001
+            print(f"  [advisor] exception: {exc}")
+            ok = False
+
+        if ok:
+            return False
 
     if not offline_fixture:
         sys.exit(
@@ -433,28 +466,6 @@ def compute_run_order(selected: str) -> list[str]:
 
 
 # ── execution backends (running) ───────────────────────────────────────────────
-
-def run_simulator_backend(workload: Path, out_dir: Path, dry_run: bool) -> bool:
-    """Run the host-side simulator on the workload + guard decision.
-
-    The simulator runs ALL 6 algorithms on the SAME workload and writes
-    trace_<algo>.jsonl for each plus metrics.json (with comparison, judgment,
-    regret_score). No separate trace_parser / metrics step is needed here.
-    """
-    print("\n[4] Execution backend: simulator")
-    guard_file = out_dir / "guard_decision.json"
-    cmd = [
-        sys.executable, str(TOOLS_DIR / "scheduler_simulator.py"),
-        "--workload", str(workload),
-        "--guard", str(guard_file),
-        "--out-dir", str(out_dir),
-    ]
-    rc = _run(cmd, dry_run)
-    if rc != 0:
-        print(f"  [ERROR] simulator exited {rc}")
-        return False
-    return True
-
 
 def _load_jsonl(path: Path) -> list[dict]:
     evs: list[dict] = []
@@ -1448,13 +1459,6 @@ def _run_correction_apply_loop(out_dir: Path, live_dir: Path, *, backend: str,
     forced = bool(force_correction)
     should_correct = forced or judgment == "FAIL" or top_metrics.get("starvation_occurred") or high_sev
 
-    if backend != "xv6":
-        _publish({"applied": False,
-                  "reason": "correction apply loop re-runs the real xv6 kernel; "
-                            "not applicable to the simulator backend."})
-        print("  applied=false (simulator backend)")
-        return
-
     if not should_correct:
         _publish({"applied": False,
                   "reason": "Initial recommendation met success criteria "
@@ -1617,7 +1621,7 @@ def export_to_live_data(out_dir: Path, live_dir: Path, *, backend: str, seed: in
     version = int(existing.get("version", 0)) + 1
 
     now = _iso_now()
-    mode = "simulator" if backend == "simulator" else "xv6-log"
+    mode = "xv6-log"  # xv6 is the sole execution authority
 
     # DISPLAY-form algorithm names for the dashboard.
     selected_disp = normalize_algorithm_name(selected)
@@ -1665,15 +1669,25 @@ def main() -> int:
     p = argparse.ArgumentParser(
         description="LLM Sched Copilot — host-side Orchestrator (Phase B)"
     )
-    p.add_argument("--backend", choices=["xv6", "simulator"], default="simulator")
-    p.add_argument("--mode", choices=["simulator", "xv6-log", "xv6", "fallback"],
-                   default=None,
-                   help="legacy alias for --backend (simulator | xv6-log/xv6 -> xv6 | fallback)")
+    # xv6 is the sole execution authority. The Python simulator backend was
+    # removed once the kernel path was made reproducible (deterministic -icount +
+    # fixed-iteration run_burst + tick-aligned start; see docs/GOAL.md). --backend
+    # / --mode are kept only so old invocations don't crash; anything other than
+    # xv6 warns and is treated as xv6.
+    p.add_argument("--backend", choices=["xv6"], default="xv6",
+                   help="execution backend (xv6 only; the simulator was removed)")
+    p.add_argument("--mode", default=None,
+                   help="DEPRECATED legacy alias; ignored (xv6 is the only backend)")
     p.add_argument("--seed", type=int, default=42)
     p.add_argument("--workload", default="interactive",
-                   help="profile name or path ending in .json")
+                   help="profile name or path ending in .json (which xv6 profile "
+                        "to EXECUTE; with --intent the LLM still picks the config)")
+    p.add_argument("--intent", default=None,
+                   help="natural-language workload intent; the LLM maps it to a "
+                        "scheduling config (tools/intent_advisor.py) instead of "
+                        "reasoning over numeric features. The LLM's semantic lane.")
     p.add_argument("--run-all", action="store_true",
-                   help="run all algorithms (default for simulator)")
+                   help="run all algorithms (xv6 already runs the full comparison)")
     p.add_argument("--algo", default=None,
                    help="single-algo override (mainly for xv6 later)")
     p.add_argument("--out-dir", default=str(OUTPUTS))
@@ -1721,9 +1735,12 @@ def main() -> int:
     )
     args = p.parse_args()
 
-    # Legacy --mode alias maps onto --backend (xv6-log/xv6 -> xv6, else simulator).
-    if args.mode:
-        args.backend = "xv6" if args.mode in ("xv6-log", "xv6") else "simulator"
+    # Legacy --mode alias: the simulator backend was removed, so xv6 is the only
+    # target. Warn if a caller asked for anything else, then proceed on xv6.
+    if args.mode and args.mode not in ("xv6", "xv6-log"):
+        print(f"[orchestrator] NOTE: --mode {args.mode!r} is obsolete "
+              f"(simulator removed); running on xv6.")
+    args.backend = "xv6"
 
     out_dir = Path(args.out_dir)
     live_dir = Path(args.live_data_dir)
@@ -1757,31 +1774,18 @@ def main() -> int:
 
     workload_stem = workload_path.stem
 
-    # Simulator backend: make --seed MEANINGFUL. Materialise a seed-jittered
-    # INSTANCE of the workload (arrival/burst magnitudes vary; process count and
-    # per-process burst/io counts preserved) and analyse + simulate THAT, so
-    # different seeds give genuinely different runs (multi-seed statistics) and
-    # the dashboard's "random" option produces fresh data each press. xv6 stays
-    # deterministic-by-profile: its curated schedtest.c tables are fixed in C
-    # with no PRNG, so we never jitter the kernel path.
-    if args.backend == "simulator" and not dry_run:
-        instance_path = out_dir / "workload_instance.json"
-        rc = _run([sys.executable, str(TOOLS_DIR / "workload_jitter.py"),
-                   "--in", str(workload_path), "--out", str(instance_path),
-                   "--seed", str(args.seed)], dry_run)
-        if rc == 0 and instance_path.is_file():
-            print(f"[orchestrator] simulator: seed {args.seed} -> jittered "
-                  f"instance {_rel(instance_path)}")
-            workload_path = instance_path
-        else:
-            print(f"  [WARN] jitter failed (rc={rc}); using base workload unchanged")
+    # xv6 is deterministic-by-profile: its curated schedtest.c tables are fixed in
+    # C with no PRNG, and the QEMU run is reproducible (deterministic -icount +
+    # fixed-iteration run_burst + tick-aligned start). --seed is therefore a label
+    # passed through to schedtest, not a workload randomiser. (The simulator
+    # backend, which used to seed-jitter the workload, has been removed.)
 
     print("=" * 64)
     print("LLM Sched Copilot — Orchestrator")
     print(f"  backend     : {args.backend}")
     print(f"  seed        : {args.seed}")
     print(f"  workload    : {workload_type} ({_rel(workload_path)})")
-    print(f"  run-all     : {args.run_all or args.backend == 'simulator'}")
+    print(f"  run-all     : {args.run_all or True}")
     print(f"  algo        : {args.algo or '(all)'}")
     print(f"  out-dir     : {_rel(out_dir)}")
     print(f"  live-data   : {_rel(live_dir)}")
@@ -1805,7 +1809,7 @@ def main() -> int:
     feedback_consumed = bool(args.use_feedback)
     advisor_fellback = run_advisor(
         out_dir, dry_run, offline_fixture=args.offline_fixture,
-        use_feedback=args.use_feedback,
+        use_feedback=args.use_feedback, intent=args.intent,
     )
     guard_fellback = run_guard(
         out_dir, dry_run, offline_fixture=args.offline_fixture
@@ -1817,13 +1821,10 @@ def main() -> int:
     run_order = compute_run_order(selected)
     print(f"\n[selected] {selected}; run order: {run_order}")
 
-    # Running phase: execute backend
-    if args.backend == "simulator":
-        ok = run_simulator_backend(workload_path, out_dir, dry_run)
-    else:
-        ok = run_xv6_backend(
-            out_dir, args.seed, workload_type, run_order, args.algo, dry_run
-        )
+    # Running phase: execute on xv6 (the sole execution authority)
+    ok = run_xv6_backend(
+        out_dir, args.seed, workload_type, run_order, args.algo, dry_run
+    )
 
     if not ok:
         print("\n[FAIL] Backend execution failed. Aborting.")
