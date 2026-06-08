@@ -12,8 +12,7 @@ the running scheduling pipeline. The pipeline lives in [`../tools/`](../tools).
 | script | question it answers | output |
 |---|---|---|
 | `burst_ablation.py` | Is the LLM's cold-start burst **prediction** better than a blind EMA / a fixed heuristic? | `outputs/ablation/burst_ablation.{json,md}` |
-| `burst_scheduling_eval.py` | Do those burst priors actually **improve SJF/SRTF** (avg waiting) in a controlled simulator A/B? | `outputs/ablation/burst_scheduling_eval.json` + `burst_scheduling_RESULTS.md` |
-| `burst_xv6_confirm.py` | Does the same A/B hold on the **real xv6 kernel**? (currently inconclusive — capture path non-deterministic) | `outputs/ablation/` |
+| `burst_xv6_confirm.py` | Do those burst priors actually **improve SJF/SRTF** on the **real xv6 kernel**? (The simulator A/B `burst_scheduling_eval.py` was removed with the simulator; the xv6 run is now reproducible — deterministic `-icount` + fixed-iteration bursts — so this is the live path to a real-kernel number.) | `outputs/ablation/` |
 | `outcome_store.py` | Retrieval memory: visible features → measured-best algorithm (leakage-free, leave-one-out). | (library, used by the two below) |
 | `retrieval_advisor.py` | Does retrieving similar **measured precedents** improve the recommendation? | `outputs/learning/llm_cache/` |
 | `recommendation_eval.py` | Leave-one-out cross-validation of every recommendation mode (fixed / kNN / LLM ± retrieval). | `outputs/learning/recommendation_eval.json` + `RESULTS.md` |

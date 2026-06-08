@@ -1,0 +1,81 @@
+{
+  "regimes": {
+    "signal": {
+      "n_workloads": 8,
+      "mean_order_acc": {
+        "ema_cold": 0.5,
+        "heuristic": 0.695,
+        "llm": 0.683
+      },
+      "by_algo": {
+        "SRTF": {
+          "heuristic_vs_ema_pct": {
+            "mean": 8.55,
+            "ci95": 9.33,
+            "n": 6
+          },
+          "llm_vs_ema_pct": {
+            "mean": 8.62,
+            "ci95": 17.9,
+            "n": 7
+          }
+        },
+        "SJF": {
+          "heuristic_vs_ema_pct": {
+            "mean": 8.37,
+            "ci95": 14.41,
+            "n": 8
+          },
+          "llm_vs_ema_pct": {
+            "mean": 8.47,
+            "ci95": 16.49,
+            "n": 8
+          }
+        }
+      }
+    },
+    "control": {
+      "n_workloads": 4,
+      "mean_order_acc": {
+        "ema_cold": 0.5,
+        "heuristic": 0.391,
+        "llm": 0.367
+      },
+      "by_algo": {
+        "SRTF": {
+          "heuristic_vs_ema_pct": {
+            "mean": -6.08,
+            "ci95": 8.23,
+            "n": 4
+          },
+          "llm_vs_ema_pct": {
+            "mean": -7.5,
+            "ci95": 24.34,
+            "n": 4
+          }
+        },
+        "SJF": {
+          "heuristic_vs_ema_pct": {
+            "mean": -12.34,
+            "ci95": 23.8,
+            "n": 4
+          },
+          "llm_vs_ema_pct": {
+            "mean": -17.96,
+            "ci95": 24.43,
+            "n": 4
+          }
+        }
+      }
+    }
+  },
+  "config": {
+    "n_signal": 8,
+    "n_control": 4,
+    "procs": 6,
+    "base_seed": 1000,
+    "algos": "SRTF,SJF",
+    "no_llm": false,
+    "out": "/home/seonguk/projects/Team_Tricycle_OS_Project/outputs/random_eval/burst_random_eval.json"
+  }
+}

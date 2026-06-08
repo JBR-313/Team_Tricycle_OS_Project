@@ -180,6 +180,13 @@ QEMUOPTS = -machine virt -bios none -kernel $K/kernel -m 128M -smp $(CPUS) -nogr
 QEMUOPTS += -global virtio-mmio.force-legacy=false
 QEMUOPTS += -drive file=fs.img,if=none,format=raw,id=x0
 QEMUOPTS += -device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0
+# Deterministic guest clock so schedtest metrics reproduce run-to-run: drive the
+# timer from a fixed virtual instruction counter, not host wall-clock, and keep
+# the clock instruction-bound even when idle (sleep=off). This MUST match the
+# orchestrator's QEMU_OPTS (scripts/orchestrator.py) so a manual `make qemu`
+# schedtest run yields the same numbers. Trade-off: sleep=off busy-spins one host
+# core while the guest idles — fine for short measurement runs. See docs/GOAL.md.
+QEMUOPTS += -icount shift=3,sleep=off
 
 qemu: check-qemu-version $K/kernel fs.img
 	$(QEMU) $(QEMUOPTS)

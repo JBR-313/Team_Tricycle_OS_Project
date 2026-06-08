@@ -10,6 +10,17 @@ picks the next process and is never on the kernel hot path. The OS component (si
 in-kernel scheduling algorithms, syscalls, processes, synchronization, IPC) is
 implemented by the team in `xv6-riscv/`, not merely hosting an LLM.
 
+> **⚠ Architecture update — xv6 is now the *sole* execution backend.** The Python
+> scheduler simulator (and its `--backend simulator` path, seed-jitter, and the
+> simulator-only A/B experiments) has been **removed**. It existed as a dev/test
+> fallback, but the xv6 kernel path is now **reproducible** — built with a
+> deterministic QEMU clock (`-icount shift=3,sleep=off`) and fixed-iteration CPU
+> bursts from a tick-aligned start (`docs/GOAL.md`) — so every measurement runs on
+> the real kernel. **Sections below that still describe a "simulator backend",
+> `SIMULATOR FALLBACK` badge, or `--backend simulator` commands are stale and being
+> revised.** Run the pipeline with `python3 scripts/orchestrator.py` (no backend
+> flag needed).
+
 ### Project deliverables (course §5)
 
 | # | Deliverable | Location |

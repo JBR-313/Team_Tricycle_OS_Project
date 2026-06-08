@@ -242,6 +242,13 @@ _PROMPT_STRIP_KEYS = (
     "total_cpu_work",
     "expected_best_algorithm",
     "expected_behavior",
+    # `description` is free text that often names the burst structure outright
+    # (e.g. "a long CPU-bound job arrives first; short jobs queue behind") — a
+    # soft answer-key. Stripping it forces both the algorithm recommendation and
+    # the burst prediction to reason from the numeric visible features, not from
+    # a sentence that gives the game away. `id` can encode the same hint.
+    "description",
+    "id",
 )
 
 # Per-process keys stripped from each `visible_processes` entry before the

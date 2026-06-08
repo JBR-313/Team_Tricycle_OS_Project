@@ -33,6 +33,14 @@ outputs/learning/*
 !outputs/adaptive/
 outputs/adaptive/*
 !outputs/adaptive/RESULTS.md
+# Random-workload burst-prediction study — keep the RESULTS doc + the two small
+# aggregate JSONs; the LLM prediction cache and bulky xv6 run logs stay ignored
+# (regeneratable via experiments/burst_random_eval.py).
+!outputs/random_eval/
+outputs/random_eval/*
+!outputs/random_eval/RESULTS.md
+!outputs/random_eval/burst_random_eval.json
+!outputs/random_eval/scout_multi.json
 
 # Defensive: catch stray logs outside outputs/. Tracked files (e.g.
 # logs/foo.log if someone deliberately git-added one) are unaffected.

@@ -13,7 +13,12 @@ The LLM is not the scheduler. xv6 is the execution authority.
 Workload Definition → Workload Analyzer → LLM Workload Interpreter → LLM Scheduling Algorithm Advisor → Algorithm Guard
 
 ### Running
-Algorithm Guard → [xv6 Scheduling Algorithm Execution (final target) | Scheduler Simulator (development fallback)] → Scheduling Trace Collector → Trace Parser → Metrics Evaluator + Event Detector → Runtime Correction Proposer
+Algorithm Guard → xv6 Scheduling Algorithm Execution (the sole execution authority, under QEMU) → Scheduling Trace Collector → Trace Parser → Metrics Evaluator + Event Detector → Runtime Correction Proposer
+
+> The Python scheduler simulator was removed once the xv6 path was made
+> reproducible (deterministic QEMU `-icount shift=3,sleep=off` + fixed-iteration
+> `run_burst` + tick-aligned start; see `docs/GOAL.md`). xv6 is now the only
+> backend; there is no simulator fallback.
 
 ### After Running
 Trace Explainer → Feedback Rule Generator → GUI Observability Dashboard
@@ -26,8 +31,8 @@ RR (default, baseline) | FCFS | Priority + Aging | MLFQ | SJF/SRTF (optional, re
 
 ## Run Commands
 ```bash
-make qemu                             # build & run xv6
-python3 scripts/orchestrator.py --backend xv6  # full pipeline (xv6 execution)
+make qemu                             # build & run xv6 (deterministic -icount clock)
+python3 scripts/orchestrator.py       # full pipeline (xv6 is the only backend)
 cd dashboard_live && npm run dev      # GUI Observability Dashboard
 ```
 

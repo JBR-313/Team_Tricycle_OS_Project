@@ -1,0 +1,70 @@
+{
+  "regimes": {
+    "signal": {
+      "n_workloads": 6,
+      "mean_order_acc": {
+        "ema_cold": 0.5,
+        "heuristic": 0.587,
+        "strong_heur": 0.736,
+        "llm": 0.505
+      },
+      "by_algo": {
+        "SRTF": {
+          "heuristic_vs_ema_pct": {
+            "mean": 12.26,
+            "ci95": 13.88,
+            "n": 4
+          },
+          "strong_heur_vs_ema_pct": {
+            "mean": 19.39,
+            "ci95": 22.33,
+            "n": 5
+          },
+          "llm_vs_ema_pct": {
+            "mean": 1.42,
+            "ci95": 17.64,
+            "n": 5
+          }
+        }
+      }
+    },
+    "control": {
+      "n_workloads": 4,
+      "mean_order_acc": {
+        "ema_cold": 0.5,
+        "heuristic": 0.391,
+        "strong_heur": 0.217,
+        "llm": 0.367
+      },
+      "by_algo": {
+        "SRTF": {
+          "heuristic_vs_ema_pct": {
+            "mean": -6.08,
+            "ci95": 8.23,
+            "n": 4
+          },
+          "strong_heur_vs_ema_pct": {
+            "mean": -22.16,
+            "ci95": 16.98,
+            "n": 4
+          },
+          "llm_vs_ema_pct": {
+            "mean": -7.5,
+            "ci95": 24.34,
+            "n": 4
+          }
+        }
+      }
+    }
+  },
+  "config": {
+    "n_signal": 6,
+    "n_control": 4,
+    "procs": 6,
+    "base_seed": 1000,
+    "algos": "SRTF",
+    "signal": "multi",
+    "no_llm": false,
+    "out": "outputs/random_eval/scout_multi.json"
+  }
+}

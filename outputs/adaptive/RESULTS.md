@@ -1,4 +1,12 @@
-# Does observe-then-adapt (ODA) beat the best STATIC scheduler? — measured
+> **⚠ Provenance (historical):** the generator `experiments/adaptive_sched_eval.py`
+> ran in the **Python scheduler simulator**, which has since been **removed** —
+> xv6 is now the sole execution authority. These numbers are kept as a record of
+> the negative result and are **no longer reproducible from this repo**. The xv6
+> run is now deterministic (`-icount shift=3,sleep=off` + fixed-iteration
+> `run_burst` + tick-aligned start; see `docs/GOAL.md`), so a *clean* re-measurement
+> of adaptive switching on the real kernel is now feasible as future work.
+
+# Does observe-then-adapt (ODA) beat the best STATIC scheduler? — measured (simulator, archived)
 
 **Verdict: NO, not robustly.** On non-stationary workloads in the reference
 simulator, mid-run adaptive switching gives at best a marginal (4–9%) gain over

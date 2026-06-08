@@ -1,4 +1,12 @@
-# Does the LLM's burst prediction improve ACTUAL scheduling? — measured
+> **⚠ Provenance (historical):** the generator `experiments/burst_scheduling_eval.py`
+> ran in the **Python scheduler simulator**, which has since been **removed** —
+> xv6 is now the sole execution authority. These numbers are kept as a record and
+> are **no longer reproducible from this repo**. Note two known caveats this run
+> carried: it was simulator-only, and the burst-prediction prompt leaked the
+> workload `description` (see prior analysis). The deterministic xv6 path now makes
+> `experiments/burst_xv6_confirm.py` the live route to a *clean* real-kernel number.
+
+# Does the LLM's burst prediction improve ACTUAL scheduling? — measured (simulator, archived)
 
 `burst_ablation.md` showed the LLM wins on burst *ordering* (0.90 vs 0.50). This
 closes the loop the project never measured: feed each prediction strategy's

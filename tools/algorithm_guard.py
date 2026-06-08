@@ -7,7 +7,7 @@ Pipeline position:
         ↓
     algorithm_guard.py (this module)
         ↓
-    guard_decision.json (to scheduler_simulator / xv6)
+    guard_decision.json (to the xv6 backend)
 
 The guard ensures:
   1. JSON schema is valid
@@ -625,7 +625,7 @@ def guard(rec: dict) -> dict:
         # negative / huge / duplicate hints into the scheduler.
         pb_clean, pb_warnings = _guard_clamp_predicted_bursts(rec.get("predicted_bursts"))
         # For SJF/SRTF, declare the prediction source so downstream
-        # (orchestrator / simulator) can route hints correctly. If no hints
+        # (orchestrator / xv6) can route hints correctly. If no hints
         # arrived, fall back to EMA explicitly rather than silently.
         prediction_source = None
         if algo in PREDICTOR_ALGORITHMS:
