@@ -41,6 +41,12 @@ outputs/random_eval/*
 !outputs/random_eval/RESULTS.md
 !outputs/random_eval/burst_random_eval.json
 !outputs/random_eval/scout_multi.json
+# Natural-language intent → config evidence — keep the RESULTS doc + the eval
+# JSON; the LLM cache stays ignored (regeneratable via experiments/intent_eval.py).
+!outputs/intent_eval/
+outputs/intent_eval/*
+!outputs/intent_eval/RESULTS.md
+!outputs/intent_eval/intent_eval.json
 
 # Defensive: catch stray logs outside outputs/. Tracked files (e.g.
 # logs/foo.log if someone deliberately git-added one) are unaffected.

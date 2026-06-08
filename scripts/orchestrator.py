@@ -282,7 +282,7 @@ def run_workload_analyzer(workload: Path, out_dir: Path, dry_run: bool):
 
 
 def run_advisor(out_dir: Path, dry_run: bool, *, offline_fixture: bool = False,
-                use_feedback: bool = False) -> bool:
+                use_feedback: bool = False, intent: str | None = None) -> bool:
     """Run llm_advisor (advise).
 
     Default behavior is STRICT: if the advisor fails (missing UPSTAGE_API_KEY,
@@ -302,39 +302,67 @@ def run_advisor(out_dir: Path, dry_run: bool, *, offline_fixture: bool = False,
     print("\n[2] LLM advisor")
     summary = out_dir / "workload_summary.json"
     rec_out = out_dir / "recommendation.json"
-    cmd = [
-        sys.executable, str(TOOLS_DIR / "llm_advisor.py"),
-        "--mode", "advise",
-        "--in", str(summary),
-        "--out", str(rec_out),
-    ]
-    if use_feedback:
-        feedback_file = out_dir / "feedback_rules.md"
-        cmd.extend(["--feedback", str(feedback_file)])
-        if feedback_file.is_file():
-            n = len(_parse_feedback_rules(feedback_file))
-            print(f"  --use-feedback ON: injecting {n} accumulated rule(s) "
-                  f"from {_rel(feedback_file)}")
-        else:
-            print(f"  --use-feedback ON: no rules file at {_rel(feedback_file)} "
-                  f"yet; advising with base prompt (no crash).")
-    if dry_run:
-        print(f"  cmd: {' '.join(cmd)}")
-        print("  [DRY-RUN] skipped")
-        return False
 
-    ok = False
-    try:
-        rc = subprocess.run(cmd, capture_output=False).returncode
-        ok = rc == 0 and rec_out.exists()
-        if not ok:
-            print(f"  [advisor] exited {rc}")
-    except Exception as exc:  # noqa: BLE001
-        print(f"  [advisor] exception: {exc}")
+    # Intent mode (the LLM's semantic lane, docs/GOAL_semantic.md): map a
+    # natural-language workload intent straight to a config, bypassing the numeric
+    # feature advisor. The rest of the pipeline (guard -> xv6 -> explain) is
+    # unchanged. No burst hints (the LLM never saw any process).
+    if intent:
+        print(f"  intent mode: natural-language → config")
+        print(f'    intent: "{intent.strip()[:80]}"')
+        if dry_run:
+            print("  [DRY-RUN] skipped")
+            return False
         ok = False
+        try:
+            sys.path.insert(0, str(TOOLS_DIR))
+            from intent_advisor import recommend_from_intent
+            from solar_client import SolarClient
+            rec = recommend_from_intent(intent, SolarClient())
+            rec_out.write_text(json.dumps(rec, indent=2) + "\n", encoding="utf-8")
+            print(f"  intent → {rec.get('algorithm')} "
+                  f"(target_metric={rec.get('target_metric')})")
+            ok = rec_out.exists()
+        except Exception as exc:  # noqa: BLE001
+            print(f"  [intent advisor] failed: {exc}")
+            ok = False
+        if ok:
+            return False
+        # fall through to the shared strict/offline-fixture fallback below.
+    else:
+        cmd = [
+            sys.executable, str(TOOLS_DIR / "llm_advisor.py"),
+            "--mode", "advise",
+            "--in", str(summary),
+            "--out", str(rec_out),
+        ]
+        if use_feedback:
+            feedback_file = out_dir / "feedback_rules.md"
+            cmd.extend(["--feedback", str(feedback_file)])
+            if feedback_file.is_file():
+                n = len(_parse_feedback_rules(feedback_file))
+                print(f"  --use-feedback ON: injecting {n} accumulated rule(s) "
+                      f"from {_rel(feedback_file)}")
+            else:
+                print(f"  --use-feedback ON: no rules file at {_rel(feedback_file)} "
+                      f"yet; advising with base prompt (no crash).")
+        if dry_run:
+            print(f"  cmd: {' '.join(cmd)}")
+            print("  [DRY-RUN] skipped")
+            return False
 
-    if ok:
-        return False
+        ok = False
+        try:
+            rc = subprocess.run(cmd, capture_output=False).returncode
+            ok = rc == 0 and rec_out.exists()
+            if not ok:
+                print(f"  [advisor] exited {rc}")
+        except Exception as exc:  # noqa: BLE001
+            print(f"  [advisor] exception: {exc}")
+            ok = False
+
+        if ok:
+            return False
 
     if not offline_fixture:
         sys.exit(
@@ -1652,7 +1680,12 @@ def main() -> int:
                    help="DEPRECATED legacy alias; ignored (xv6 is the only backend)")
     p.add_argument("--seed", type=int, default=42)
     p.add_argument("--workload", default="interactive",
-                   help="profile name or path ending in .json")
+                   help="profile name or path ending in .json (which xv6 profile "
+                        "to EXECUTE; with --intent the LLM still picks the config)")
+    p.add_argument("--intent", default=None,
+                   help="natural-language workload intent; the LLM maps it to a "
+                        "scheduling config (tools/intent_advisor.py) instead of "
+                        "reasoning over numeric features. The LLM's semantic lane.")
     p.add_argument("--run-all", action="store_true",
                    help="run all algorithms (xv6 already runs the full comparison)")
     p.add_argument("--algo", default=None,
@@ -1776,7 +1809,7 @@ def main() -> int:
     feedback_consumed = bool(args.use_feedback)
     advisor_fellback = run_advisor(
         out_dir, dry_run, offline_fixture=args.offline_fixture,
-        use_feedback=args.use_feedback,
+        use_feedback=args.use_feedback, intent=args.intent,
     )
     guard_fellback = run_guard(
         out_dir, dry_run, offline_fixture=args.offline_fixture
