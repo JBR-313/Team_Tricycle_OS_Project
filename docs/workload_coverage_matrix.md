@@ -8,13 +8,13 @@ run on the real xv6 kernel and which are simulator-only**.
 ## Backends
 
 - **xv6-backed** — a curated `schedtest.c` profile mirror exists, so the
-  workload runs on the real xv6 kernel under QEMU (and also in the simulator).
-  xv6 has no JSON parser; these map to the fixed `schedtest.c` WORKLOADS tables
-  via `XV6_MIRROR_MAP` in `scripts/orchestrator.py`. See
-  [`xv6_profile_support.md`](xv6_profile_support.md).
-- **simulator-only** — runs through `tools/scheduler_simulator.py` only. The
-  simulator reads arbitrary workload JSON; xv6 does not. This asymmetry is
-  intentional and documented (see [`system_limitations.md`](system_limitations.md)).
+  workload runs on the real xv6 kernel under QEMU. xv6 has no JSON parser; these
+  map to the fixed `schedtest.c` WORKLOADS tables via `XV6_MIRROR_MAP` in
+  `scripts/orchestrator.py`. (Arbitrary workloads can be injected at runtime with
+  `schedtest --procs "arrival:burst:prio,..."`.)
+- **analysis-only** — has a workload JSON but no `schedtest.c` mirror, so the
+  orchestrator collapses it to the `mixed` profile when executing on xv6; the JSON
+  is still used by the analyzer and the `experiments/` tools.
 
 ## Matrix
 
