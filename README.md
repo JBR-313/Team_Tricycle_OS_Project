@@ -20,10 +20,30 @@ cheap classical methods (shown with negative controls); at the **human interface
 Three host-side phases wrap the kernel; the Orchestrator
 (`scripts/orchestrator.py`) sequences them but is **not** the scheduler. All
 module interfaces are JSON / JSONL.
-```
-Before:   workload → analyzer → LLM advisor → Algorithm Guard
-Running:  xv6 (QEMU) → trace → parser → metrics → event detector → correction loop
-After:    trace explainer → feedback rules (FAIL-only) → dashboard
+
+```mermaid
+flowchart TD
+  subgraph BEFORE["Before running"]
+    W["workloads/*.json"] --> AN["workload_analyzer"]
+    AN -->|"workload_summary"| AD["LLM advisor (Solar Pro 3)"]
+    AD -->|"recommendation"| GD["Algorithm Guard"]
+  end
+  subgraph RUN["Running - xv6 under QEMU"]
+    XV["xv6 schedtest<br/>RR / FCFS / Priority / MLFQ / SJF / SRTF"]
+    XV -->|"trace.jsonl"| MP["trace_parser -> metrics"]
+    MP --> EV["event_detector"]
+    EV -->|"FAIL / starvation"| CR["correction loop<br/>(Guard-approved xv6 re-run)"]
+    CR -.->|"before / after"| XV
+  end
+  subgraph AFTER["After running"]
+    EX["trace_explainer"]
+    FB["feedback rules<br/>(FAIL-only)"]
+    DB["dashboard_live"]
+  end
+  GD -->|"guard_decision OK"| XV
+  MP --> EX --> DB
+  MP --> FB -.->|"opt-in, next run"| AD
+  MP --> DB
 ```
 
 ## Main features
