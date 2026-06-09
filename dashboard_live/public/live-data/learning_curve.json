@@ -1,0 +1,112 @@
+{
+  "source": "measured",
+  "provenance": "outputs/learning_curve/results.json (experiments/learning_curve_bank|replay|llm.py, real xv6 bank)",
+  "k": 3,
+  "families": [
+    "interactive",
+    "cpu_batch",
+    "convoy",
+    "priority"
+  ],
+  "n_instances": 20,
+  "precedent_curve": {
+    "knn": [
+      {
+        "precedents": 0,
+        "mean_regret": 0.283,
+        "n": 4
+      },
+      {
+        "precedents": 1,
+        "mean_regret": 0.0,
+        "n": 4
+      },
+      {
+        "precedents": 2,
+        "mean_regret": 0.0,
+        "n": 4
+      },
+      {
+        "precedents": 3,
+        "mean_regret": 0.0,
+        "n": 4
+      },
+      {
+        "precedents": 4,
+        "mean_regret": 0.009,
+        "n": 4
+      }
+    ],
+    "llm_retrieval": [
+      {
+        "precedents": 0,
+        "mean_regret": 0.183,
+        "n": 4
+      },
+      {
+        "precedents": 1,
+        "mean_regret": 0.05,
+        "n": 4
+      },
+      {
+        "precedents": 2,
+        "mean_regret": 0.086,
+        "n": 4
+      },
+      {
+        "precedents": 3,
+        "mean_regret": 0.111,
+        "n": 4
+      },
+      {
+        "precedents": 4,
+        "mean_regret": 0.067,
+        "n": 4
+      }
+    ]
+  },
+  "arms": [
+    {
+      "key": "fixed_rr",
+      "label": "Always RR",
+      "kind": "baseline",
+      "mean_regret": 0.38
+    },
+    {
+      "key": "llm_facts",
+      "label": "LLM (no memory)",
+      "kind": "no_learning",
+      "mean_regret": 0.327
+    },
+    {
+      "key": "fixed_mlfq",
+      "label": "Always MLFQ",
+      "kind": "baseline",
+      "mean_regret": 0.215
+    },
+    {
+      "key": "llm_retrieval",
+      "label": "LLM + memory",
+      "kind": "learning",
+      "mean_regret": 0.099
+    },
+    {
+      "key": "knn",
+      "label": "Retrieval kNN",
+      "kind": "learning",
+      "mean_regret": 0.059
+    }
+  ],
+  "negative_control": {
+    "true_label_knn": 0.059,
+    "shuffled_label_knn": 0.314,
+    "best_fixed_bar": 0.215,
+    "verdict": "signal real (shuffle collapses toward fixed bar)"
+  },
+  "drift": {
+    "knn": 0.059,
+    "knn_drift": 0.059,
+    "z": 2.0,
+    "verdict": "self-heals within one instance of the new pattern; no explicit drift-correction mechanism added"
+  }
+}

@@ -64,6 +64,10 @@ export async function loadRuntimeEvents()          { return _maybeJson('runtime_
 // runs (not regenerated per RUN), so it loads optionally and the card hides
 // itself when the file is absent.
 export async function loadBurstAblation()          { return _maybeJson('burst_ablation.json') }
+// Adaptive / retrieval-learning study (export_learning_curve.py). A measured,
+// cross-run artifact — static across live RUNs — so it loads optionally and the
+// Learning tab shows an empty-state hint when the file is absent.
+export async function loadLearningCurve()          { return _maybeJson('learning_curve.json') }
 export async function loadCorrectionProposal()     { return _maybeJson('correction_proposal.json') }
 export async function loadCorrectionGuardDecision(){ return _maybeJson('correction_guard_decision.json') }
 export async function loadCorrectionApplied()      { return _maybeJson('correction_applied.json') }

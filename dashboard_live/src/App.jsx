@@ -7,7 +7,7 @@ import {
   loadWorkloadSummary, loadMetrics, loadAllTraces,
   getLiveDataBase,
   loadRuntimeEvents, loadCorrectionProposal, loadCorrectionGuardDecision, loadCorrectionApplied,
-  loadBurstAblation,
+  loadBurstAblation, loadLearningCurve,
 } from './data/liveDataClient.js'
 import { tickToMs } from './components/constants.js'
 import { useRun } from './data/useRun.js'
@@ -198,6 +198,7 @@ import AlgorithmComparison from './components/AlgorithmComparison.jsx'
 import MetricVisualization from './components/MetricVisualization.jsx'
 import MLFQQueuePanel      from './components/MLFQQueuePanel.jsx'
 import LLMContributionCard from './components/LLMContributionCard.jsx'
+import LearningCurveCard    from './components/LearningCurveCard.jsx'
 
 const POLL_INTERVAL_MS = 1500
 
@@ -242,6 +243,7 @@ export default function App() {
   const [correctionGuardDecision, setCorrectionGuardDecision] = useState(null)
   const [correctionApplied,       setCorrectionApplied]       = useState(null)
   const [burstAblation,           setBurstAblation]           = useState(null)
+  const [learningCurve,           setLearningCurve]           = useState(null)
 
   const manifestVersionRef = useRef(null)
   const recommendedAlgoRef = useRef('MLFQ')
@@ -289,18 +291,20 @@ export default function App() {
         if (exRes.ok) setTraceExplanation(await exRes.json())
       } catch {/* optional */}
 
-      const [re, cp, cd, ca, ab] = await Promise.all([
+      const [re, cp, cd, ca, ab, lc] = await Promise.all([
         loadRuntimeEvents(),
         loadCorrectionProposal(),
         loadCorrectionGuardDecision(),
         loadCorrectionApplied(),
         loadBurstAblation(),
+        loadLearningCurve(),
       ])
       setRuntimeEvents(re)
       setCorrectionProposal(cp)
       setCorrectionGuardDecision(cd)
       setCorrectionApplied(ca)
       setBurstAblation(ab)
+      setLearningCurve(lc)
     } catch (err) {
       setLoadError(err.message)
       setDataMode('fallback')
@@ -579,6 +583,10 @@ export default function App() {
     )
   }
 
+  function renderLearningTab() {
+    return <LearningCurveCard data={learningCurve} />
+  }
+
   return (
     <div className="dashboard-shell">
       <Header
@@ -599,6 +607,7 @@ export default function App() {
         {tab === 'LLM' && renderLLMTab()}
         {tab === 'Visualization' && renderVisualizationTab()}
         {tab === 'Evaluation' && renderEvaluationTab()}
+        {tab === 'Learning' && renderLearningTab()}
       </div>
     </div>
   )
