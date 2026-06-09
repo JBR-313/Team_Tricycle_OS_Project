@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Scheduling Trace Log is the primary data interface between the xv6 kernel (or Scheduler Simulator) and all downstream modules.
+The Scheduling Trace Log is the primary data interface between the xv6 kernel and all downstream modules.
 
 Format: **JSON Lines (JSONL)** — one JSON object per line, newline-delimited.  
 File: `outputs/trace.jsonl`
@@ -33,10 +33,9 @@ Emitted by the xv6 kernel scheduler.
 ```
 
 Events emitted today: `DISPATCH`, `PREEMPT`, `EXIT`, `QUEUE_CHANGE`,
-`ARRIVE`, `SLEEP`, `WAKEUP`. `PRED_UPDATE` (SJF/SRTF EMA refresh) is emitted
-by **both** the simulator and the real xv6 kernel (`proc.c`
-`update_burst_prediction`, gated to SJF/SRTF). Tokens are generic `key=value`
-pairs; not every token is present on every line.
+`ARRIVE`, `SLEEP`, `WAKEUP`, and `PRED_UPDATE` (SJF/SRTF EMA refresh, `proc.c`
+`update_burst_prediction`). Tokens are generic `key=value` pairs; not every
+token is present on every line.
 
 **Per-event optional fields (loaders MUST tolerate missing keys):**
 
@@ -48,7 +47,7 @@ pairs; not every token is present on every line.
 | `EXIT` | `tick`, `pid` | `state`, `queue`, `turnaround`, `waiting`, `response` |
 | `QUEUE_CHANGE` | `tick`, `pid`, `from_queue`, `to_queue` | `reason` (`demotion` / `aging_promotion` / `promotion`) |
 | `SLEEP` / `WAKEUP` | `tick`, `pid` | `state` |
-| `PRED_UPDATE` (simulator + xv6, SJF/SRTF) | `tick`, `pid`, `observed`, `predicted_prev`, `predicted_next` | `alpha`, `source` (`ema` or `llm`) |
+| `PRED_UPDATE` (SJF/SRTF) | `tick`, `pid`, `observed`, `predicted_prev`, `predicted_next` | `alpha`, `source` (`ema` or `llm`) |
 
 > The spec-suggested discrete events `QUEUE_ENTER` / `QUEUE_LEAVE` /
 > `DEMOTE` / `PROMOTE` are **expressed** in this project as
@@ -65,9 +64,6 @@ pairs; not every token is present on every line.
 [SCHED] tick=30 algo=MLFQ event=QUEUE_CHANGE pid=1 state=RUNNABLE from_queue=0 to_queue=1 reason=demotion
 [SCHED] tick=60 algo=MLFQ event=EXIT pid=2 state=ZOMBIE queue=1 turnaround=58 waiting=50 response=2
 ```
-
-> Status note: the full set of rich `[SCHED]` events is part of the in-progress
-> xv6 backend. Not all events are emitted by the kernel yet.
 
 ### User-program metadata lines — `[SCHEDTEST]`
 
@@ -274,33 +270,16 @@ A process has moved from one MLFQ queue to another (demotion or aging promotion)
 
 ---
 
-### CORRECTION_APPLIED *(reserved in-kernel event — not emitted today)*
+### CORRECTION_APPLIED *(not a trace event)*
 
-> This reserved event would mark a correction applied **inside the kernel at a
-> scheduling point**. The kernel does **not** emit it, and by design never will
-> in the hot path — there is no in-kernel LLM and no tick-level correction.
->
-> Runtime correction **is** implemented, but as a **host-side post-evaluation
-> apply loop**, not a kernel event: `scripts/orchestrator.py` re-runs xv6 with a
+> There is **no** in-kernel correction event, and by design never will be — no
+> in-kernel LLM, no tick-level correction. Runtime correction is a **host-side
+> post-evaluation apply loop**: `scripts/orchestrator.py` re-runs xv6 with a
 > corrected, Guard-approved algorithm/params after a FAIL and records the
-> before/after in `correction_applied.json` (a host artifact, not a trace line).
-> The pipeline also ships the observational/preview artifacts
-> `runtime_events.json`, `correction_proposal.json`,
-> `correction_guard_decision.json`. The schema below remains reserved for
-> documentation only.
-
-```json
-{"tick": 45, "algo": "MLFQ",  "event": "CORRECTION_APPLIED", "pid": -1, "state": null, "correction_type": "parameter_update", "new_params": {"aging_threshold": 20, "boost_interval": 80}}
-{"tick": 60, "algo": "Priority", "event": "CORRECTION_APPLIED", "pid": -1, "state": null, "correction_type": "algorithm_change", "new_algo": "MLFQ"}
-```
-
-| Field | Notes |
-|-------|-------|
-| `pid` | `-1` — this event applies to the scheduler, not a specific process. |
-| `state` | `null` |
-| `correction_type` | `"parameter_update"`, `"algorithm_change"`, `"aging_threshold_adjustment"`, `"quantum_adjustment"` |
-| `new_params` | Updated parameters (present for `parameter_update` corrections). |
-| `new_algo` | New Scheduling Algorithm (present for `algorithm_change` corrections). |
+> before/after in `correction_applied.json` (a host artifact, not a trace line;
+> see `dashboard_data_contract.md` §2b), alongside the preview artifacts
+> `runtime_events.json` / `correction_proposal.json` /
+> `correction_guard_decision.json`.
 
 ---
 
@@ -329,5 +308,4 @@ A process has moved from one MLFQ queue to another (demotion or aging promotion)
 - Every DISPATCH must be preceded by either an ARRIVE or a WAKEUP for the same `pid`.
 - Every EXIT must terminate the process — no further events for that `pid` should appear.
 - QUEUE_CHANGE is only valid when `algo` is `MLFQ` or `Priority` (for aging events).
-- CORRECTION_APPLIED uses `pid: -1` and `state: null`.
 - All times are in xv6 tick units.
