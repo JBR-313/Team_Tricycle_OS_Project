@@ -1,11 +1,11 @@
 # Development Process Document — LLM Sched Copilot
 
-Deliverable #3 (§5): planning → scheduling → execution → retrospective, with
+Deliverable #3: planning -> scheduling -> execution -> retrospective, with
 meeting notes, weekly progress per role, and issues encountered + how they were
 resolved.
 
 > Sections marked **[TEAM TODO]** need team-specific information (names, dates,
-> who-did-what) that only the team can fill in. The technical issue log (§5) is
+> who-did-what) that only the team can fill in. The technical issue log (section 5) is
 > reconstructed from the actual commit history and is accurate.
 
 ## 1. Team & roles  [TEAM TODO]
@@ -28,7 +28,7 @@ Team name: **[TEAM TODO]** · Repo: this repository (public).
   (2) LLM advisor + Algorithm Guard + post-evaluation correction loop; (3) trace
   collection + metrics + observability dashboard.
 - **OS concepts targeted:** scheduling, processes/context switching, system calls,
-  synchronization, IPC, timer interrupts (see technical_report.md §4).
+  synchronization, IPC, timer interrupts (see technical_report.md section 4).
 
 ## 3. Schedule (mapped to the course timeline)
 
