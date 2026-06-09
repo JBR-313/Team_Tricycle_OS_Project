@@ -14,6 +14,7 @@ export default function Header({
   runAvailable, runLabel, runDisabled, runPill, onRunClick,
   minimal = false,
   manifest = null, loadError = false,
+  executorOffline = false, executorProbing = false, executorError = null,
 }) {
   const TABS = ['LLM', 'Visualization', 'Evaluation']
 
@@ -50,11 +51,28 @@ export default function Header({
 
       <div className="header-spacer" />
 
-      {/* Pre-analysis: keep the top-right area calm — only the primary action.
-          Status pills (and the offline hint) are hidden until a run begins. */}
-      {!minimal && runAvailable === false && (
-        <span className="run-pill run-pill-idle" title="Run server offline — analysis uses bundled data">
-          server offline
+      {/* The RUN button does ONE honest thing: a real local xv6 execution via
+          the local executor (scripts/run_server.py). When that executor is not
+          running we say so plainly and disable RUN — we never replay finished
+          data as if it were a fresh run. The hint shows in every phase
+          (including the pre-analysis minimal state) so RUN is never a dead
+          click with no explanation. */}
+      {executorProbing && (
+        <span className="run-pill run-pill-idle" title="Checking for the local xv6 executor">
+          checking executor…
+        </span>
+      )}
+      {executorOffline && (
+        <span
+          className="run-pill run-pill-err"
+          title="Start it in a terminal:  python3 scripts/run_server.py"
+        >
+          executor offline — run&nbsp;<code>python3 scripts/run_server.py</code>
+        </span>
+      )}
+      {executorError && (
+        <span className="run-pill run-pill-err" title={executorError}>
+          run failed — {executorError}
         </span>
       )}
       {!minimal && (

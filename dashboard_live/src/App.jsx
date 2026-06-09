@@ -387,19 +387,18 @@ export default function App() {
     })
   }, [loadAll, startReveal])
 
-  const { available: runAvailable, state: runState, inFlight: runInFlight, startRun } =
-    useRun(onBackendComplete)
+  const { available: runAvailable, state: runState, inFlight: runInFlight,
+          error: runError, startRun } = useRun(onBackendComplete)
 
-  // If the backend run errors while we are waiting, fall back to revealing the
-  // already-loaded (or fallback) data so the demo never gets stuck.
+  // If the real backend run errors, return to IDLE so the failure is visible and
+  // the user can retry. We deliberately do NOT fake a reveal of stale data — a
+  // failed run must look failed, never like a fresh execution.
   useEffect(() => {
     if (demoPhase === DemoPhase.ANALYZING_LLM && runState === 'ERROR') {
-      // Reset the run guard so a subsequent RUN click is not ignored, then
-      // reveal the already-loaded (or fallback) analysis so we never get stuck.
       runInitiatedRef.current = false
-      startReveal()
+      setDemoPhase(DemoPhase.IDLE)
     }
-  }, [demoPhase, runState, startReveal])
+  }, [demoPhase, runState])
 
   function startVisualization() {
     setTab('Visualization')
@@ -414,15 +413,14 @@ export default function App() {
   // Phase-aware primary action for the header RUN button.
   const handlePrimaryRun = useCallback(() => {
     if (demoPhase === DemoPhase.IDLE) {
+      // RUN only does the one honest thing: trigger a REAL local xv6 run through
+      // the executor. If the executor is offline the button is disabled (see
+      // runDisabled) and an instruction is shown — we never fake a run.
       if (runAvailable) {
-        // Kick off the real backend run; reveal starts on completion.
         runInitiatedRef.current = true
         startRun()
         setDemoPhase(DemoPhase.ANALYZING_LLM)
         setRevealStage(0)
-      } else {
-        // Run-server offline → reveal the bundled/fallback analysis directly.
-        startReveal()
       }
     } else if (demoPhase === DemoPhase.READY_TO_VISUALIZE) {
       startVisualization()
@@ -430,12 +428,15 @@ export default function App() {
       setTab('Evaluation')
     }
     // ANALYZING_LLM / VISUALIZING: button disabled, nothing to do.
-  }, [demoPhase, runAvailable, startRun, startReveal])
+  }, [demoPhase, runAvailable, startRun])
 
+  // In IDLE the RUN button requires a live local executor (runAvailable === true).
+  // null = still probing, false = executor offline; both disable RUN so it can
+  // never trigger a fake/replayed "run".
   const runDisabled =
     demoPhase === DemoPhase.ANALYZING_LLM ||
     demoPhase === DemoPhase.VISUALIZING ||
-    (demoPhase === DemoPhase.IDLE && runAvailable === null)
+    (demoPhase === DemoPhase.IDLE && runAvailable !== true)
 
   const runLabel = RUN_LABEL[demoPhase] || 'RUN'
 
@@ -590,6 +591,9 @@ export default function App() {
         minimal={demoPhase === DemoPhase.IDLE}
         manifest={manifest}
         loadError={!!loadError}
+        executorOffline={runAvailable === false}
+        executorProbing={runAvailable === null}
+        executorError={runState === 'ERROR' ? runError : null}
       />
       <div className="dashboard-main tab-main">
         {tab === 'LLM' && renderLLMTab()}

@@ -4,10 +4,15 @@
 Invokes the pipeline described in docs/orchestrator_design.md.
 Single-run-at-a-time, stdlib-only (no Flask/FastAPI), localhost-only by default.
 
+This is the LOCAL executor behind the dashboard's RUN button: it runs a REAL
+xv6 execution under QEMU on this device. xv6 is the only backend — there is no
+simulator and no offline-fixture replay path, so a RUN is always a genuine
+kernel run (or a clear error), never a replay of finished data.
+
 Endpoints (CORS-allowed for http://localhost:5174):
   POST /api/run
-      body: {"backend": "simulator"|"xv6", "profile": "<name>",
-             "seed": <int>, "run_all": true, "offline_fixture": <bool>}
+      body: {"backend": "xv6", "profile": "<name>",
+             "seed": <int>, "run_all": true}
       -> 202 + {"run_id": "...", "state": "RUNNING"}
       -> 409 if a run is already in flight
       -> 400 on schema violation
@@ -40,9 +45,9 @@ ROOT = Path(__file__).resolve().parent.parent
 LIVE_DATA = ROOT / "dashboard_live" / "public" / "live-data"
 ORCHESTRATOR = ROOT / "scripts" / "orchestrator.py"
 
-# Only the four curated profiles that schedtest.c actually forks may run on the
-# xv6 backend. Anything else would make orchestrator silently substitute `mixed`
-# while the manifest still badged the requested profile — a dishonest xv6 run.
+# Only the curated profiles that schedtest.c actually forks may run. Anything
+# else would make orchestrator silently substitute `mixed` while the manifest
+# still badged the requested profile — a dishonest xv6 run.
 # Keep this in lockstep with orchestrator.XV6_PROFILES and schedtest.c WORKLOADS.
 XV6_PROFILES = {
     "interactive", "cpu_bound", "mixed", "priority_sensitive",
@@ -50,21 +55,6 @@ XV6_PROFILES = {
     # Larger discriminating profiles (feedback train/test set).
     "convoy_tail", "cpu_quad", "burst_storm", "prio_starve",
     "bimodal", "preempt_stream",
-}
-SIM_PROFILES = XV6_PROFILES | {
-    # Simulator-only profiles (no curated schedtest.c table). These resolve in
-    # orchestrator.PROFILE_MAP; keep this whitelist in sync or the RUN button
-    # 400s on a profile the orchestrator would happily accept.
-    "short_jobs", "starvation_risk",
-    # v2 workload-ID aliases offered by the dashboard's simulator dropdown
-    # (dashboard_live/.../RunControls.jsx PROFILES_SIM).
-    "interactive_heavy", "short_jobs_clustered", "long_job_first_convoy",
-    "interactive_mixed", "priority_critical_tasks",
-    "cpu_bound_vs_io_bound", "ambiguous_mixed",
-    "pure_batch", "bursty_long_tail",
-    # Scheduling-lab coverage workloads (simulator only).
-    "convoy_effect", "fairness_rr", "staggered_short_arrival",
-    "starvation_priority", "burst_prediction_demo",
 }
 
 ALLOWED_ORIGINS = {
@@ -156,23 +146,19 @@ def _classify_stage(line: str) -> Optional[str]:
 
 def _worker(params: dict) -> None:
     """Run orchestrator.py as a subprocess and stream stdout into the state."""
-    backend = params["backend"]
     profile = params["profile"]
     seed = int(params.get("seed", 42))
     run_all = bool(params.get("run_all", True))
-    offline = bool(params.get("offline_fixture", False))
     use_feedback = bool(params.get("use_feedback", False))
 
     cmd = [
         sys.executable, str(ORCHESTRATOR),
-        "--backend", backend,
+        "--backend", "xv6",
         "--workload", profile,
         "--seed", str(seed),
     ]
     if run_all:
         cmd.append("--run-all")
-    if offline:
-        cmd.append("--offline-fixture")
     if use_feedback:
         cmd.append("--use-feedback")
 
@@ -207,26 +193,26 @@ def _worker(params: dict) -> None:
 
 
 def _validate_run_body(body: dict) -> tuple[bool, str | dict]:
-    backend = body.get("backend")
+    # xv6 is the only backend. Accept a missing/"xv6" value; reject anything else
+    # (notably the removed "simulator") so RUN can never become a non-kernel run.
+    backend = body.get("backend", "xv6")
     profile = body.get("profile")
     seed = body.get("seed", 42)
-    if backend not in ("xv6", "simulator"):
-        return False, "backend must be 'xv6' or 'simulator'"
+    if backend != "xv6":
+        return False, "backend must be 'xv6' (the only execution backend)"
     if not isinstance(profile, str):
         return False, "profile must be a string"
-    allow = XV6_PROFILES if backend == "xv6" else SIM_PROFILES
-    if profile not in allow:
-        return False, f"profile '{profile}' not in allow-list for backend={backend}"
+    if profile not in XV6_PROFILES:
+        return False, f"profile '{profile}' not in the xv6 curated allow-list"
     try:
         seed = int(seed)
     except (TypeError, ValueError):
         return False, "seed must be an integer"
     return True, {
-        "backend": backend,
+        "backend": "xv6",
         "profile": profile,
         "seed": seed,
         "run_all": bool(body.get("run_all", True)),
-        "offline_fixture": bool(body.get("offline_fixture", False)),
         # OPT-IN feedback consumption. Defaults to False so the dashboard RUN
         # button stays deterministic; a missing field is treated as off.
         "use_feedback": bool(body.get("use_feedback", False)),
