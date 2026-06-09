@@ -16,7 +16,7 @@ export default function Header({
   manifest = null, loadError = false,
   executorOffline = false, executorProbing = false, executorError = null,
 }) {
-  const TABS = ['LLM', 'Visualization', 'Evaluation']
+  const TABS = ['LLM', 'Visualization', 'Evaluation', 'Learning']
 
   const pillClass = {
     IDLE: 'run-pill-idle', DONE: 'run-pill-ok', ERROR: 'run-pill-err',

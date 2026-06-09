@@ -2589,3 +2589,62 @@
 .contrib-row-llm { background: #f5f3ff; font-weight: 700; }
 .contrib-src { margin: 8px 0 0; font-size: 10px; color: #94a3b8; }
 .contrib-src code { font-size: 10px; }
+
+/* ── Learning tab (adaptive / retrieval-learning measured study) ───────────── */
+.learning-grid { grid-template-columns: 1.15fr 1fr; gap: 14px; }
+.learning-grid .tab-col { display: flex; flex-direction: column; gap: 14px; min-height: 0; }
+.card-learning { padding: 14px 16px 12px; }
+
+.lc-intro { margin-bottom: 6px; }
+.lc-measured-badge {
+  display: inline-block;
+  font-size: 0.62rem; font-weight: 700; letter-spacing: 0.03em;
+  color: #6d28d9; background: #f5f3ff; border: 1px solid #ddd6fe;
+  border-radius: 999px; padding: 3px 10px; margin-bottom: 8px;
+}
+.lc-lede { font-size: 0.82rem; line-height: 1.5; color: #334155; margin: 0; }
+.lc-lede strong { color: #1e293b; }
+
+.lc-svg { width: 100%; height: auto; display: block; margin: 6px 0 2px; }
+.lc-axis-text { font-size: 10px; fill: #94a3b8; }
+.lc-axis-title { font-size: 10px; fill: #64748b; font-weight: 600; }
+
+.lc-legend { display: flex; gap: 16px; justify-content: center; margin: 2px 0 6px; }
+.lc-legend-item { display: inline-flex; align-items: center; gap: 6px; font-size: 0.74rem; color: #475569; }
+.lc-legend-swatch { width: 14px; height: 4px; border-radius: 2px; display: inline-block; }
+
+.lc-caption { font-size: 0.76rem; line-height: 1.5; color: #475569; margin: 6px 0 0; }
+.lc-caption strong { color: #0f172a; }
+
+/* arm bars */
+.lc-bars { display: flex; align-items: flex-end; gap: 14px; height: 168px; padding: 8px 6px 0; }
+.lc-bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; justify-content: flex-end; }
+.lc-bar-val { font-size: 0.74rem; font-weight: 700; color: #1e293b; margin-bottom: 3px; }
+.lc-bar-track { width: 100%; max-width: 46px; flex: 1; display: flex; align-items: flex-end; }
+.lc-bar-fill { width: 100%; border-radius: 7px 7px 0 0; transition: height 0.5s ease; min-height: 3px; }
+.lc-bar-label { font-size: 0.66rem; color: #64748b; margin-top: 6px; text-align: center; line-height: 1.2; }
+
+.lc-armlegend { display: flex; gap: 14px; flex-wrap: wrap; margin: 10px 0 0; font-size: 0.68rem; color: #64748b; }
+.lc-armlegend span { display: inline-flex; align-items: center; gap: 5px; }
+.lc-sw { width: 11px; height: 11px; border-radius: 3px; display: inline-block; }
+
+/* "is the signal real" checks */
+.lc-checks { display: flex; flex-direction: column; gap: 9px; }
+.lc-check { border-radius: 12px; padding: 9px 11px; border: 1px solid #e2e8f0; background: #f8fafc; }
+.lc-check.ok { border-color: #bbf7d0; background: #f0fdf4; }
+.lc-check.warn { border-color: #fde68a; background: #fffbeb; }
+.lc-check-head { display: flex; align-items: center; gap: 7px; font-size: 0.78rem; font-weight: 700; color: #1e293b; }
+.lc-check-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 17px; height: 17px; border-radius: 50%; font-size: 0.66rem; color: #fff;
+  background: #10b981;
+}
+.lc-check.warn .lc-check-icon { background: #f59e0b; }
+.lc-check-body { font-size: 0.73rem; line-height: 1.45; color: #475569; margin-top: 4px; }
+.lc-check-body strong { color: #0f172a; }
+
+.lc-foot { font-size: 0.72rem; line-height: 1.5; color: #64748b; margin: 10px 0 0; font-style: italic; }
+
+.lc-empty { padding: 20px; text-align: center; color: #64748b; }
+.lc-empty-hint { font-size: 0.74rem; margin-top: 8px; }
+.lc-empty code { font-size: 0.72rem; background: #f1f5f9; padding: 1px 5px; border-radius: 4px; }
