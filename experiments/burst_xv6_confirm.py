@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """burst_xv6_confirm.py — confirm the burst-prediction scheduling win on the REAL
-xv6 kernel under QEMU (not just the simulator A/B in burst_scheduling_eval.py).
+xv6 kernel under QEMU. (The newer, leak-closed study with a negative control is
+experiments/burst_random_eval.py.)
 
 For each profile, runs xv6 SRTF (and SJF) TWICE on the identical workload:
   EMA cold-start : --alpha/--initial/--min/--max, NO --hints  -> every process
