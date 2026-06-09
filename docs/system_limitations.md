@@ -13,8 +13,10 @@ the demo and defense.
 - **Curated xv6 workloads.** xv6 has **no JSON parser**. `schedtest.c` carries a
   fixed set of curated workload tables — six profiles: `interactive`,
   `cpu_bound`, `mixed`, `priority_sensitive` (≈5 procs each) plus the larger
-  8-proc `interactive_storm` and `batch_convoy`. Arbitrary `workloads/*.json`
-  run on the **simulator** only. The orchestrator maps each curated profile to a
+  8-proc `interactive_storm` and `batch_convoy`. An arbitrary `workloads/*.json`
+  is not directly runnable as a curated profile; the random-workload study
+  injects generated workloads onto the real kernel via `schedtest --procs`
+  (see `technical_report.md` §6). The orchestrator maps each curated profile to a
   mirror JSON so burst priors align to fork order; `tests/test_xv6_mirror_alignment.py`
   enforces that the C tables and their mirrors stay in lockstep. See
   [`workload_coverage_matrix.md`](workload_coverage_matrix.md).
@@ -49,10 +51,9 @@ the demo and defense.
   control. After a run is evaluated, the orchestrator may launch a *second*
   ordinary xv6 run with a corrected, Guard-approved algorithm/params and record
   the before/after in `correction_applied.json`. There is **no** tick-level
-  online correction and **no** in-kernel LLM call.
-- **Simulator correction is an intentional no-op.** The apply loop re-runs the
-  real kernel; on the simulator backend it records `applied:false` with a clear
-  reason.
+  online correction and **no** in-kernel LLM call. The apply loop always re-runs
+  the real kernel (xv6 is the only backend); if a Guard-approved fix is not
+  available it records `applied:false` with a clear reason rather than faking one.
 - **Feedback is FAIL-only and never faked.** Rules are generated only on a FAIL
   judgment (or starvation). With no `UPSTAGE_API_KEY` the step logs an explicit
   skip instead of inventing rules.
@@ -61,9 +62,11 @@ the demo and defense.
 
 - **No websocket / live streaming.** The dashboard polls `manifest.json` for
   version changes; it does not stream kernel state live.
-- **Simulator output is not proof of xv6.** The data-source badge
-  (`XV6 TRACE` / `SIMULATOR` / `FALLBACK` / `SNAPSHOT`) exists precisely so
-  simulator or fallback data is never mistaken for a real kernel run.
+- **Bundled data is not proof of a fresh run.** The data-source badge
+  (`XV6 TRACE` / `FALLBACK` / `SNAPSHOT`) exists precisely so committed fixtures
+  or a pre-generated snapshot are never mistaken for a live kernel run. (The
+  badge component retains a legacy `SIMULATOR` enum, but the simulator backend
+  was removed and `manifest.backend` is now only `xv6`.)
 - **Offline fixture ≠ live LLM.** With `--offline-fixture` (and no key) the
   recommendation comes from committed fixtures and the manifest is stamped
   `metadata_source = demo_fallback`.

@@ -63,7 +63,7 @@ flowchart TD
 | Host control plane | Python 3 (stdlib + `python-dotenv`), `scripts/orchestrator.py` |
 | LLM | Upstage **Solar Pro 3** via the OpenAI-compatible HTTP API (`tools/solar_client.py`, urllib, temperature 0) |
 | Dashboard | React + Vite (`dashboard_live/`) |
-| Interfaces / tests | JSON & JSONL between modules; pytest (162) + Vitest |
+| Interfaces / tests | JSON & JSONL between modules; pytest (173) + Vitest |
 
 ## 5. File structure
 ```
