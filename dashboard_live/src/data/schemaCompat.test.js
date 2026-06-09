@@ -89,8 +89,10 @@ describe('getBackend', () => {
     expect(getBackend({ backend: 'xv6-log' })).toBe('xv6')
     expect(getBackend({ mode: 'xv6' })).toBe('xv6')
   })
-  it('defaults to simulator', () => {
-    expect(getBackend({})).toBe('simulator')
-    expect(getBackend(null)).toBe('simulator')
+  it('defaults to unknown (the simulator backend was removed)', () => {
+    expect(getBackend({})).toBe('unknown')
+    expect(getBackend(null)).toBe('unknown')
+    // legacy data explicitly claiming the removed simulator is still reported
+    expect(getBackend({ mode: 'simulator' })).toBe('simulator')
   })
 })

@@ -40,8 +40,12 @@ def test_event_tick_prefers_tick_then_time():
 def test_backend_from_backend_field_and_legacy_mode():
     assert sc.get_backend({"backend": "XV6"}) == "xv6"
     assert sc.get_backend({"mode": "xv6-log"}) == "xv6"
+    # Legacy data EXPLICITLY claiming the (removed) simulator is still reported
+    # as such — but an empty/unknown manifest must read 'unknown', never default
+    # to a backend that no longer exists.
     assert sc.get_backend({"mode": "simulator"}) == "simulator"
-    assert sc.get_backend({}) == "simulator"
+    assert sc.get_backend({}) == "unknown"
+    assert sc.get_backend(None) == "unknown"
 
 
 def test_target_metric_aliasing():

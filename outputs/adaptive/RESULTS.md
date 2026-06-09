@@ -83,11 +83,20 @@ At `switch_cost ≥ 2` the oracle "adaptive" choice degenerates to *switch at ti
 Reproduce: `python3 experiments/adaptive_sched_eval.py --switch-cost 0` (then 2, 5),
 and `… priority_then_batch --start PRIORITY --metric avg_waiting_time`.
 
-## (b) Real xv6 — ATTEMPTED, BLOCKED by metric non-determinism
+## (b) Real xv6 — ATTEMPTED, BLOCKED by metric non-determinism *(historical — since FIXED)*
+
+> **Note (current state):** the non-determinism documented below was the
+> wall-clock-era pipeline and is what MOTIVATED the determinization work — xv6
+> now runs on a deterministic `-icount` clock with fixed-iteration bursts and
+> reproduces run-to-run (`docs/GOAL.md`, re-verify with
+> `experiments/xv6_determinism_probe.py`). The numbers below are kept as the
+> historical record of why the simulator-era measurement could not be confirmed
+> on the kernel at the time.
+
 The idealised simulator lacks context-switch cost, so the natural follow-up was to
 measure adaptation on real xv6 where that cost is physical. Before building a kernel
 mid-run switch, `experiments/xv6_determinism_probe.py` checked the prerequisite: is
-the real-xv6 metric pipeline even reproducible? It is NOT.
+the real-xv6 metric pipeline even reproducible? At the time it was NOT.
 
 Running the identical (profile, algo) three times via the orchestrator's exact
 QEMU + parse + metrics path:

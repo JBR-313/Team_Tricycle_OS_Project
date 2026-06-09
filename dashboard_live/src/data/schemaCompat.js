@@ -153,16 +153,22 @@ export function computeBestPerMetric(comparison) {
   return out
 }
 
+// The simulator backend was removed: only data that EXPLICITLY claims
+// "simulator" (legacy snapshots) is reported as such; an empty/unknown
+// manifest must read as 'unknown', never default to a backend that no
+// longer exists (it would falsely badge stale data as a simulator run).
 export function getBackend(manifest) {
-  if (!manifest) return 'simulator'
+  if (!manifest) return 'unknown'
   if (manifest.backend) {
     const b = String(manifest.backend).toLowerCase()
     if (b === 'xv6' || b === 'xv6-log') return 'xv6'
     if (b === 'fallback') return 'fallback'
-    return 'simulator'
+    if (b === 'simulator') return 'simulator'
+    return 'unknown'
   }
   const mode = String(manifest.mode || '').toLowerCase()
   if (mode === 'xv6-log' || mode === 'xv6') return 'xv6'
   if (mode === 'fallback') return 'fallback'
-  return 'simulator'
+  if (mode === 'simulator') return 'simulator'
+  return 'unknown'
 }

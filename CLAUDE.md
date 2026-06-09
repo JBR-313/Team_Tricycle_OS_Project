@@ -33,6 +33,9 @@ RR (default, baseline) | FCFS | Priority + Aging | MLFQ | SJF/SRTF (optional, re
 ```bash
 make qemu                             # build & run xv6 (deterministic -icount clock)
 python3 scripts/orchestrator.py       # full pipeline (xv6 is the only backend)
+python3 scripts/orchestrator.py --random-family interactive --seed 1000
+                                      # recurring random workload on real xv6
+                                      # (schedtest --procs injection; retrieval ON)
 cd dashboard_live && npm run dev      # GUI Observability Dashboard
 ```
 
