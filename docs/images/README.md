@@ -1,20 +1,12 @@
-# Demo media (course §3)
+# Demo media
 
-§3 requires demo screenshots and/or a short demo video/GIF in the README. Put them
-here and embed them in README §8.
+Put dashboard screenshots / a short GIF here and embed them in the main README.
+Best captures: the dashboard overview after a full run (recommendation + algorithm
+comparison + trace + metrics) and, when shown, the runtime-correction card.
 
-## What to capture
-1. `dashboard_overview.png` — the running dashboard after a full run (recommendation,
-   algorithm comparison, trace, metrics, correction card).
-2. `correction.png` — the safety-net moment (e.g. MLFQ judged FAIL → corrected to RR,
-   turnaround improved) — this is the strongest single screenshot.
-3. `demo.gif` *(optional)* — a short capture of a RUN.
-
-## How to produce
+Generate data without an API key or QEMU using the offline fixtures, then
+screenshot the browser:
 ```bash
-# 1) generate live data (offline path needs no API key)
-python3 scripts/orchestrator.py --backend simulator --offline-fixture
-# 2) run the dashboard and screenshot it in the browser
-cd dashboard_live && npm run dev      # open the shown localhost URL, then screenshot
+python3 scripts/orchestrator.py --workload interactive --offline-fixture
+cd dashboard_live && npm run dev
 ```
-Then reference them in README §8, e.g. `![dashboard](docs/images/dashboard_overview.png)`.

@@ -1,6 +1,6 @@
 """Event Detector — feeds the runtime correction loop.
 
-Role classification (see docs/implementation_status.md):
+Role classification (see README §11.1 Implementation Status):
   detect -> propose -> guard -> APPLY is implemented HOST-SIDE as a
   post-evaluation loop: orchestrator.py `_run_correction_apply_loop`
   re-runs the backend with the corrected Scheduling Algorithm/params and
