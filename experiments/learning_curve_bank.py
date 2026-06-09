@@ -53,91 +53,14 @@ ALGOS = ("rr", "fcfs", "priority", "mlfq")
 
 
 # ── workload families ─────────────────────────────────────────────────────────
-# Each family is a recurring user PATTERN. Instances are jittered around the
-# family centroid so they are "similar but not identical" (a fair test of
-# retrieval — a byte-identical repeat would degenerate into a lookup table).
-# Every family has a distinct VISIBLE feature fingerprint (process_count,
-# arrival gaps, cpu/interactive label ratio, priority spread, target_metric) so
-# the families are separable in retrieval space, and a distinct structural
-# reason for a different scheduler to win.
-def _proc(pid, arrival, burst, prio, label):
-    b = max(1, int(round(burst)))
-    return {"pid": pid, "arrival_time": max(0, int(arrival)),
-            "cpu_bursts": [b], "actual_bursts": [b], "io_bursts": [],
-            "priority": int(prio), "label": label}
-
-
-def gen_interactive(rng):
-    """Many short interactive jobs, staggered arrivals, uniform priority.
-    Response-time target — RR/MLFQ should shine (fairness/low first-response)."""
-    n = rng.choice([6, 7, 8])
-    procs = []
-    for i in range(n):
-        procs.append(_proc(i + 1, arrival=i + rng.randint(0, 1),
-                            burst=rng.randint(2, 4), prio=5, label="interactive"))
-    return procs, "avg_response_time"
-
-
-def gen_cpu_batch(rng):
-    """A few long CPU-bound jobs, all present at t=0, uniform priority.
-    Turnaround target — shortest-remaining ordering matters; among the 4 core
-    algos this tends to separate MLFQ/RR from FCFS (convoy-on-arrival-order)."""
-    n = rng.choice([4, 5])
-    procs = []
-    for i in range(n):
-        procs.append(_proc(i + 1, arrival=0,
-                            burst=rng.randint(10, 18), prio=5, label="cpu_bound"))
-    return procs, "avg_turnaround_time"
-
-
-def gen_convoy(rng):
-    """One long CPU hog arrives first, then a burst of short interactive jobs.
-    Waiting target — the classic convoy: FCFS makes the shorts wait behind the
-    hog; preemptive/aging algos (MLFQ) relieve it."""
-    procs = [_proc(1, arrival=0, burst=rng.randint(16, 22), prio=5, label="cpu_bound")]
-    n_short = rng.choice([4, 5])
-    for i in range(n_short):
-        procs.append(_proc(i + 2, arrival=1 + rng.randint(0, 2),
-                            burst=rng.randint(2, 4), prio=5, label="interactive"))
-    return procs, "avg_waiting_time"
-
-
-def gen_priority(rng):
-    """Wide priority spread, medium bursts, simultaneous arrival.
-    Waiting target with a strong priority signal — Priority+Aging / MLFQ should
-    beat plain RR/FCFS that ignore the priority field."""
-    n = rng.choice([5, 6])
-    procs = []
-    for i in range(n):
-        procs.append(_proc(i + 1, arrival=0, burst=rng.randint(5, 10),
-                            prio=rng.choice([1, 2, 3, 7, 8, 9]), label="mixed"))
-    return procs, "avg_waiting_time"
-
-
-FAMILIES = {
-    "interactive": gen_interactive,
-    "cpu_batch":   gen_cpu_batch,
-    "convoy":      gen_convoy,
-    "priority":    gen_priority,
-}
-
-
-def build_doc(family: str, seed: int) -> dict:
-    rng = random.Random(seed)
-    procs, target = FAMILIES[family](rng)
-    return {
-        "id": f"{family}_s{seed}",
-        "family": family,
-        "schema_version": 2,
-        "target_metric": target,
-        "processes": procs,
-    }
-
-
-def _spec(doc: dict) -> str:
-    return ",".join(
-        f"{p['arrival_time']}:{p['actual_bursts'][0]}:{p['priority']}"
-        for p in doc["processes"])
+# The recurring-PATTERN generator now lives in the shared, dependency-free
+# experiments/workload_families.py (single source of truth, also used by the
+# orchestrator's --random-family live mode). Re-exported here so the rest of this
+# module (and any importer of learning_curve_bank) keeps working unchanged.
+from workload_families import (                    # noqa: E402
+    FAMILIES, build_doc, spec as _spec,
+    gen_interactive, gen_cpu_batch, gen_convoy, gen_priority,
+)
 
 
 # ── one instance: sweep all comparison algos on real xv6 ──────────────────────

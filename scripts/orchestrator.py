@@ -1074,18 +1074,32 @@ def _applied_from_guard(algo: str, guard_params: dict,
 
 
 def run_xv6_backend(out_dir: Path, seed: int, profile: str, run_order: list[str],
-                    algo: str | None, dry_run: bool) -> bool:
+                    algo: str | None, dry_run: bool,
+                    custom_spec: str | None = None,
+                    custom_mirror: Path | None = None) -> bool:
     """Execute the workload on the real xv6 kernel under QEMU and parse the result.
 
     Steps: build -> for each algorithm, boot QEMU + run schedtest + capture the
     serial console -> window to the run -> parse to trace_<algo>.jsonl -> aggregate
     metrics.json. The LLM-selected algorithm runs first.
+
+    Two execution shapes:
+      * curated profile (default): schedtest runs its fixed in-C `profile` table.
+      * custom injection (`--random-family` live mode): `custom_spec` is an
+        "arrival:burst:prio,..." string injected via `schedtest custom --procs`,
+        and `custom_mirror` is the generated workload JSON used for fork-order-
+        aligned SJF/SRTF burst priors. The kernel's parse_procs accepts exactly
+        this shape (same path the random-workload studies use).
     """
     print("\n[4] Execution backend: xv6")
 
-    xv6_profile = profile if profile in XV6_PROFILES else "mixed"
-    if xv6_profile != profile:
-        print(f"  [note] profile {profile!r} has no curated xv6 table; using {xv6_profile!r}")
+    if custom_spec is not None:
+        xv6_profile = "custom"
+        print(f"  custom workload injected via --procs: {custom_spec}")
+    else:
+        xv6_profile = profile if profile in XV6_PROFILES else "mixed"
+        if xv6_profile != profile:
+            print(f"  [note] profile {profile!r} has no curated xv6 table; using {xv6_profile!r}")
 
     algos = [normalize_algo(algo)] if algo else list(run_order)
     print(f"  algorithms (selected first): {algos}")
@@ -1094,8 +1108,9 @@ def run_xv6_backend(out_dir: Path, seed: int, profile: str, run_order: list[str]
         return False
 
     # Predictor params + per-process burst priors for SJF/SRTF, built once from
-    # the guard decision and the curated mirror workload (fork-order aligned).
-    mirror_path = XV6_MIRROR_MAP.get(xv6_profile)
+    # the guard decision and the fork-order-aligned mirror workload (the curated
+    # profile's mirror, or the generated JSON itself in custom injection mode).
+    mirror_path = custom_mirror if custom_spec is not None else XV6_MIRROR_MAP.get(xv6_profile)
     pred_args = _build_predictor_args(out_dir, mirror_path)
     if pred_args:
         print(f"  predictor args (SJF/SRTF): {' '.join(pred_args)}")
@@ -1109,7 +1124,11 @@ def run_xv6_backend(out_dir: Path, seed: int, profile: str, run_order: list[str]
     parsed_any = False
     for a in algos:
         raw_path = RAW_LOG_DIR / f"xv6_raw_{a.lower()}_seed{seed}.log"
-        a_args = _schedtest_flags_for(a, selected_upper, guard_params, pred_args)
+        a_args = _schedtest_flags_for(a, selected_upper, guard_params, pred_args) or []
+        # In custom-injection mode every algorithm run carries the --procs spec
+        # (the workload is not in a C table); per-algo flags follow it.
+        if custom_spec is not None:
+            a_args = ["--procs", custom_spec] + a_args
         if a_args and a.upper() == selected_upper:
             print(f"  schedtest flags ({a}): {' '.join(a_args)}")
         if not qemu_run_schedtest(a.lower(), seed, xv6_profile, raw_path, dry_run, a_args):
@@ -1471,7 +1490,8 @@ def _run_correction_apply_loop(out_dir: Path, live_dir: Path, *, backend: str,
                                seed: int, xv6_profile: str, mirror_path: Path | None,
                                selected: str, target_metric: str | None,
                                top_metrics: dict, guard_params: dict,
-                               force_correction: str | None, dry_run: bool) -> None:
+                               force_correction: str | None, dry_run: bool,
+                               custom_spec: str | None = None) -> None:
     """Guarded post-evaluation correction APPLY loop (host-side closed loop).
 
     Pipeline: initial recommendation -> guard -> xv6 execution -> metrics ->
@@ -1593,6 +1613,10 @@ def _run_correction_apply_loop(out_dir: Path, live_dir: Path, *, backend: str,
         flags = _build_predictor_args(out_dir, mirror_path)
     else:
         flags = _schedtest_flags_for(corrected_algo, corrected_algo, corrected_params, None)
+    # In --random-family mode the workload is injected, not a C-table profile, so
+    # the corrected re-run must carry the same --procs spec (xv6_profile=="custom").
+    if custom_spec is not None:
+        flags = ["--procs", custom_spec] + (flags or [])
     raw = RAW_LOG_DIR / f"xv6_raw_{au.lower()}_corrected_seed{seed}.log"
     trace_name = f"trace_{au.lower()}_corrected.jsonl"
     if not qemu_run_schedtest(au.lower(), seed, xv6_profile, raw, dry_run, flags):
@@ -1747,6 +1771,16 @@ def main() -> int:
     p.add_argument("--workload", default="interactive",
                    help="profile name or path ending in .json (which xv6 profile "
                         "to EXECUTE; with --intent the LLM still picks the config)")
+    p.add_argument("--random-family", dest="random_family", default=None,
+                   choices=["interactive", "cpu_batch", "convoy", "priority"],
+                   help="generate a RANDOM jittered instance of this recurring "
+                        "workload PATTERN (workload_families.build_doc, seeded by "
+                        "--seed) and run it on real xv6 via --procs injection — the "
+                        "'same local environment runs many similar workloads' mode. "
+                        "Each --seed gives a different but same-family instance; "
+                        "repeated runs accumulate same-family precedents so "
+                        "retrieval (default ON in this mode) warm-starts the "
+                        "recommendation. Overrides --workload.")
     p.add_argument("--intent", default=None,
                    help="natural-language workload intent; the LLM maps it to a "
                         "scheduling config (tools/intent_advisor.py) instead of "
@@ -1824,14 +1858,40 @@ def main() -> int:
     live_dir = Path(args.live_data_dir)
     dry_run = args.dry_run
 
-    workload_type, workload_path = resolve_workload(args.workload)
+    # --random-family: generate a jittered instance of a recurring PATTERN and
+    # run it on xv6 via --procs injection (the generated JSON is its OWN mirror —
+    # process order == fork order — so no curated-table collapse applies). This
+    # is the "same local environment, many similar workloads" mode: each --seed
+    # yields a different same-family instance, and retrieval defaults ON so
+    # repeated runs visibly warm-start from accumulated same-family precedents.
+    custom_spec = None
+    custom_mirror = None
+    if args.random_family:
+        sys.path.insert(0, str(ROOT / "experiments"))
+        import workload_families as _wf  # noqa: PLC0415
+        doc = _wf.build_doc(args.random_family, args.seed)
+        custom_mirror = out_dir / "workload_generated.json"
+        if not dry_run:
+            ensure_dir(out_dir)
+            custom_mirror.write_text(json.dumps(doc, indent=2) + "\n")
+        custom_spec = _wf.spec(doc)
+        workload_type, workload_path = args.random_family, custom_mirror
+        # Retrieval warm-start is the whole point of this mode; default it ON
+        # (still overridable: the flag only ever turns consumption ON).
+        args.use_retrieval = True
+        print(f"[orchestrator] --random-family {args.random_family!r} seed={args.seed}: "
+              f"generated instance {doc['id']} ({len(doc['processes'])} procs, "
+              f"target {doc['target_metric']}); retrieval warm-start ON")
+    else:
+        workload_type, workload_path = resolve_workload(args.workload)
 
     # xv6 backend: schedtest only runs the curated profiles, so collapse the
     # requested workload to one of them and analyze its MIRROR JSON instead of
     # the original v2 workload. This keeps the LLM burst priors aligned to the
     # exact processes xv6 forks (process order == fork order). The simulator
-    # backend keeps using the full v2 workload unchanged.
-    if args.backend == "xv6":
+    # backend keeps using the full v2 workload unchanged. The generated
+    # --random-family instance is already its own fork-aligned mirror, so skip.
+    if args.backend == "xv6" and not args.random_family:
         xv6_profile = workload_type if workload_type in XV6_PROFILES else "mixed"
         mirror = XV6_MIRROR_MAP.get(xv6_profile)
         if mirror and mirror.is_file():
@@ -1909,7 +1969,8 @@ def main() -> int:
 
     # Running phase: execute on xv6 (the sole execution authority)
     ok = run_xv6_backend(
-        out_dir, args.seed, workload_type, run_order, args.algo, dry_run
+        out_dir, args.seed, workload_type, run_order, args.algo, dry_run,
+        custom_spec=custom_spec, custom_mirror=custom_mirror,
     )
 
     if not ok:
@@ -1954,15 +2015,18 @@ def main() -> int:
         guard = _read_json(out_dir / "guard_decision.json")
         target_metric = (rec or {}).get("target_metric") or "avg_response_time"
         guard_params = (guard or {}).get("params") or {}
-        xv6_profile = workload_type if workload_type in XV6_PROFILES else "mixed"
-        mirror_path = XV6_MIRROR_MAP.get(xv6_profile)
+        if args.random_family:
+            corr_profile, corr_mirror = "custom", custom_mirror
+        else:
+            corr_profile = workload_type if workload_type in XV6_PROFILES else "mixed"
+            corr_mirror = XV6_MIRROR_MAP.get(corr_profile)
         _run_correction_apply_loop(
             out_dir, live_dir,
-            backend=args.backend, seed=args.seed, xv6_profile=xv6_profile,
-            mirror_path=mirror_path, selected=selected_disp,
+            backend=args.backend, seed=args.seed, xv6_profile=corr_profile,
+            mirror_path=corr_mirror, selected=selected_disp,
             target_metric=target_metric, top_metrics=top_metrics,
             guard_params=guard_params, force_correction=args.force_correction,
-            dry_run=dry_run,
+            dry_run=dry_run, custom_spec=custom_spec,
         )
 
     # After-running LLM stages: explain the run, then (FAIL-only) learn from it.

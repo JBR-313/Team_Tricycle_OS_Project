@@ -13,6 +13,7 @@ export default function Header({
   tab, onTabChange,
   runAvailable, runLabel, runDisabled, runPill, onRunClick,
   minimal = false,
+  randomMode = false, onToggleRandom = null, randomFamily = '', runInfo = null,
   manifest = null, loadError = false,
   executorOffline = false, executorProbing = false, executorError = null,
 }) {
@@ -83,6 +84,29 @@ export default function Header({
       )}
       {!minimal && (
         <span className={`run-pill ${pillClass}`} title={runPill}>{runPill}</span>
+      )}
+
+      {/* "Same local environment runs many similar workloads" toggle. In IDLE
+          the user opts RUN into generating a RANDOM jittered instance of a fixed
+          recurring family (a REAL xv6 run via --procs, never a replay); the
+          executor auto-increments the seed so repeated RUNs accumulate same-
+          family precedents and the LLM's retrieval warm-start improves run over
+          run. Shown only in IDLE so it clearly governs the NEXT run. */}
+      {minimal && onToggleRandom && (
+        <label className="random-toggle" title={
+          `RUN a random instance of the recurring "${randomFamily}" workload family. ` +
+          `Each RUN is a real xv6 execution with a new seed; repeated RUNs let the ` +
+          `LLM warm-start from accumulated same-family precedents (retrieval ON).`}>
+          <input type="checkbox" checked={randomMode}
+                 onChange={e => onToggleRandom(e.target.checked)} />
+          🎲 recurring random workload
+        </label>
+      )}
+      {runInfo && (
+        <span className="run-info-pill"
+              title="The local environment keeps running the same workload family; the seed auto-increments each RUN.">
+          local env: {runInfo.family}{runInfo.runIndex ? ` · run #${runInfo.runIndex}` : ''}
+        </span>
       )}
       <button
         className="header-run-button"

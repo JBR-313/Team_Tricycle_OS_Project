@@ -392,7 +392,19 @@ export default function App() {
   }, [loadAll, startReveal])
 
   const { available: runAvailable, state: runState, inFlight: runInFlight,
-          error: runError, startRun } = useRun(onBackendComplete)
+          error: runError, status: runStatus, startRun } = useRun(onBackendComplete)
+
+  // "Same local environment runs many similar workloads" mode: when ON, RUN
+  // generates a RANDOM jittered instance of a fixed recurring family (a real
+  // xv6 run via --procs injection, NOT a replay) and the executor auto-
+  // increments the seed, so repeated RUNs accumulate same-family precedents and
+  // the LLM's retrieval warm-start improves the recommendation run over run.
+  const RANDOM_FAMILY = 'interactive'
+  const [randomMode, setRandomMode] = useState(false)
+  const runInfo = (randomMode || runStatus?.params?.random_family)
+    ? { family: runStatus?.params?.random_family || RANDOM_FAMILY,
+        runIndex: runStatus?.params?.run_index || null }
+    : null
 
   // If the real backend run errors, return to IDLE so the failure is visible and
   // the user can retry. We deliberately do NOT fake a reveal of stale data — a
@@ -422,7 +434,7 @@ export default function App() {
       // runDisabled) and an instruction is shown — we never fake a run.
       if (runAvailable) {
         runInitiatedRef.current = true
-        startRun()
+        startRun(randomMode ? { random_family: RANDOM_FAMILY } : {})
         setDemoPhase(DemoPhase.ANALYZING_LLM)
         setRevealStage(0)
       }
@@ -432,7 +444,7 @@ export default function App() {
       setTab('Evaluation')
     }
     // ANALYZING_LLM / VISUALIZING: button disabled, nothing to do.
-  }, [demoPhase, runAvailable, startRun])
+  }, [demoPhase, runAvailable, startRun, randomMode])
 
   // In IDLE the RUN button requires a live local executor (runAvailable === true).
   // null = still probing, false = executor offline; both disable RUN so it can
@@ -597,6 +609,10 @@ export default function App() {
         runPill={runPill}
         onRunClick={handlePrimaryRun}
         minimal={demoPhase === DemoPhase.IDLE}
+        randomMode={randomMode}
+        onToggleRandom={setRandomMode}
+        randomFamily={RANDOM_FAMILY}
+        runInfo={runInfo}
         manifest={manifest}
         loadError={!!loadError}
         executorOffline={runAvailable === false}

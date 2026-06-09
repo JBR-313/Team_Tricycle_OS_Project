@@ -95,7 +95,8 @@ python3 scripts/orchestrator.py --workload interactive
 #   [1] analyze  [2] advise  [3] guard  [4] run on xv6 (all 6 algorithms)
 #   [5] export   [6] validate [7] correct [8] explain [9] feedback (FAIL-only)
 python3 scripts/orchestrator.py --intent "Interactive desktop; latency matters."  # NL to config
-cd dashboard_live && npm run dev          # dashboard at http://localhost:5174
+python3 scripts/orchestrator.py --random-family interactive --seed 1000           # random recurring-pattern instance on xv6 (retrieval warm-start ON)
+cd dashboard_live && npm run dev          # dashboard at http://localhost:5174 (toggle "recurring random workload" on the RUN button)
 cd xv6-riscv && make qemu                 # raw kernel to a shell (Ctrl-A X to quit)
 ```
 Reproduce the evidence:
