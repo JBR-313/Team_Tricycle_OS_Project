@@ -249,6 +249,11 @@ _PROMPT_STRIP_KEYS = (
     # a sentence that gives the game away. `id` can encode the same hint.
     "description",
     "id",
+    # `workload_file` is the path of the source JSON ("workloads/xv6_interactive
+    # .json") — the file NAME names the workload class outright, the exact same
+    # soft answer-key as `id`. The path stays in workload_summary.json on disk
+    # (dashboard / provenance); only the prompt hides it.
+    "workload_file",
     # `family` is the generated-workload PATTERN tag ("interactive"/"convoy"/...)
     # written by the --random-family live mode (workload_families.build_doc). It
     # names the workload class outright, so it is an answer-tag exactly like

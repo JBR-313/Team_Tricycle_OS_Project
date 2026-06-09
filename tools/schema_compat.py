@@ -115,18 +115,23 @@ def get_event_algo(ev):
 
 
 def get_backend(manifest):
-    """Return 'xv6' or 'simulator' for a dashboard manifest dict.
+    """Return the backend a dashboard manifest claims: 'xv6', 'fallback',
+    'simulator' (legacy snapshots only), or 'unknown'.
 
-    If manifest['backend'] is present, use it (normalized to lowercase). Else
-    map legacy manifest['mode']: 'xv6-log' -> 'xv6', 'simulator' -> 'simulator',
-    anything else -> 'simulator'.
+    The simulator backend was removed: only data that EXPLICITLY claims
+    "simulator" is reported as such; an empty/unknown manifest reads as
+    'unknown' — it must never default to a backend that no longer exists.
     """
     manifest = manifest or {}
     backend = manifest.get("backend")
     if backend:
         return str(backend).strip().lower()
-    mode = manifest.get("mode")
-    return "xv6" if mode == "xv6-log" else "simulator"
+    mode = str(manifest.get("mode") or "").strip().lower()
+    if mode in ("xv6-log", "xv6"):
+        return "xv6"
+    if mode in ("fallback", "simulator"):
+        return mode
+    return "unknown"
 
 
 # ── DISPLAY-form helpers (output boundaries) ────────────────────────────────
