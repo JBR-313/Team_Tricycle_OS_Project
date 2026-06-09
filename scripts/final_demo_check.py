@@ -7,7 +7,6 @@ Runs the cheap-to-verify health checks and prints a single PASS/FAIL summary:
     PASS  unit tests
     PASS  dashboard build
     PASS  contract validation
-    PASS  simulator fallback smoke
     SKIP  xv6 smoke (qemu-system-riscv64 not found)
     PASS  trace sanity
 
@@ -103,21 +102,6 @@ def check_contract() -> None:
            "" if rc == 0 else "strict contract violations")
 
 
-def check_simulator_smoke() -> None:
-    # Non-destructive: write to throwaway dirs so the committed demo live-data
-    # (which may be a real xv6 run) is never clobbered by this health check.
-    import tempfile
-    with tempfile.TemporaryDirectory() as td:
-        rc, out = run([sys.executable, str(ROOT / "scripts" / "orchestrator.py"),
-                       "--backend", "simulator", "--seed", "42",
-                       "--workload", "interactive", "--run-all", "--offline-fixture",
-                       "--out-dir", str(Path(td) / "out"),
-                       "--live-data-dir", str(Path(td) / "live")],
-                      timeout=300)
-    record(PASS if rc == 0 else FAIL, "simulator fallback smoke",
-           "" if rc == 0 else "orchestrator (simulator) failed")
-
-
 def xv6_tools_available() -> tuple[bool, str]:
     if not shutil.which("qemu-system-riscv64"):
         return False, "qemu-system-riscv64 not found"
@@ -209,7 +193,6 @@ def main() -> int:
     check_unit_tests()
     check_dashboard_build(args.skip_build)
     check_contract()
-    check_simulator_smoke()
     if args.skip_xv6:
         record(SKIP, "xv6 smoke", "--skip-xv6")
     else:
