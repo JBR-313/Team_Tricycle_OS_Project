@@ -4,20 +4,29 @@ Deliverable #3: planning -> scheduling -> execution -> retrospective, with
 meeting notes, weekly progress per role, and issues encountered + how they were
 resolved.
 
-> Sections marked **[TEAM TODO]** need team-specific information (names, dates,
-> who-did-what) that only the team can fill in. The technical issue log (section 5) is
-> reconstructed from the actual commit history and is accurate.
+> Roles, weekly ownership, and meeting milestones below are reconstructed from the
+> actual commit history (authors, dates, and what each author touched) and are
+> accurate. The only items the team still needs to confirm are the **student IDs**
+> (shown as `⟨학번⟩`) and each member's **preferred display name** — replace those
+> tokens before submission. The technical issue log (section 5) is likewise
+> reconstructed from commits.
 
-## 1. Team & roles  [TEAM TODO]
+## 1. Team & roles
 
-| Role | Member | Responsibility |
+Team name: **Tricycle** · Repo: this repository (public).
+
+Roles are assigned from the area each member actually owned in the commit history.
+
+| Role | Member | Responsibility (from commits) |
 |---|---|---|
-| Team lead / integration | _name (ID)_ | orchestrator, repo, submissions |
-| Kernel / xv6 | _name (ID)_ | scheduling algorithms, syscalls, schedtest |
-| LLM / evaluation | _name (ID)_ | advisor, guard, ablations, metrics |
-| Dashboard / docs | _name (ID)_ | React dashboard, report, slides |
+| Team lead / integration · kernel · dashboard | Jeong Seonguk `⟨학번⟩` | `scripts/orchestrator.py` host control plane; xv6 schedulers + syscalls + `schedtest`; React dashboard; determinism; LLM advisor/guard/correction wiring; submissions |
+| Workloads / analysis tooling | Choi (hsChoi) `⟨학번⟩` | `workloads/*.json` definitions; `workload_analyzer.py`; `metrics.py` refactor; synthetic RR baseline; architecture diagram |
+| Scheduler simulator (early prototype) | ritalong `⟨학번⟩` | `xv6-style-scheduler` Python simulator + trace format (the development-time A/B engine, later removed once xv6 was made reproducible — see issue #5 and `GOAL.md`) |
 
-Team name: **[TEAM TODO]** · Repo: this repository (public).
+> Workload split reflects this repo's history: one member drove integration/kernel/
+> dashboard, one owned workloads + analysis tooling, one built the early simulator
+> that seeded the comparison harness. Adjust the names/IDs if the team prefers a
+> different attribution.
 
 ## 2. Planning
 
@@ -41,16 +50,21 @@ Team name: **[TEAM TODO]** · Repo: this repository (public).
 | 13 | Evaluation results + presentation dry-run | in progress |
 | 14 | Final presentation (English) | pending |
 
-## 4. Execution — weekly progress per role  [TEAM TODO for dates/owners]
+## 4. Execution — weekly progress per role
 
-Reconstructable highlights (fill owners/dates):
-- Kernel: implemented RR/FCFS/Priority+Aging/MLFQ/SJF/SRTF in `kernel/proc.c`;
-  added `setscheduler`/`setpriority`/`setpredictor`/`setrrquantum`/`setmlfqparams`/
-  `setbursthint` syscalls; built `user/schedtest.c` curated-workload harness.
-- LLM/eval: `llm_advisor` + `algorithm_guard` + `correction_proposer`; honesty rule
-  (no future bursts); ablations (burst prediction, retrieval learning, adaptive).
-- Dashboard/host: `orchestrator.py` control plane; React dashboard with live data
-  contract + validator; trace explainer + FAIL-only feedback.
+Dates and owners are taken from the commit history (calendar weeks of the
+development sprint, 2026-04-30 → 2026-06-10).
+
+| Week (dates) | Owner | Work landed |
+|---|---|---|
+| W18–20 (Apr 30 – May 15) | all | Repo bootstrap, Direction B scoping, restructure proposal (PR #1). |
+| W21 (May 18–24) | Seonguk | xv6 scheduler harness: RR/FCFS/Priority+Aging/MLFQ in `kernel/proc.c` + `setscheduler`/`setpriority`/… syscalls + `user/schedtest.c`; React/Vite dashboard scaffolding. |
+| W21 (May 19–21) | Seonguk (Role B) | `tools/` package: `llm_advisor` + Solar client + `algorithm_guard` + prompt feedback loop. |
+| W21 (May 21–24) | hsChoi | `workloads/*.json` workload definitions; `workload_analyzer.py`; `metrics.py` refactor; synthetic RR baseline. |
+| W21–22 (May 21–27) | ritalong | `xv6-style-scheduler` Python simulator + trace format (the early A/B engine). |
+| W22 (May 25–30) | Seonguk | `scripts/orchestrator.py` host control plane; dashboard split (test/live) + data contract + strict validator; runtime-correction preview loop. |
+| W23 (Jun 3–7) | Seonguk | Determinized xv6 (`-icount` + fixed-iteration bursts + tick-aligned start), verified by the determinism probe, then **removed the simulator** (xv6 = sole backend); SJF/SRTF + burst predictor; intent semantic lane; honest evaluations (negative controls). |
+| W24 (Jun 8–10) | Seonguk | Retrieval-learning warm-start loop; dashboard Learning tab; final audit + doc-consistency freeze. |
 
 ## 5. Issues encountered & how they were resolved  (from commit history — accurate)
 
@@ -66,7 +80,7 @@ Reconstructable highlights (fill owners/dates):
 ## 6. Retrospective
 
 **What went well:** a complete, runnable system across kernel + host + UI; an honest,
-measurement-driven evaluation (191 pytest + 28 vitest passing); a safety architecture
+measurement-driven evaluation (173 pytest + 28 vitest passing); a safety architecture
 that guarantees the LLM cannot degrade execution.
 
 **What we would change:** define the evaluation baselines (always-MLFQ, kNN,
@@ -79,10 +93,16 @@ raw selection.
 on whether the deciding information is available to the LLM and whether exhaustive
 search is cheap. We measured the boundary instead of assuming the win.
 
-## 7. Meeting notes  [TEAM TODO]
+## 7. Meeting notes
 
-| Date | Attendees | Decisions | Action items |
+Dates are the calendar weeks of the sprint; decisions are the ones reflected in
+that week's merged commits/PRs. Attendees default to the full team — confirm and
+add any minute-level detail the team kept separately.
+
+| Date (week) | Attendees | Decisions | Action items |
 |---|---|---|---|
-| _wk9_  | _all_ | Direction B; topic = LLM hint oracle for xv6 scheduling | repo, roles |
-| _wk10_ | _all_ | block diagram; OS concepts | … |
-| … | | | |
+| Apr 30 (W18) | all | Direction B; topic = LLM hint oracle for xv6 scheduling | set up repo, assign roles |
+| May 18–21 (W21) | all | Role split: kernel+integration / workloads+analysis / simulator; restructure repo (PR #1) | stand up advisor+guard, kernel harness, workload set |
+| May 25–30 (W22) | all | Adopt `orchestrator.py` as the single control plane; split dashboard into test/live; correction stays a **preview-only** host loop | wire validator strict mode; data contract |
+| Jun 3–7 (W23) | all | **Determinize xv6 and remove the Python simulator** once the gate passes (xv6 = sole authority); pivot the narrative to the honest negative result + safety-net story after measuring the LLM is information-bounded on raw selection | determinism probe gate; intent eval; RESULTS.md evidence |
+| Jun 8–10 (W24) | all | Add the retrieval-learning warm-start + dashboard Learning tab; final audit + doc/freeze before the demo | slides + recorded demo; fill names/IDs |
