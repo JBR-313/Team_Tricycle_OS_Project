@@ -36,13 +36,12 @@ the demo and defense.
   FCFS — and **SRTF may show no preemption**. This is expected, not a bug.
 - **Aging/boost are round-granular**, not strictly tick-accurate — a
   simplification for the lab.
-- **`--seed` jitters the SIMULATOR only.** `tools/workload_jitter.py` derives a
-  seed-specific instance (arrival/burst magnitudes vary; counts preserved) so
-  simulator runs differ per seed and can be averaged. xv6 has no PRNG in
-  `schedtest.c` (curated tables are fixed in C), so on the xv6 backend the seed
-  only labels the run — it does not change the schedule. `tools/seed_sweep.py`
-  reports mean ± std across seeds, but for the same reason it is **simulator-only**:
-  a seed sweep on xv6 would be N identical runs.
+- **`--seed` only labels an xv6 run.** xv6 has no PRNG in `schedtest.c` (curated
+  tables are fixed in C) and the run is reproducible (deterministic `-icount`
+  clock), so the same (profile, algorithm, seed) reproduces exactly — `--seed`
+  does not change the schedule. Statistical power therefore comes from generating
+  many *different* random workloads (see `experiments/burst_random_eval.py`), not
+  from re-seeding one profile.
 
 ## Pipeline / correction
 
