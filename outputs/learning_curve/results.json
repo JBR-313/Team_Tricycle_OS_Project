@@ -1,0 +1,1613 @@
+{
+  "k": 3,
+  "drift_z": 2.0,
+  "families": [
+    "interactive",
+    "cpu_batch",
+    "convoy",
+    "priority"
+  ],
+  "n_instances": 20,
+  "sequences": {
+    "stable_blocks": {
+      "order": [
+        "interactive_s7000",
+        "interactive_s7001",
+        "interactive_s7002",
+        "interactive_s7003",
+        "interactive_s7004",
+        "cpu_batch_s8000",
+        "cpu_batch_s8001",
+        "cpu_batch_s8002",
+        "cpu_batch_s8003",
+        "cpu_batch_s8004",
+        "convoy_s9000",
+        "convoy_s9001",
+        "convoy_s9002",
+        "convoy_s9003",
+        "convoy_s9004",
+        "priority_s10000",
+        "priority_s10001",
+        "priority_s10002",
+        "priority_s10003",
+        "priority_s10004"
+      ],
+      "arms": {
+        "fixed_rr": {
+          "mean_regret": 0.38,
+          "series": [
+            {
+              "name": "interactive_s7000",
+              "family": "interactive",
+              "pred": "RR",
+              "true_best": "MLFQ",
+              "regret": 0.199
+            },
+            {
+              "name": "interactive_s7001",
+              "family": "interactive",
+              "pred": "RR",
+              "true_best": "MLFQ",
+              "regret": 0.304
+            },
+            {
+              "name": "interactive_s7002",
+              "family": "interactive",
+              "pred": "RR",
+              "true_best": "MLFQ",
+              "regret": 0.047
+            },
+            {
+              "name": "interactive_s7003",
+              "family": "interactive",
+              "pred": "RR",
+              "true_best": "MLFQ",
+              "regret": 0.293
+            },
+            {
+              "name": "interactive_s7004",
+              "family": "interactive",
+              "pred": "RR",
+              "true_best": "RR",
+              "regret": 0.0
+            },
+            {
+              "name": "cpu_batch_s8000",
+              "family": "cpu_batch",
+              "pred": "RR",
+              "true_best": "FCFS",
+              "regret": 0.601
+            },
+            {
+              "name": "cpu_batch_s8001",
+              "family": "cpu_batch",
+              "pred": "RR",
+              "true_best": "FCFS",
+              "regret": 0.577
+            },
+            {
+              "name": "cpu_batch_s8002",
+              "family": "cpu_batch",
+              "pred": "RR",
+              "true_best": "FCFS",
+              "regret": 0.444
+            },
+            {
+              "name": "cpu_batch_s8003",
+              "family": "cpu_batch",
+              "pred": "RR",
+              "true_best": "FCFS",
+              "regret": 0.439
+            },
+            {
+              "name": "cpu_batch_s8004",
+              "family": "cpu_batch",
+              "pred": "RR",
+              "true_best": "FCFS",
+              "regret": 0.447
+            },
+            {
+              "name": "convoy_s9000",
+              "family": "convoy",
+              "pred": "RR",
+              "true_best": "MLFQ",
+              "regret": 0.077
+            },
+            {
+              "name": "convoy_s9001",
+              "family": "convoy",
+              "pred": "RR",
+              "true_best": "MLFQ",
+              "regret": 0.024
+            },
+            {
+              "name": "convoy_s9002",
+              "family": "convoy",
+              "pred": "RR",
+              "true_best": "MLFQ",
+              "regret": 0.037
+            },
+            {
+              "name": "convoy_s9003",
+              "family": "convoy",
+              "pred": "RR",
+              "true_best": "MLFQ",
+              "regret": 0.186
+            },
+            {
+              "name": "convoy_s9004",
+              "family": "convoy",
+              "pred": "RR",
+              "true_best": "RR",
+              "regret": 0.0
+            },
+            {
+              "name": "priority_s10000",
+              "family": "priority",
+              "pred": "RR",
+              "true_best": "FCFS",
+              "regret": 0.91
+            },
+            {
+              "name": "priority_s10001",
+              "family": "priority",
+              "pred": "RR",
+              "true_best": "FCFS",
+              "regret": 0.72
+            },
+            {
+              "name": "priority_s10002",
+              "family": "priority",
+              "pred": "RR",
+              "true_best": "FCFS",
+              "regret": 0.756
+            },
+            {
+              "name": "priority_s10003",
+              "family": "priority",
+              "pred": "RR",
+              "true_best": "FCFS",
+              "regret": 1.0
+            },
+            {
+              "name": "priority_s10004",
+              "family": "priority",
+              "pred": "RR",
+              "true_best": "FCFS",
+              "regret": 0.536
+            }
+          ]
+        },
+        "fixed_mlfq": {
+          "mean_regret": 0.215,
+          "series": [
+            {
+              "name": "interactive_s7000",
+              "family": "interactive",
+              "pred": "MLFQ",
+              "true_best": "MLFQ",
+              "regret": 0.0
+            },
+            {
+              "name": "interactive_s7001",
+              "family": "interactive",
+              "pred": "MLFQ",
+              "true_best": "MLFQ",
+              "regret": 0.0
+            },
+            {
+              "name": "interactive_s7002",
+              "family": "interactive",
+              "pred": "MLFQ",
+              "true_best": "MLFQ",
+              "regret": 0.0
+            },
+            {
+              "name": "interactive_s7003",
+              "family": "interactive",
+              "pred": "MLFQ",
+              "true_best": "MLFQ",
+              "regret": 0.0
+            },
+            {
+              "name": "interactive_s7004",
+              "family": "interactive",
+              "pred": "MLFQ",
+              "true_best": "RR",
+              "regret": 0.0
+            },
+            {
+              "name": "cpu_batch_s8000",
+              "family": "cpu_batch",
+              "pred": "MLFQ",
+              "true_best": "FCFS",
+              "regret": 0.316
+            },
+            {
+              "name": "cpu_batch_s8001",
+              "family": "cpu_batch",
+              "pred": "MLFQ",
+              "true_best": "FCFS",
+              "regret": 0.275
+            },
+            {
+              "name": "cpu_batch_s8002",
+              "family": "cpu_batch",
+              "pred": "MLFQ",
+              "true_best": "FCFS",
+              "regret": 0.235
+            },
+            {
+              "name": "cpu_batch_s8003",
+              "family": "cpu_batch",
+              "pred": "MLFQ",
+              "true_best": "FCFS",
+              "regret": 0.236
+            },
+            {
+              "name": "cpu_batch_s8004",
+              "family": "cpu_batch",
+              "pred": "MLFQ",
+              "true_best": "FCFS",
+              "regret": 0.27
+            },
+            {
+              "name": "convoy_s9000",
+              "family": "convoy",
+              "pred": "MLFQ",
+              "true_best": "MLFQ",
+              "regret": 0.0
+            },
+            {
+              "name": "convoy_s9001",
+              "family": "convoy",
+              "pred": "MLFQ",
+              "true_best": "MLFQ",
+              "regret": 0.0
+            },
+            {
+              "name": "convoy_s9002",
+              "family": "convoy",
+              "pred": "MLFQ",
+              "true_best": "MLFQ",
+              "regret": 0.0
+            },
+            {
+              "name": "convoy_s9003",
+              "family": "convoy",
+              "pred": "MLFQ",
+              "true_best": "MLFQ",
+              "regret": 0.0
+            },
+            {
+              "name": "convoy_s9004",
+              "family": "convoy",
+              "pred": "MLFQ",
+              "true_best": "RR",
+              "regret": 0.038
+            },
+            {
+              "name": "priority_s10000",
+              "family": "priority",
+              "pred": "MLFQ",
+              "true_best": "FCFS",
+              "regret": 0.618
+            },
+            {
+              "name": "priority_s10001",
+              "family": "priority",
+              "pred": "MLFQ",
+              "true_best": "FCFS",
+              "regret": 0.48
+            },
+            {
+              "name": "priority_s10002",
+              "family": "priority",
+              "pred": "MLFQ",
+              "true_best": "FCFS",
+              "regret": 0.626
+            },
+            {
+              "name": "priority_s10003",
+              "family": "priority",
+              "pred": "MLFQ",
+              "true_best": "FCFS",
+              "regret": 0.714
+            },
+            {
+              "name": "priority_s10004",
+              "family": "priority",
+              "pred": "MLFQ",
+              "true_best": "FCFS",
+              "regret": 0.5
+            }
+          ]
+        },
+        "knn": {
+          "mean_regret": 0.059,
+          "series": [
+            {
+              "name": "interactive_s7000",
+              "family": "interactive",
+              "pred": "RR",
+              "true_best": "MLFQ",
+              "regret": 0.199
+            },
+            {
+              "name": "interactive_s7001",
+              "family": "interactive",
+              "pred": "MLFQ",
+              "true_best": "MLFQ",
+              "regret": 0.0
+            },
+            {
+              "name": "interactive_s7002",
+              "family": "interactive",
+              "pred": "MLFQ",
+              "true_best": "MLFQ",
+              "regret": 0.0
+            },
+            {
+              "name": "interactive_s7003",
+              "family": "interactive",
+              "pred": "MLFQ",
+              "true_best": "MLFQ",
+              "regret": 0.0
+            },
+            {
+              "name": "interactive_s7004",
+              "family": "interactive",
+              "pred": "MLFQ",
+              "true_best": "RR",
+              "regret": 0.0
+            },
+            {
+              "name": "cpu_batch_s8000",
+              "family": "cpu_batch",
+              "pred": "MLFQ",
+              "true_best": "FCFS",
+              "regret": 0.316
+            },
+            {
+              "name": "cpu_batch_s8001",
+              "family": "cpu_batch",
+              "pred": "FCFS",
+              "true_best": "FCFS",
+              "regret": 0.0
+            },
+            {
+              "name": "cpu_batch_s8002",
+              "family": "cpu_batch",
+              "pred": "FCFS",
+              "true_best": "FCFS",
+              "regret": 0.0
+            },
+            {
+              "name": "cpu_batch_s8003",
+              "family": "cpu_batch",
+              "pred": "FCFS",
+              "true_best": "FCFS",
+              "regret": 0.0
+            },
+            {
+              "name": "cpu_batch_s8004",
+              "family": "cpu_batch",
+              "pred": "FCFS",
+              "true_best": "FCFS",
+              "regret": 0.0
+            },
+            {
+              "name": "convoy_s9000",
+              "family": "convoy",
+              "pred": "MLFQ",
+              "true_best": "MLFQ",
+              "regret": 0.0
+            },
+            {
+              "name": "convoy_s9001",
+              "family": "convoy",
+              "pred": "MLFQ",
+              "true_best": "MLFQ",
+              "regret": 0.0
+            },
+            {
+              "name": "convoy_s9002",
+              "family": "convoy",
+              "pred": "MLFQ",
+              "true_best": "MLFQ",
+              "regret": 0.0
+            },
+            {
+              "name": "convoy_s9003",
+              "family": "convoy",
+              "pred": "MLFQ",
+              "true_best": "MLFQ",
+              "regret": 0.0
+            },
+            {
+              "name": "convoy_s9004",
+              "family": "convoy",
+              "pred": "MLFQ",
+              "true_best": "RR",
+              "regret": 0.038
+            },
+            {
+              "name": "priority_s10000",
+              "family": "priority",
+              "pred": "MLFQ",
+              "true_best": "FCFS",
+              "regret": 0.618
+            },
+            {
+              "name": "priority_s10001",
+              "family": "priority",
+              "pred": "FCFS",
+              "true_best": "FCFS",
+              "regret": 0.0
+            },
+            {
+              "name": "priority_s10002",
+              "family": "priority",
+              "pred": "FCFS",
+              "true_best": "FCFS",
+              "regret": 0.0
+            },
+            {
+              "name": "priority_s10003",
+              "family": "priority",
+              "pred": "FCFS",
+              "true_best": "FCFS",
+              "regret": 0.0
+            },
+            {
+              "name": "priority_s10004",
+              "family": "priority",
+              "pred": "FCFS",
+              "true_best": "FCFS",
+              "regret": 0.0
+            }
+          ]
+        },
+        "knn_drift": {
+          "mean_regret": 0.059,
+          "series": [
+            {
+              "name": "interactive_s7000",
+              "family": "interactive",
+              "pred": "RR",
+              "true_best": "MLFQ",
+              "regret": 0.199
+            },
+            {
+              "name": "interactive_s7001",
+              "family": "interactive",
+              "pred": "MLFQ",
+              "true_best": "MLFQ",
+              "regret": 0.0
+            },
+            {
+              "name": "interactive_s7002",
+              "family": "interactive",
+              "pred": "MLFQ",
+              "true_best": "MLFQ",
+              "regret": 0.0
+            },
+            {
+              "name": "interactive_s7003",
+              "family": "interactive",
+              "pred": "MLFQ",
+              "true_best": "MLFQ",
+              "regret": 0.0
+            },
+            {
+              "name": "interactive_s7004",
+              "family": "interactive",
+              "pred": "MLFQ",
+              "true_best": "RR",
+              "regret": 0.0
+            },
+            {
+              "name": "cpu_batch_s8000",
+              "family": "cpu_batch",
+              "pred": "MLFQ",
+              "true_best": "FCFS",
+              "regret": 0.316
+            },
+            {
+              "name": "cpu_batch_s8001",
+              "family": "cpu_batch",
+              "pred": "FCFS",
+              "true_best": "FCFS",
+              "regret": 0.0
+            },
+            {
+              "name": "cpu_batch_s8002",
+              "family": "cpu_batch",
+              "pred": "FCFS",
+              "true_best": "FCFS",
+              "regret": 0.0
+            },
+            {
+              "name": "cpu_batch_s8003",
+              "family": "cpu_batch",
+              "pred": "FCFS",
+              "true_best": "FCFS",
+              "regret": 0.0
+            },
+            {
+              "name": "cpu_batch_s8004",
+              "family": "cpu_batch",
+              "pred": "FCFS",
+              "true_best": "FCFS",
+              "regret": 0.0
+            },
+            {
+              "name": "convoy_s9000",
+              "family": "convoy",
+              "pred": "MLFQ",
+              "true_best": "MLFQ",
+              "regret": 0.0
+            },
+            {
+              "name": "convoy_s9001",
+              "family": "convoy",
+              "pred": "MLFQ",
+              "true_best": "MLFQ",
+              "regret": 0.0
+            },
+            {
+              "name": "convoy_s9002",
+              "family": "convoy",
+              "pred": "MLFQ",
+              "true_best": "MLFQ",
+              "regret": 0.0
+            },
+            {
+              "name": "convoy_s9003",
+              "family": "convoy",
+              "pred": "MLFQ",
+              "true_best": "MLFQ",
+              "regret": 0.0
+            },
+            {
+              "name": "convoy_s9004",
+              "family": "convoy",
+              "pred": "MLFQ",
+              "true_best": "RR",
+              "regret": 0.038
+            },
+            {
+              "name": "priority_s10000",
+              "family": "priority",
+              "pred": "MLFQ",
+              "true_best": "FCFS",
+              "regret": 0.618
+            },
+            {
+              "name": "priority_s10001",
+              "family": "priority",
+              "pred": "FCFS",
+              "true_best": "FCFS",
+              "regret": 0.0
+            },
+            {
+              "name": "priority_s10002",
+              "family": "priority",
+              "pred": "FCFS",
+              "true_best": "FCFS",
+              "regret": 0.0
+            },
+            {
+              "name": "priority_s10003",
+              "family": "priority",
+              "pred": "FCFS",
+              "true_best": "FCFS",
+              "regret": 0.0
+            },
+            {
+              "name": "priority_s10004",
+              "family": "priority",
+              "pred": "FCFS",
+              "true_best": "FCFS",
+              "regret": 0.0
+            }
+          ]
+        }
+      },
+      "precedent_curve": {
+        "0": {
+          "n": 4,
+          "mean_regret": 0.283
+        },
+        "1": {
+          "n": 4,
+          "mean_regret": 0.0
+        },
+        "2": {
+          "n": 4,
+          "mean_regret": 0.0
+        },
+        "3": {
+          "n": 4,
+          "mean_regret": 0.0
+        },
+        "4": {
+          "n": 4,
+          "mean_regret": 0.009
+        }
+      }
+    },
+    "round_robin": {
+      "order": [
+        "interactive_s7000",
+        "cpu_batch_s8000",
+        "convoy_s9000",
+        "priority_s10000",
+        "interactive_s7001",
+        "cpu_batch_s8001",
+        "convoy_s9001",
+        "priority_s10001",
+        "interactive_s7002",
+        "cpu_batch_s8002",
+        "convoy_s9002",
+        "priority_s10002",
+        "interactive_s7003",
+        "cpu_batch_s8003",
+        "convoy_s9003",
+        "priority_s10003",
+        "interactive_s7004",
+        "cpu_batch_s8004",
+        "convoy_s9004",
+        "priority_s10004"
+      ],
+      "arms": {
+        "fixed_rr": {
+          "mean_regret": 0.38,
+          "series": [
+            {
+              "name": "interactive_s7000",
+              "family": "interactive",
+              "pred": "RR",
+              "true_best": "MLFQ",
+              "regret": 0.199
+            },
+            {
+              "name": "cpu_batch_s8000",
+              "family": "cpu_batch",
+              "pred": "RR",
+              "true_best": "FCFS",
+              "regret": 0.601
+            },
+            {
+              "name": "convoy_s9000",
+              "family": "convoy",
+              "pred": "RR",
+              "true_best": "MLFQ",
+              "regret": 0.077
+            },
+            {
+              "name": "priority_s10000",
+              "family": "priority",
+              "pred": "RR",
+              "true_best": "FCFS",
+              "regret": 0.91
+            },
+            {
+              "name": "interactive_s7001",
+              "family": "interactive",
+              "pred": "RR",
+              "true_best": "MLFQ",
+              "regret": 0.304
+            },
+            {
+              "name": "cpu_batch_s8001",
+              "family": "cpu_batch",
+              "pred": "RR",
+              "true_best": "FCFS",
+              "regret": 0.577
+            },
+            {
+              "name": "convoy_s9001",
+              "family": "convoy",
+              "pred": "RR",
+              "true_best": "MLFQ",
+              "regret": 0.024
+            },
+            {
+              "name": "priority_s10001",
+              "family": "priority",
+              "pred": "RR",
+              "true_best": "FCFS",
+              "regret": 0.72
+            },
+            {
+              "name": "interactive_s7002",
+              "family": "interactive",
+              "pred": "RR",
+              "true_best": "MLFQ",
+              "regret": 0.047
+            },
+            {
+              "name": "cpu_batch_s8002",
+              "family": "cpu_batch",
+              "pred": "RR",
+              "true_best": "FCFS",
+              "regret": 0.444
+            },
+            {
+              "name": "convoy_s9002",
+              "family": "convoy",
+              "pred": "RR",
+              "true_best": "MLFQ",
+              "regret": 0.037
+            },
+            {
+              "name": "priority_s10002",
+              "family": "priority",
+              "pred": "RR",
+              "true_best": "FCFS",
+              "regret": 0.756
+            },
+            {
+              "name": "interactive_s7003",
+              "family": "interactive",
+              "pred": "RR",
+              "true_best": "MLFQ",
+              "regret": 0.293
+            },
+            {
+              "name": "cpu_batch_s8003",
+              "family": "cpu_batch",
+              "pred": "RR",
+              "true_best": "FCFS",
+              "regret": 0.439
+            },
+            {
+              "name": "convoy_s9003",
+              "family": "convoy",
+              "pred": "RR",
+              "true_best": "MLFQ",
+              "regret": 0.186
+            },
+            {
+              "name": "priority_s10003",
+              "family": "priority",
+              "pred": "RR",
+              "true_best": "FCFS",
+              "regret": 1.0
+            },
+            {
+              "name": "interactive_s7004",
+              "family": "interactive",
+              "pred": "RR",
+              "true_best": "RR",
+              "regret": 0.0
+            },
+            {
+              "name": "cpu_batch_s8004",
+              "family": "cpu_batch",
+              "pred": "RR",
+              "true_best": "FCFS",
+              "regret": 0.447
+            },
+            {
+              "name": "convoy_s9004",
+              "family": "convoy",
+              "pred": "RR",
+              "true_best": "RR",
+              "regret": 0.0
+            },
+            {
+              "name": "priority_s10004",
+              "family": "priority",
+              "pred": "RR",
+              "true_best": "FCFS",
+              "regret": 0.536
+            }
+          ]
+        },
+        "fixed_mlfq": {
+          "mean_regret": 0.215,
+          "series": [
+            {
+              "name": "interactive_s7000",
+              "family": "interactive",
+              "pred": "MLFQ",
+              "true_best": "MLFQ",
+              "regret": 0.0
+            },
+            {
+              "name": "cpu_batch_s8000",
+              "family": "cpu_batch",
+              "pred": "MLFQ",
+              "true_best": "FCFS",
+              "regret": 0.316
+            },
+            {
+              "name": "convoy_s9000",
+              "family": "convoy",
+              "pred": "MLFQ",
+              "true_best": "MLFQ",
+              "regret": 0.0
+            },
+            {
+              "name": "priority_s10000",
+              "family": "priority",
+              "pred": "MLFQ",
+              "true_best": "FCFS",
+              "regret": 0.618
+            },
+            {
+              "name": "interactive_s7001",
+              "family": "interactive",
+              "pred": "MLFQ",
+              "true_best": "MLFQ",
+              "regret": 0.0
+            },
+            {
+              "name": "cpu_batch_s8001",
+              "family": "cpu_batch",
+              "pred": "MLFQ",
+              "true_best": "FCFS",
+              "regret": 0.275
+            },
+            {
+              "name": "convoy_s9001",
+              "family": "convoy",
+              "pred": "MLFQ",
+              "true_best": "MLFQ",
+              "regret": 0.0
+            },
+            {
+              "name": "priority_s10001",
+              "family": "priority",
+              "pred": "MLFQ",
+              "true_best": "FCFS",
+              "regret": 0.48
+            },
+            {
+              "name": "interactive_s7002",
+              "family": "interactive",
+              "pred": "MLFQ",
+              "true_best": "MLFQ",
+              "regret": 0.0
+            },
+            {
+              "name": "cpu_batch_s8002",
+              "family": "cpu_batch",
+              "pred": "MLFQ",
+              "true_best": "FCFS",
+              "regret": 0.235
+            },
+            {
+              "name": "convoy_s9002",
+              "family": "convoy",
+              "pred": "MLFQ",
+              "true_best": "MLFQ",
+              "regret": 0.0
+            },
+            {
+              "name": "priority_s10002",
+              "family": "priority",
+              "pred": "MLFQ",
+              "true_best": "FCFS",
+              "regret": 0.626
+            },
+            {
+              "name": "interactive_s7003",
+              "family": "interactive",
+              "pred": "MLFQ",
+              "true_best": "MLFQ",
+              "regret": 0.0
+            },
+            {
+              "name": "cpu_batch_s8003",
+              "family": "cpu_batch",
+              "pred": "MLFQ",
+              "true_best": "FCFS",
+              "regret": 0.236
+            },
+            {
+              "name": "convoy_s9003",
+              "family": "convoy",
+              "pred": "MLFQ",
+              "true_best": "MLFQ",
+              "regret": 0.0
+            },
+            {
+              "name": "priority_s10003",
+              "family": "priority",
+              "pred": "MLFQ",
+              "true_best": "FCFS",
+              "regret": 0.714
+            },
+            {
+              "name": "interactive_s7004",
+              "family": "interactive",
+              "pred": "MLFQ",
+              "true_best": "RR",
+              "regret": 0.0
+            },
+            {
+              "name": "cpu_batch_s8004",
+              "family": "cpu_batch",
+              "pred": "MLFQ",
+              "true_best": "FCFS",
+              "regret": 0.27
+            },
+            {
+              "name": "convoy_s9004",
+              "family": "convoy",
+              "pred": "MLFQ",
+              "true_best": "RR",
+              "regret": 0.038
+            },
+            {
+              "name": "priority_s10004",
+              "family": "priority",
+              "pred": "MLFQ",
+              "true_best": "FCFS",
+              "regret": 0.5
+            }
+          ]
+        },
+        "knn": {
+          "mean_regret": 0.083,
+          "series": [
+            {
+              "name": "interactive_s7000",
+              "family": "interactive",
+              "pred": "RR",
+              "true_best": "MLFQ",
+              "regret": 0.199
+            },
+            {
+              "name": "cpu_batch_s8000",
+              "family": "cpu_batch",
+              "pred": "MLFQ",
+              "true_best": "FCFS",
+              "regret": 0.316
+            },
+            {
+              "name": "convoy_s9000",
+              "family": "convoy",
+              "pred": "MLFQ",
+              "true_best": "MLFQ",
+              "regret": 0.0
+            },
+            {
+              "name": "priority_s10000",
+              "family": "priority",
+              "pred": "MLFQ",
+              "true_best": "FCFS",
+              "regret": 0.618
+            },
+            {
+              "name": "interactive_s7001",
+              "family": "interactive",
+              "pred": "MLFQ",
+              "true_best": "MLFQ",
+              "regret": 0.0
+            },
+            {
+              "name": "cpu_batch_s8001",
+              "family": "cpu_batch",
+              "pred": "FCFS",
+              "true_best": "FCFS",
+              "regret": 0.0
+            },
+            {
+              "name": "convoy_s9001",
+              "family": "convoy",
+              "pred": "MLFQ",
+              "true_best": "MLFQ",
+              "regret": 0.0
+            },
+            {
+              "name": "priority_s10001",
+              "family": "priority",
+              "pred": "MLFQ",
+              "true_best": "FCFS",
+              "regret": 0.48
+            },
+            {
+              "name": "interactive_s7002",
+              "family": "interactive",
+              "pred": "MLFQ",
+              "true_best": "MLFQ",
+              "regret": 0.0
+            },
+            {
+              "name": "cpu_batch_s8002",
+              "family": "cpu_batch",
+              "pred": "FCFS",
+              "true_best": "FCFS",
+              "regret": 0.0
+            },
+            {
+              "name": "convoy_s9002",
+              "family": "convoy",
+              "pred": "MLFQ",
+              "true_best": "MLFQ",
+              "regret": 0.0
+            },
+            {
+              "name": "priority_s10002",
+              "family": "priority",
+              "pred": "FCFS",
+              "true_best": "FCFS",
+              "regret": 0.0
+            },
+            {
+              "name": "interactive_s7003",
+              "family": "interactive",
+              "pred": "MLFQ",
+              "true_best": "MLFQ",
+              "regret": 0.0
+            },
+            {
+              "name": "cpu_batch_s8003",
+              "family": "cpu_batch",
+              "pred": "FCFS",
+              "true_best": "FCFS",
+              "regret": 0.0
+            },
+            {
+              "name": "convoy_s9003",
+              "family": "convoy",
+              "pred": "MLFQ",
+              "true_best": "MLFQ",
+              "regret": 0.0
+            },
+            {
+              "name": "priority_s10003",
+              "family": "priority",
+              "pred": "FCFS",
+              "true_best": "FCFS",
+              "regret": 0.0
+            },
+            {
+              "name": "interactive_s7004",
+              "family": "interactive",
+              "pred": "MLFQ",
+              "true_best": "RR",
+              "regret": 0.0
+            },
+            {
+              "name": "cpu_batch_s8004",
+              "family": "cpu_batch",
+              "pred": "FCFS",
+              "true_best": "FCFS",
+              "regret": 0.0
+            },
+            {
+              "name": "convoy_s9004",
+              "family": "convoy",
+              "pred": "MLFQ",
+              "true_best": "RR",
+              "regret": 0.038
+            },
+            {
+              "name": "priority_s10004",
+              "family": "priority",
+              "pred": "FCFS",
+              "true_best": "FCFS",
+              "regret": 0.0
+            }
+          ]
+        },
+        "knn_drift": {
+          "mean_regret": 0.118,
+          "series": [
+            {
+              "name": "interactive_s7000",
+              "family": "interactive",
+              "pred": "RR",
+              "true_best": "MLFQ",
+              "regret": 0.199
+            },
+            {
+              "name": "cpu_batch_s8000",
+              "family": "cpu_batch",
+              "pred": "MLFQ",
+              "true_best": "FCFS",
+              "regret": 0.316
+            },
+            {
+              "name": "convoy_s9000",
+              "family": "convoy",
+              "pred": "MLFQ",
+              "true_best": "MLFQ",
+              "regret": 0.0
+            },
+            {
+              "name": "priority_s10000",
+              "family": "priority",
+              "pred": "MLFQ",
+              "true_best": "FCFS",
+              "regret": 0.618
+            },
+            {
+              "name": "interactive_s7001",
+              "family": "interactive",
+              "pred": "MLFQ",
+              "true_best": "MLFQ",
+              "regret": 0.0
+            },
+            {
+              "name": "cpu_batch_s8001",
+              "family": "cpu_batch",
+              "pred": "FCFS",
+              "true_best": "FCFS",
+              "regret": 0.0
+            },
+            {
+              "name": "convoy_s9001",
+              "family": "convoy",
+              "pred": "MLFQ",
+              "true_best": "MLFQ",
+              "regret": 0.0
+            },
+            {
+              "name": "priority_s10001",
+              "family": "priority",
+              "pred": "MLFQ",
+              "true_best": "FCFS",
+              "regret": 0.48
+            },
+            {
+              "name": "interactive_s7002",
+              "family": "interactive",
+              "pred": "MLFQ",
+              "true_best": "MLFQ",
+              "regret": 0.0
+            },
+            {
+              "name": "cpu_batch_s8002",
+              "family": "cpu_batch",
+              "pred": "FCFS",
+              "true_best": "FCFS",
+              "regret": 0.0
+            },
+            {
+              "name": "convoy_s9002",
+              "family": "convoy",
+              "pred": "MLFQ",
+              "true_best": "MLFQ",
+              "regret": 0.0
+            },
+            {
+              "name": "priority_s10002",
+              "family": "priority",
+              "pred": "FCFS",
+              "true_best": "FCFS",
+              "regret": 0.0
+            },
+            {
+              "name": "interactive_s7003",
+              "family": "interactive",
+              "pred": "MLFQ",
+              "true_best": "MLFQ",
+              "regret": 0.0
+            },
+            {
+              "name": "cpu_batch_s8003",
+              "family": "cpu_batch",
+              "pred": "FCFS",
+              "true_best": "FCFS",
+              "regret": 0.0
+            },
+            {
+              "name": "convoy_s9003",
+              "family": "convoy",
+              "pred": "MLFQ",
+              "true_best": "MLFQ",
+              "regret": 0.0
+            },
+            {
+              "name": "priority_s10003",
+              "family": "priority",
+              "pred": "MLFQ",
+              "true_best": "FCFS",
+              "regret": 0.714
+            },
+            {
+              "name": "interactive_s7004",
+              "family": "interactive",
+              "pred": "MLFQ",
+              "true_best": "RR",
+              "regret": 0.0
+            },
+            {
+              "name": "cpu_batch_s8004",
+              "family": "cpu_batch",
+              "pred": "FCFS",
+              "true_best": "FCFS",
+              "regret": 0.0
+            },
+            {
+              "name": "convoy_s9004",
+              "family": "convoy",
+              "pred": "MLFQ",
+              "true_best": "RR",
+              "regret": 0.038
+            },
+            {
+              "name": "priority_s10004",
+              "family": "priority",
+              "pred": "FCFS",
+              "true_best": "FCFS",
+              "regret": 0.0
+            }
+          ]
+        }
+      },
+      "precedent_curve": {
+        "0": {
+          "n": 4,
+          "mean_regret": 0.283
+        },
+        "1": {
+          "n": 4,
+          "mean_regret": 0.12
+        },
+        "2": {
+          "n": 4,
+          "mean_regret": 0.0
+        },
+        "3": {
+          "n": 4,
+          "mean_regret": 0.0
+        },
+        "4": {
+          "n": 4,
+          "mean_regret": 0.009
+        }
+      }
+    }
+  },
+  "negative_control": {
+    "true_label_knn": 0.059,
+    "shuffled_label_knn": 0.314,
+    "best_fixed_bar": 0.215,
+    "verdict": "signal real (shuffle collapses toward fixed bar)"
+  },
+  "llm_arms": {
+    "llm_facts": {
+      "mean_regret": 0.327,
+      "missing": 0,
+      "precedent_curve": {
+        "0": {
+          "n": 4,
+          "mean_regret": 0.204
+        },
+        "1": {
+          "n": 4,
+          "mean_regret": 0.446
+        },
+        "2": {
+          "n": 4,
+          "mean_regret": 0.418
+        },
+        "3": {
+          "n": 4,
+          "mean_regret": 0.252
+        },
+        "4": {
+          "n": 4,
+          "mean_regret": 0.317
+        }
+      },
+      "series": [
+        {
+          "name": "interactive_s7000",
+          "family": "interactive",
+          "pred": "RR",
+          "true_best": "MLFQ",
+          "regret": 0.199
+        },
+        {
+          "name": "interactive_s7001",
+          "family": "interactive",
+          "pred": "RR",
+          "true_best": "MLFQ",
+          "regret": 0.304
+        },
+        {
+          "name": "interactive_s7002",
+          "family": "interactive",
+          "pred": "RR",
+          "true_best": "MLFQ",
+          "regret": 0.047
+        },
+        {
+          "name": "interactive_s7003",
+          "family": "interactive",
+          "pred": "RR",
+          "true_best": "MLFQ",
+          "regret": 0.293
+        },
+        {
+          "name": "interactive_s7004",
+          "family": "interactive",
+          "pred": "RR",
+          "true_best": "RR",
+          "regret": 0.0
+        },
+        {
+          "name": "cpu_batch_s8000",
+          "family": "cpu_batch",
+          "pred": "FCFS",
+          "true_best": "FCFS",
+          "regret": 0.0
+        },
+        {
+          "name": "cpu_batch_s8001",
+          "family": "cpu_batch",
+          "pred": "SJF",
+          "true_best": "FCFS",
+          "regret": 1.0
+        },
+        {
+          "name": "cpu_batch_s8002",
+          "family": "cpu_batch",
+          "pred": "SJF",
+          "true_best": "FCFS",
+          "regret": 1.0
+        },
+        {
+          "name": "cpu_batch_s8003",
+          "family": "cpu_batch",
+          "pred": "FCFS",
+          "true_best": "FCFS",
+          "regret": 0.0
+        },
+        {
+          "name": "cpu_batch_s8004",
+          "family": "cpu_batch",
+          "pred": "SJF",
+          "true_best": "FCFS",
+          "regret": 1.0
+        },
+        {
+          "name": "convoy_s9000",
+          "family": "convoy",
+          "pred": "MLFQ",
+          "true_best": "MLFQ",
+          "regret": 0.0
+        },
+        {
+          "name": "convoy_s9001",
+          "family": "convoy",
+          "pred": "MLFQ",
+          "true_best": "MLFQ",
+          "regret": 0.0
+        },
+        {
+          "name": "convoy_s9002",
+          "family": "convoy",
+          "pred": "MLFQ",
+          "true_best": "MLFQ",
+          "regret": 0.0
+        },
+        {
+          "name": "convoy_s9003",
+          "family": "convoy",
+          "pred": "MLFQ",
+          "true_best": "MLFQ",
+          "regret": 0.0
+        },
+        {
+          "name": "convoy_s9004",
+          "family": "convoy",
+          "pred": "MLFQ",
+          "true_best": "RR",
+          "regret": 0.038
+        },
+        {
+          "name": "priority_s10000",
+          "family": "priority",
+          "pred": "MLFQ",
+          "true_best": "FCFS",
+          "regret": 0.618
+        },
+        {
+          "name": "priority_s10001",
+          "family": "priority",
+          "pred": "MLFQ",
+          "true_best": "FCFS",
+          "regret": 0.48
+        },
+        {
+          "name": "priority_s10002",
+          "family": "priority",
+          "pred": "MLFQ",
+          "true_best": "FCFS",
+          "regret": 0.626
+        },
+        {
+          "name": "priority_s10003",
+          "family": "priority",
+          "pred": "MLFQ",
+          "true_best": "FCFS",
+          "regret": 0.714
+        },
+        {
+          "name": "priority_s10004",
+          "family": "priority",
+          "pred": "PRIORITY",
+          "true_best": "FCFS",
+          "regret": 0.228
+        }
+      ]
+    },
+    "llm_retrieval": {
+      "mean_regret": 0.099,
+      "missing": 0,
+      "precedent_curve": {
+        "0": {
+          "n": 4,
+          "mean_regret": 0.183
+        },
+        "1": {
+          "n": 4,
+          "mean_regret": 0.05
+        },
+        "2": {
+          "n": 4,
+          "mean_regret": 0.086
+        },
+        "3": {
+          "n": 4,
+          "mean_regret": 0.111
+        },
+        "4": {
+          "n": 4,
+          "mean_regret": 0.067
+        }
+      },
+      "series": [
+        {
+          "name": "interactive_s7000",
+          "family": "interactive",
+          "pred": "RR",
+          "true_best": "MLFQ",
+          "regret": 0.199
+        },
+        {
+          "name": "interactive_s7001",
+          "family": "interactive",
+          "pred": "MLFQ",
+          "true_best": "MLFQ",
+          "regret": 0.0
+        },
+        {
+          "name": "interactive_s7002",
+          "family": "interactive",
+          "pred": "MLFQ",
+          "true_best": "MLFQ",
+          "regret": 0.0
+        },
+        {
+          "name": "interactive_s7003",
+          "family": "interactive",
+          "pred": "MLFQ",
+          "true_best": "MLFQ",
+          "regret": 0.0
+        },
+        {
+          "name": "interactive_s7004",
+          "family": "interactive",
+          "pred": "MLFQ",
+          "true_best": "RR",
+          "regret": 0.0
+        },
+        {
+          "name": "cpu_batch_s8000",
+          "family": "cpu_batch",
+          "pred": "FCFS",
+          "true_best": "FCFS",
+          "regret": 0.0
+        },
+        {
+          "name": "cpu_batch_s8001",
+          "family": "cpu_batch",
+          "pred": "FCFS",
+          "true_best": "FCFS",
+          "regret": 0.0
+        },
+        {
+          "name": "cpu_batch_s8002",
+          "family": "cpu_batch",
+          "pred": "FCFS",
+          "true_best": "FCFS",
+          "regret": 0.0
+        },
+        {
+          "name": "cpu_batch_s8003",
+          "family": "cpu_batch",
+          "pred": "FCFS",
+          "true_best": "FCFS",
+          "regret": 0.0
+        },
+        {
+          "name": "cpu_batch_s8004",
+          "family": "cpu_batch",
+          "pred": "FCFS",
+          "true_best": "FCFS",
+          "regret": 0.0
+        },
+        {
+          "name": "convoy_s9000",
+          "family": "convoy",
+          "pred": "MLFQ",
+          "true_best": "MLFQ",
+          "regret": 0.0
+        },
+        {
+          "name": "convoy_s9001",
+          "family": "convoy",
+          "pred": "MLFQ",
+          "true_best": "MLFQ",
+          "regret": 0.0
+        },
+        {
+          "name": "convoy_s9002",
+          "family": "convoy",
+          "pred": "MLFQ",
+          "true_best": "MLFQ",
+          "regret": 0.0
+        },
+        {
+          "name": "convoy_s9003",
+          "family": "convoy",
+          "pred": "MLFQ",
+          "true_best": "MLFQ",
+          "regret": 0.0
+        },
+        {
+          "name": "convoy_s9004",
+          "family": "convoy",
+          "pred": "MLFQ",
+          "true_best": "RR",
+          "regret": 0.038
+        },
+        {
+          "name": "priority_s10000",
+          "family": "priority",
+          "pred": "PRIORITY",
+          "true_best": "FCFS",
+          "regret": 0.534
+        },
+        {
+          "name": "priority_s10001",
+          "family": "priority",
+          "pred": "PRIORITY",
+          "true_best": "FCFS",
+          "regret": 0.2
+        },
+        {
+          "name": "priority_s10002",
+          "family": "priority",
+          "pred": "PRIORITY",
+          "true_best": "FCFS",
+          "regret": 0.343
+        },
+        {
+          "name": "priority_s10003",
+          "family": "priority",
+          "pred": "PRIORITY",
+          "true_best": "FCFS",
+          "regret": 0.444
+        },
+        {
+          "name": "priority_s10004",
+          "family": "priority",
+          "pred": "PRIORITY",
+          "true_best": "FCFS",
+          "regret": 0.228
+        }
+      ]
+    }
+  }
+}

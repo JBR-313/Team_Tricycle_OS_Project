@@ -47,6 +47,15 @@ outputs/random_eval/*
 outputs/intent_eval/*
 !outputs/intent_eval/RESULTS.md
 !outputs/intent_eval/intent_eval.json
+# Adaptive learning-curve study — the measured source behind the dashboard
+# Learning tab and the presentation Result chart. Keep the evidence docs + the
+# aggregate results.json; the xv6 raw logs and the instance bank stay ignored
+# (regeneratable via experiments/learning_curve_bank|replay|llm.py).
+!outputs/learning_curve/
+outputs/learning_curve/*
+!outputs/learning_curve/RESULTS.md
+!outputs/learning_curve/FINDINGS.md
+!outputs/learning_curve/results.json
 
 # Defensive: catch stray logs outside outputs/. Tracked files (e.g.
 # logs/foo.log if someone deliberately git-added one) are unaffected.
