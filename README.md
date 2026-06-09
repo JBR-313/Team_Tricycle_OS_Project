@@ -10,47 +10,6 @@ picks the next process and is never on the kernel hot path. The OS component (si
 in-kernel scheduling algorithms, syscalls, processes, synchronization, IPC) is
 implemented by the team in `xv6-riscv/`, not merely hosting an LLM.
 
-> ## Status & key findings (final)
->
-> **xv6 (under QEMU) is the sole, *reproducible* execution backend.** The Python
-> scheduler simulator was removed; determinism comes from a fixed virtual QEMU
-> clock (`-icount shift=3,sleep=off`) + fixed-iteration CPU bursts from a
-> tick-aligned start (see [`docs/GOAL.md`](docs/GOAL.md)). Run the whole pipeline
-> with `python3 scripts/orchestrator.py` (no backend flag).
->
-> **What we measured on the real kernel (with negative controls):**
-> - **LLM *out of* the decision hot path — it loses.** As the quantitative
->   decision-maker (which algorithm, when to switch mid-run, the next CPU burst),
->   the LLM does **not** beat cheap classical methods. Burst prediction: leak-free,
->   negative-controlled — the LLM ties a trivial heuristic on easy signal and
->   *fails* on a fused two-feature signal ([`outputs/random_eval/RESULTS.md`](outputs/random_eval/RESULTS.md)).
->   Mid-run adaptive switching: no robust headroom ([`outputs/adaptive/RESULTS.md`](outputs/adaptive/RESULTS.md)).
-> - **LLM *at* the human interface — it wins.** Mapping a natural-language workload
->   intent → a valid scheduling config: **8/8** ([`outputs/intent_eval/RESULTS.md`](outputs/intent_eval/RESULTS.md),
->   try it with `--intent "..."`); plus natural-language trace explanation. These
->   tasks have **no classical substitute**.
-> - **Conclusion:** *put the LLM at the OS's human-facing layer, not its decision
->   hot path* — exactly the architecture below (the LLM is not the scheduler; xv6
->   is the execution authority).
->
-> *Some deep reference sections below predate the simulator removal and may still
-> mention a "simulator backend" historically; the authoritative run path is
-> xv6-only as stated here.*
-
-### Project deliverables (course §5)
-
-| # | Deliverable | Location |
-|---|---|---|
-| 1 | Application (code + how-to-run + demo) | this repo · §10.3 below · `scripts/orchestrator.py` |
-| 2 | Technical Report | [`docs/technical_report.md`](docs/technical_report.md) |
-| 3 | Development Process Document | [`docs/development_process.md`](docs/development_process.md) |
-| 4 | Presentation Slides (English) | [`docs/presentation/`](docs/presentation/) |
-
-> **Demo media:** screenshots / a short GIF of the dashboard go in `docs/images/`
-> and are embedded in §8 (see `docs/images/README.md`).
-
----
-
 ## 1. Core Idea
 
 Traditional xv6 scheduling behavior is usually visible only through terminal logs or source code.  
@@ -157,26 +116,6 @@ Workload (workloads/*.json or schedtest profile)
 > **`FALLBACK`** when only the committed fixtures are in use. If you see anything
 > other than `XV6 TRACE` during the demo, name it out loud.
 
-### Component roles in the new flow
-
-- **Orchestrator** is the control plane. It owns the run order: it runs every
-  algorithm sequentially on the same deterministic workload (same seed +
-  profile), with the LLM-selected algorithm first, so the comparison is fair.
-- **`schedtest.c`** is the xv6 execution backend. It is a tiny xv6 user program:
-  it sets a scheduling algorithm via a system call, forks children, and prints
-  `[SCHED]` / `[SCHEDTEST]` lines. It cannot open a dashboard or call the LLM.
-- The execution path is xv6 `schedtest` driven by the host-side Orchestrator, and
-  it is the **only** one — the former Python simulator backend has been removed now
-  that the kernel run is reproducible (deterministic `-icount` clock).
-
-The LLM cannot:
-
-- choose the next process at every timer tick
-- directly modify kernel state
-- directly perform context switches
-- apply unverified recommendations automatically
-- replace xv6 Scheduling Algorithms
-
 ---
 
 ## 3. Supported Scheduling Algorithms
@@ -222,27 +161,6 @@ This project therefore uses a **hybrid predictor** (see §10.2 for the mechanics
 - traditional exponential averaging (EMA), always on, refined from observed CPU
 - LLM-assisted **initial** burst prior, derived from visible features only
 - LLM-assisted predictor parameter tuning (`alpha`, `initial`, `min`, `max`)
-
-The LLM produces the initial prior; xv6 executes SJF/SRTF and corrects the
-prediction via EMA. The LLM must not receive the actual future CPU burst as
-input, and the kernel never calls the LLM.
-
-**Why the SRTF demo often shows no `PREEMPT` events (expected, not a bug).**
-SRTF only preempts a running job when a newly-arrived job has a *shorter
-predicted remaining time*. Because true future bursts may never be leaked to the
-scheduler, every never-run process starts with the **same cold-start EMA prior**
-(`initial`), while the running job's predicted remaining only *decreases* as it
-executes. A fresh arrival therefore (almost) never looks shorter than the job
-already running, so no preemption is triggered. In the bundled `ambiguous_mixed`
-workload the arrivals are staggered by ~1 tick and the running job's estimate is
-already below the cold-start prior by the time the next job arrives — hence the
-SRTF trace contains `ARRIVE`/`DISPATCH`/`PRED_UPDATE`/`EXIT` but no `PREEMPT`.
-This is a direct consequence of the "no future bursts" constraint, not a
-visualization or scheduler defect: the Gantt, Process Lanes, Process State and
-Trace Log all render `PREEMPT` correctly when a trace contains it (e.g. RR/MLFQ
-quantum preemption). A trace that *would* visibly preempt under SRTF requires
-seeding a shorter burst prior for the late arrival (a burst-hint run), which is a
-backend concern outside this frontend-only dashboard polish.
 
 ---
 
@@ -304,51 +222,11 @@ Example output:
 
 The recommendation is sent to the Algorithm Guard before execution.
 
-> **Recommended vs applied (xv6 backend honesty).** The xv6 backend now applies
-> the LLM/Guard-validated parameters of the **selected algorithm** to the real
-> kernel before the workload runs, via dedicated syscalls:
-> RR `quantum` (`setrrquantum`), Priority `aging_threshold` (`setpriorityaging`),
-> MLFQ `queues`/`quantum`/`boost_interval` (`setmlfqparams`/`setmlfqboost`), and
-> the SJF/SRTF predictor params + per-process burst priors
-> (`setpredictor`/`setbursthint`). Each is proven by a `[SCHEDTEST] event=*_PARAMS`
-> trace line. The Guard validates params only for the **selection**, so the other
-> algorithms in the comparison sweep honestly run on xv6's compile-time defaults.
-> `metrics.json` records, per algorithm, `recommended_params` (what the LLM/Guard
-> asked for), `applied_params` (what xv6 actually used, tagged `llm_guard` or
-> `xv6_default`), and `param_application_status`
-> (`fully_applied` / `fixed_default` / `not_applicable`).
-> See `docs/dashboard_data_contract.md`.
-
-> **Runtime correction (host-side closed loop).** After a run, if the selected
-> algorithm is judged FAIL (or starves), a guarded post-evaluation correction
-> loop re-runs xv6 on the **same** workload with a corrected, Guard-approved
-> algorithm/params, compares before/after, and records `correction_applied.json`
-> (`applied=true`, with `original_*`/`corrected_*` metrics). This is NOT kernel
-> hot-path LLM control — the LLM never runs in the kernel and never picks the
-> next process; the correction is decided on the host and applied by launching a
-> second ordinary xv6 run.
-
 ---
 
 ### 4.2 Running
 
 #### 4.2.1 Runtime Correction Proposer & host-side apply loop *(implemented)*
-
-> **What is implemented today:** `tools/event_detector.py` (runtime event
-> detection), `tools/correction_proposer.py` (correction proposal),
-> `tools/correction_guard.py` (correction re-check), and the **host-side
-> post-evaluation correction apply loop** in `scripts/orchestrator.py`
-> (`_run_correction_apply_loop`). When the selected algorithm is judged FAIL
-> (or starves), the loop re-runs the real xv6 kernel on the **same** workload
-> with a corrected, Guard-approved algorithm/params, compares before/after, and
-> records `correction_applied.json` (`applied=true`).
->
-> **What is intentionally NOT implemented:** there is no LLM inside the kernel,
-> no tick-level online correction, no kernel hot-path correction, and no
-> websocket live streaming. Runtime correction is a host-side closed loop
-> applied AFTER a run is evaluated — never live kernel control. On the
-> simulator backend the apply loop is an intentional no-op (it re-runs the real
-> kernel, which the simulator is not). See §11.1.
 
 During execution, the Trace Monitor watches the Scheduling Trace Log.
 
@@ -400,12 +278,6 @@ the kernel (see §11.1).
 ### 4.3 After Running
 
 #### 4.3.1 Trace Explainer *(implemented, wired into the pipeline)*
-
-> `tools/trace_explainer.py` runs as orchestrator step **[8]**. Every run
-> produces a fresh `trace_explanation.json` for that run, or an explicit
-> `available: false` placeholder when the LLM is unavailable (no
-> `UPSTAGE_API_KEY`). The dashboard's Evaluation tab renders it and never shows
-> a stale explanation from an older run.
 
 After execution, the system summarizes:
 
@@ -616,61 +488,6 @@ The GUI shows (as `dashboard_live`, the primary React/Vite UI on
 Main dashboard message:
 
 > **LLM suggests. xv6 executes. Metrics verify. GUI explains.**
-
----
-
-## 9. Example Demo Scenario
-
-> **The shipped demo flow today** is: workload → LLM recommendation
-> → Algorithm Guard → xv6 schedtest execution (per algorithm on the
-> same seed + profile) → Metrics Evaluator → snapshot tour across
-> the four pre-rendered xv6 profile snapshots. (schedtest.c now also
-> carries two larger 8-proc profiles — `interactive_storm`, `batch_convoy`
-> — runnable live; only the original four are pre-rendered as snapshots.)
->
-> The scenario below illustrates the **host-side closed-loop runtime
-> correction** that ships today: event detection → correction proposal →
-> correction guard → a second, ordinary xv6 run with the corrected
-> Guard-approved algorithm/params → before/after comparison in
-> `correction_applied.json`. The one nuance: the correction is applied as a
-> **post-evaluation** re-run on the host, NOT "from the next scheduling point"
-> inside the kernel — the LLM never runs in the kernel hot path.
-
-### Scenario: Starvation under Priority Scheduling
-
-1. User goal:
-   - interactive jobs should respond quickly
-   - no process should starve
-
-2. LLM recommendation:
-   - Priority Scheduling + weak aging
-
-3. xv6 execution:
-   - low-priority process waits too long
-
-4. Trace Monitor:
-   - starvation warning detected
-
-5. LLM correction:
-   - reduce aging threshold
-   - or change Scheduling Algorithm to MLFQ
-
-6. Correction Guard:
-   - validates the proposed correction
-
-7. xv6 (host-side apply loop):
-   - the orchestrator launches a second xv6 run with the corrected
-     algorithm/params on the same workload (post-evaluation, not tick-level)
-
-8. Metrics Evaluator:
-   - max waiting time decreases
-   - starvation disappears
-   - before/after recorded in correction_applied.json
-
-9. GUI:
-   - shows before/after Gantt chart
-   - shows metrics improvement
-   - shows natural-language trace explanation
 
 ---
 
