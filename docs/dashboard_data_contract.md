@@ -154,8 +154,8 @@ won — passing tuned "safe defaults" (e.g. RR `quantum=10`) would re-run a
 *different* configuration than the xv6 RR baseline (`quantum=1`) that won, and
 could never confirm the improvement.
 
-When no correction is warranted (the recommendation met the success criteria, or
-the simulator backend is used), the file is `{"applied": false, "reason": ...}`.
+When no correction is warranted (the recommendation met the success criteria),
+the file is `{"applied": false, "reason": ...}`.
 This is an **applied** artifact (it may carry `applied=true`), distinct from the
 preview-only `correction_proposal.json` / `correction_guard_decision.json`, which
 remain `preview_only=true`. The corrected run's trace is published alongside the
@@ -245,7 +245,7 @@ When `version` or `updated_at` changes, the dashboard reloads all files.
 
 ```json
 {
-  "mode": "simulator",
+  "mode": "xv6-log",
   "updated_at": "2026-05-24T00:00:00Z",
   "version": 1,
   "workload": "interactive_heavy",
@@ -257,7 +257,7 @@ When `version` or `updated_at` changes, the dashboard reloads all files.
 
 | Field                  | Type   | Notes                                                 |
 |------------------------|--------|-------------------------------------------------------|
-| `mode`                 | string | `"simulator"` \| `"xv6-log"` \| `"fallback"`        |
+| `mode`                 | string | `"xv6"` \| `"xv6-log"` \| `"fallback"` (the simulator mode was removed with the simulator backend) |
 | `updated_at`           | string | ISO 8601 UTC timestamp                                |
 | `version`              | number | Incremented on each pipeline run                      |
 | `workload`             | string | Workload name (stem of the workload JSON file)        |

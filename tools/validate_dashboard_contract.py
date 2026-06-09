@@ -38,8 +38,10 @@ NEW_MANIFEST_FIELDS = [
     "llm_selected_algorithm", "algorithms_executed",
     "generated_at", "orchestrator_version",
 ]
-ALLOWED_BACKENDS = {"xv6", "simulator", "fallback"}
-ALLOWED_MODES = {"simulator", "xv6-log", "xv6", "fallback"}
+# "simulator" was removed with the simulator backend: no producer can emit it
+# anymore, so a manifest claiming it SHOULD warn (stale data, not a live run).
+ALLOWED_BACKENDS = {"xv6", "fallback"}
+ALLOWED_MODES = {"xv6-log", "xv6", "fallback"}
 
 # Trace events that must carry these fields.
 SCHED_EVENTS = {"DISPATCH", "PREEMPT", "EXIT", "QUEUE_CHANGE",
