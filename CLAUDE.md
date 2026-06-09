@@ -76,6 +76,8 @@ runtime_events.json       → correction.json → guard → host-side re-run →
 trace.jsonl + metrics.json → trace_explanation.json
 metrics.json              → outputs/live/feedback_rules.md (fail only; GENERATION)
 feedback_rules.md         → advise prompt (CONSUMPTION; opt-in via --use-feedback)
+workload_summary.json + metrics.json → outputs/learning/outcome_store.jsonl (every run; ACCUMULATION)
+outcome_store.jsonl       → advise prompt (CONSUMPTION; opt-in via --use-retrieval)
 ```
 
 ## Feedback Loop (generation vs consumption)
@@ -86,6 +88,28 @@ Feedback **generation** is automatic and FAIL-only: a FAIL/starvation run writes
 The default final demo consumes nothing, so it stays deterministic and stale or
 overfit rules cannot pollute a recommendation. Feedback never changes the
 already-finished run; it only influences FUTURE recommendations when opted in.
+
+## Retrieval Learning Loop (accumulation vs consumption)
+The personalization / warm-start layer: the LLM learns a user's RECURRING
+workload patterns from accumulated MEASURED outcomes, instead of reasoning blind
+from textbook priors each time. **Accumulation** is automatic on every evaluated
+run: step `[8b]` appends one `(prompt-safe visible features → measured_best)`
+record to `outputs/learning/outcome_store.jsonl` (a stable cross-run path of its
+own — NOT the per-run out_dir, NOT the dashboard publish dir). **Consumption** —
+injecting the k most similar past outcomes into a future advise prompt — is
+**opt-in only** via `scripts/orchestrator.py --use-retrieval` (passes
+`--retrieval-store` to `tools/llm_advisor.py`). The default final demo retrieves
+nothing, so it stays deterministic. Honesty mirrors the feedback loop: stored
+features are visible aggregates only (no per-process bursts, no total_cpu_work),
+retrieval is leave-one-out by id (a workload never sees its own answer), and no
+future burst durations are ever stored or injected. Measured effect and the
+no-drift-correction finding: `outputs/learning_curve/FINDINGS.md`.
+
+This is NOT "the LLM is a better scheduler" — it is the LLM at the human
+interface, out of the kernel hot path, learning which Scheduling Algorithm a
+recurring workload signature wants. Drift (a change in the user's pattern) is NOT
+handled by an explicit runtime correction here: retrieval self-heals within one
+instance of the new pattern (measured), so no drift mechanism is added.
 
 ## Metrics
 ```
@@ -109,3 +133,4 @@ FAIL         = LLM result is clearly worse than the best result
 - Do not use the word "policy" — use "Scheduling Algorithm" consistently.
 - All module-to-module interfaces must be JSON or JSONL.
 - Feedback loop fires only on FAIL evaluation.
+- Outcome accumulation is automatic every run; retrieval consumption is opt-in via `--use-retrieval` (default OFF keeps the demo deterministic).

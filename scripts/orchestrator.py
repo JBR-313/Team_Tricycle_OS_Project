@@ -282,7 +282,8 @@ def run_workload_analyzer(workload: Path, out_dir: Path, dry_run: bool):
 
 
 def run_advisor(out_dir: Path, dry_run: bool, *, offline_fixture: bool = False,
-                use_feedback: bool = False, intent: str | None = None) -> bool:
+                use_feedback: bool = False, intent: str | None = None,
+                retrieval_store: Path | None = None) -> bool:
     """Run llm_advisor (advise).
 
     Default behavior is STRICT: if the advisor fails (missing UPSTAGE_API_KEY,
@@ -346,6 +347,20 @@ def run_advisor(out_dir: Path, dry_run: bool, *, offline_fixture: bool = False,
             else:
                 print(f"  --use-feedback ON: no rules file at {_rel(feedback_file)} "
                       f"yet; advising with base prompt (no crash).")
+        # Retrieval-augmented learning (personalization warm-start) is OPT-IN,
+        # mirroring --use-feedback: the advisor consumes accumulated MEASURED
+        # outcomes (features->winner) from a PRIOR run only when a store path is
+        # passed. Default runs pass nothing, so the demo stays deterministic.
+        if retrieval_store is not None:
+            cmd.extend(["--retrieval-store", str(retrieval_store)])
+            if retrieval_store.is_file():
+                n = sum(1 for ln in retrieval_store.read_text().splitlines()
+                        if ln.strip())
+                print(f"  --use-retrieval ON: store has {n} past outcome(s) "
+                      f"at {_rel(retrieval_store)}")
+            else:
+                print(f"  --use-retrieval ON: no store yet at "
+                      f"{_rel(retrieval_store)}; advising with base prompt.")
         if dry_run:
             print(f"  cmd: {' '.join(cmd)}")
             print("  [DRY-RUN] skipped")
@@ -1213,6 +1228,56 @@ def run_trace_explainer(out_dir: Path, live_dir: Path, selected: str, *,
     )
 
 
+def persist_outcome(out_dir: Path, store_path: Path, dry_run: bool) -> None:
+    """[8b] Outcome-store accumulation — the LEARNING MEMORY.
+
+    Every evaluated run already computes the true best algorithm via the
+    exhaustive cross-algorithm comparison. That (visible_features -> measured
+    winner) pair is the learning signal. We append it to a persistent JSONL so a
+    FUTURE --use-retrieval advise call can warm-start from a user's recurring
+    workload PATTERNS (measured to help: experiments/learning_curve_*).
+
+    Always-on but SIDE-EFFECT-ONLY: it appends a log line and never touches the
+    just-finished run (mirrors how feedback GENERATION is always-on while
+    CONSUMPTION is opt-in). Honest: stores prompt-safe VISIBLE features only (via
+    outcome_store.prompt_safe_features — no per-process bursts, no total_cpu_work)
+    and skips runs whose best is UNKNOWN (no comparison data)."""
+    print("\n[8b] Outcome-store accumulation (learning memory)")
+    if dry_run:
+        print("  [DRY-RUN] skipped")
+        return
+    summary = _read_json(out_dir / "workload_summary.json")
+    m = _read_json(out_dir / "metrics.json")
+    if not summary or not m:
+        print("  skipped (missing workload_summary.json or metrics.json)")
+        return
+    best = m.get("best_algorithm")
+    if not best:
+        print("  skipped honestly (no best_algorithm — no comparison data)")
+        return
+    try:
+        sys.path.insert(0, str(ROOT / "experiments"))
+        from outcome_store import prompt_safe_features
+        feats = prompt_safe_features(summary)
+    except Exception as exc:  # noqa: BLE001
+        print(f"  skipped (feature extraction failed: {exc})")
+        return
+    record = {
+        "name": summary.get("id") or summary.get("workload_file") or "run",
+        "features": feats,
+        "measured_best": str(best).upper(),
+        "target_metric": feats.get("target_metric"),
+        "source": "xv6-measured",
+    }
+    store_path.parent.mkdir(parents=True, exist_ok=True)
+    with store_path.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(record) + "\n")
+    n = sum(1 for ln in store_path.read_text().splitlines() if ln.strip())
+    print(f"  appended {record['name']} -> {record['measured_best']} "
+          f"({record['target_metric']}); store now {n} outcome(s) "
+          f"at {_rel(store_path)}")
+
+
 def run_feedback_generator(out_dir: Path, live_dir: Path, *,
                            offline_fixture: bool, dry_run: bool) -> None:
     """[9] Feedback Rule Generator — FAIL-only prompt-feedback loop.
@@ -1725,6 +1790,19 @@ def main() -> int:
         ),
     )
     p.add_argument(
+        "--use-retrieval",
+        dest="use_retrieval",
+        action="store_true",
+        help=(
+            "OPT-IN: inject the k most similar PAST measured outcomes "
+            "(features->winner) from outputs/live/outcome_store.jsonl into the "
+            "advise prompt — the personalization / warm-start learning loop "
+            "(measured to help: experiments/learning_curve_*). Outcomes are still "
+            "ACCUMULATED after every run regardless of this flag — it only "
+            "controls CONSUMPTION. Default OFF so the demo stays deterministic."
+        ),
+    )
+    p.add_argument(
         "--force-correction",
         dest="force_correction",
         default=None,
@@ -1807,9 +1885,17 @@ def main() -> int:
         if args.use_feedback and feedback_file.is_file() else 0
     )
     feedback_consumed = bool(args.use_feedback)
+    # Persistent learning memory: outcomes are ACCUMULATED here (step [8b]) every
+    # run; CONSUMPTION via retrieval is opt-in (--use-retrieval), mirroring
+    # feedback. The store is a CROSS-RUN memory, so it lives in a stable path of
+    # its own — NOT the per-run out_dir (overwritten each run) and NOT the
+    # dashboard publish dir (live_dir).
+    outcome_store_path = ROOT / "outputs" / "learning" / "outcome_store.jsonl"
+    retrieval_store = outcome_store_path if args.use_retrieval else None
     advisor_fellback = run_advisor(
         out_dir, dry_run, offline_fixture=args.offline_fixture,
         use_feedback=args.use_feedback, intent=args.intent,
+        retrieval_store=retrieval_store,
     )
     guard_fellback = run_guard(
         out_dir, dry_run, offline_fixture=args.offline_fixture
@@ -1888,6 +1974,9 @@ def main() -> int:
             out_dir, live_dir, selected,
             offline_fixture=args.offline_fixture, dry_run=dry_run,
         )
+        # [8b] Accumulate this run's measured outcome into the learning memory
+        # (always-on; a FUTURE --use-retrieval advise call consumes it).
+        persist_outcome(out_dir, outcome_store_path, dry_run)
         run_feedback_generator(
             out_dir, live_dir,
             offline_fixture=args.offline_fixture, dry_run=dry_run,

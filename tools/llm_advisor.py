@@ -262,6 +262,60 @@ _PROMPT_STRIP_KEYS = (
 _VISIBLE_PROCESS_STRIP_KEYS = ("label",)
 
 
+_RETRIEVAL_HEADER = (
+    "\n\n--- RETRIEVED PRECEDENTS — past workloads with SIMILAR visible features "
+    "and the algorithm that ACTUALLY WON when measured on THIS xv6 backend ---\n"
+    "Treat these as empirical evidence, not an answer key. Reason about WHICH "
+    "visible features (process count, arrival gaps, priority spread, interactive "
+    "ratio, ...) separate the winners, then apply that reasoning to the current "
+    "workload. Do NOT blindly copy the nearest one; the current workload may "
+    "differ on the feature that flips the outcome.\n"
+)
+
+
+def build_retrieval_block(summary: dict, store_path: Path | None, k: int = 3) -> str:
+    """OPT-IN retrieval-augmented learning: inject the k most similar PAST
+    measured outcomes from the persistent outcome store into the advise prompt.
+    This is the personalization / warm-start layer — as the store accumulates a
+    user's recurring workload PATTERNS, recommendations improve (measured: see
+    experiments/learning_curve_*). Empty string when no store is supplied or no
+    relevant precedent exists, so the default advise run is unchanged.
+
+    Honesty: precedents carry only VISIBLE features of OTHER workloads + their
+    measured winner; the query's own outcome is excluded by name (we learn from
+    SIMILAR past workloads, never from the current one's answer). No future burst
+    durations are ever included.
+    """
+    if store_path is None or not store_path.is_file():
+        return ""
+    # outcome_store owns the prompt-safe feature extraction + leave-one-out
+    # retrieval (single source of truth for the honesty contract).
+    sys.path.insert(0, str(PROJECT_ROOT / "experiments"))
+    sys.path.insert(0, str(PROJECT_ROOT / "tools"))
+    try:
+        import outcome_store as osmod  # noqa: PLC0415
+    except ImportError:
+        return ""
+    records = []
+    for line in store_path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if line:
+            try:
+                records.append(json.loads(line))
+            except json.JSONDecodeError:
+                continue
+    records = [r for r in records if r.get("features") and r.get("measured_best")]
+    if not records:
+        return ""
+    qf = osmod.prompt_safe_features(summary)
+    neighbors = osmod.retrieve(qf, records, k, exclude_name=summary.get("id"))
+    if not neighbors:
+        return ""
+    print(f"[llm_advisor] retrieval ON: injecting {len(neighbors)} precedent(s) "
+          f"from {store_path}")
+    return _RETRIEVAL_HEADER + osmod.format_examples_for_prompt(neighbors) + "\n"
+
+
 def build_user_prompt(summary: dict) -> str:
     # Defensive copy with ground-truth / answer-key fields stripped first.
     safe = {k: v for k, v in summary.items() if k not in _PROMPT_STRIP_KEYS}
@@ -722,9 +776,13 @@ def run_feedback(metrics_spec: str, rules_out: Path, rec_path: Path) -> int:
 # ---------------------------------------------------------------------------
 
 
-def run_advise(in_path: Path, out_path: Path, feedback_path: Path | None) -> int:
+def run_advise(in_path: Path, out_path: Path, feedback_path: Path | None,
+               retrieval_store: Path | None = None) -> int:
     summary = read_workload_summary(in_path)
     system_prompt = build_system_prompt(feedback_path)
+    # OPT-IN retrieval-augmented learning (personalization warm-start). Appended
+    # AFTER the feedback block; both default to OFF so the demo stays deterministic.
+    system_prompt += build_retrieval_block(summary, retrieval_store)
     user_prompt = build_user_prompt(summary)
 
     try:
@@ -798,6 +856,15 @@ def main() -> int:
         "outputs/feedback_rules.md when omitted).",
     )
     parser.add_argument(
+        "--retrieval-store",
+        dest="retrieval_store",
+        default=None,
+        help="[advise] path to a persistent outcome-store JSONL "
+        "(features->measured_best per past run). OPT-IN: when supplied, the k "
+        "most similar past outcomes are injected into the advise prompt "
+        "(retrieval-augmented learning). Default: no retrieval.",
+    )
+    parser.add_argument(
         "--metrics",
         dest="metrics_path",
         default=str(PROJECT_ROOT / "outputs" / "metrics.json"),
@@ -825,7 +892,8 @@ def main() -> int:
         )
     # advise: consumption is OPT-IN — only when --feedback explicitly supplied.
     fb_in = Path(args.feedback_path) if args.feedback_path else None
-    return run_advise(Path(args.in_path), Path(args.out_path), fb_in)
+    ret_store = Path(args.retrieval_store) if args.retrieval_store else None
+    return run_advise(Path(args.in_path), Path(args.out_path), fb_in, ret_store)
 
 
 if __name__ == "__main__":
