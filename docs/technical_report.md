@@ -70,7 +70,7 @@ is unavailable, committed offline fixtures keep the dashboard populated (badged
 | LLM | Upstage **Solar Pro 3** via OpenAI-compatible API (`tools/solar_client.py`), temperature 0 |
 | Interfaces | JSON / JSONL between every module (no CSV) |
 | Dashboard | React + Vite (`dashboard_live/`) |
-| Tests | pytest (162) + Vitest |
+| Tests | pytest (173) + Vitest |
 
 ## 4. OS concepts exercised (and where)
 
@@ -163,4 +163,4 @@ contribution.
 `python3 scripts/orchestrator.py --workload cpu_bound` (full live run) ·
 `python3 experiments/xv6_determinism_probe.py` (reproducibility) ·
 `cd dashboard_live && npm run dev` (dashboard). Setup and the Solar API key:
-see the root README sections 6–7. Tests: `pytest` (162) and `cd dashboard_live && npm test`.
+see the root README sections 6–7. Tests: `pytest` (173) and `cd dashboard_live && npm test`.
