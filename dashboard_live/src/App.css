@@ -1854,6 +1854,33 @@
   opacity: 0.85;
 }
 
+/* "Recurring random workload" opt-in toggle + the local-environment run pill. */
+.random-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+.random-toggle input { cursor: pointer; margin: 0; }
+.run-info-pill {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: #ede9fe;
+  color: #6d28d9;
+  border: 1px solid #ddd6fe;
+  white-space: nowrap;
+}
+
 .run-pill {
   display: inline-flex;
   align-items: center;

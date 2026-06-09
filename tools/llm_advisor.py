@@ -249,6 +249,12 @@ _PROMPT_STRIP_KEYS = (
     # a sentence that gives the game away. `id` can encode the same hint.
     "description",
     "id",
+    # `family` is the generated-workload PATTERN tag ("interactive"/"convoy"/...)
+    # written by the --random-family live mode (workload_families.build_doc). It
+    # names the workload class outright, so it is an answer-tag exactly like
+    # `description`/`label` — strip it from the prompt while keeping it on disk
+    # (the dashboard/run_server use it to label "local environment, run #N").
+    "family",
 )
 
 # Per-process keys stripped from each `visible_processes` entry before the

@@ -45,6 +45,31 @@ ROOT = Path(__file__).resolve().parent.parent
 LIVE_DATA = ROOT / "dashboard_live" / "public" / "live-data"
 ORCHESTRATOR = ROOT / "scripts" / "orchestrator.py"
 
+# Recurring-PATTERN families for the "same local environment runs many similar
+# workloads" RUN mode (--random-family). Kept in lockstep with
+# experiments/workload_families.FAMILIES.
+RANDOM_FAMILIES = {"interactive", "cpu_batch", "convoy", "priority"}
+# Per-family auto-incrementing seed counter, persisted so repeated RUNs of the
+# same family produce DIFFERENT but same-family instances — the recurrence that
+# lets retrieval warm-start. Seeds start high to never collide with study seeds.
+SEED_STATE = ROOT / "outputs" / "learning" / "random_seq.json"
+SEED_BASE = 1000
+
+
+def _next_random_seed(family: str) -> tuple[int, int]:
+    """Allocate the next (seed, run_index) for a family and persist the counter.
+    run_index is 1-based: the Nth time this local environment ran this family."""
+    try:
+        state = json.loads(SEED_STATE.read_text()) if SEED_STATE.is_file() else {}
+    except (OSError, json.JSONDecodeError):
+        state = {}
+    used = int(state.get(family, 0))
+    seed = SEED_BASE + used
+    state[family] = used + 1
+    SEED_STATE.parent.mkdir(parents=True, exist_ok=True)
+    SEED_STATE.write_text(json.dumps(state, indent=2) + "\n")
+    return seed, used + 1
+
 # Only the curated profiles that schedtest.c actually forks may run. Anything
 # else would make orchestrator silently substitute `mixed` while the manifest
 # still badged the requested profile — a dishonest xv6 run.
@@ -146,21 +171,25 @@ def _classify_stage(line: str) -> Optional[str]:
 
 def _worker(params: dict) -> None:
     """Run orchestrator.py as a subprocess and stream stdout into the state."""
-    profile = params["profile"]
     seed = int(params.get("seed", 42))
     run_all = bool(params.get("run_all", True))
-    use_feedback = bool(params.get("use_feedback", False))
+    random_family = params.get("random_family")
 
     cmd = [
         sys.executable, str(ORCHESTRATOR),
         "--backend", "xv6",
-        "--workload", profile,
         "--seed", str(seed),
     ]
+    if random_family:
+        # Random recurring-pattern mode: orchestrator generates the instance and
+        # defaults retrieval warm-start ON (no --workload / --use-feedback here).
+        cmd += ["--random-family", random_family]
+    else:
+        cmd += ["--workload", params["profile"]]
+        if bool(params.get("use_feedback", False)):
+            cmd.append("--use-feedback")
     if run_all:
         cmd.append("--run-all")
-    if use_feedback:
-        cmd.append("--use-feedback")
 
     STATE.append_log(f"$ {' '.join(cmd)}")
 
@@ -196,10 +225,29 @@ def _validate_run_body(body: dict) -> tuple[bool, str | dict]:
     # xv6 is the only backend. Accept a missing/"xv6" value; reject anything else
     # (notably the removed "simulator") so RUN can never become a non-kernel run.
     backend = body.get("backend", "xv6")
-    profile = body.get("profile")
-    seed = body.get("seed", 42)
     if backend != "xv6":
         return False, "backend must be 'xv6' (the only execution backend)"
+
+    # Random-PATTERN mode: a generated jittered instance of a recurring family,
+    # run on real xv6 via --procs injection. The server allocates the seed (an
+    # auto-incrementing per-family counter) so repeated RUNs accumulate same-
+    # family precedents and retrieval (ON in this orchestrator mode) warm-starts.
+    random_family = body.get("random_family")
+    if random_family is not None:
+        if random_family not in RANDOM_FAMILIES:
+            return False, (f"random_family '{random_family}' not in "
+                           f"{sorted(RANDOM_FAMILIES)}")
+        seed, run_index = _next_random_seed(random_family)
+        return True, {
+            "backend": "xv6",
+            "random_family": random_family,
+            "seed": seed,
+            "run_index": run_index,
+            "run_all": True,
+        }
+
+    profile = body.get("profile")
+    seed = body.get("seed", 42)
     if not isinstance(profile, str):
         return False, "profile must be a string"
     if profile not in XV6_PROFILES:
