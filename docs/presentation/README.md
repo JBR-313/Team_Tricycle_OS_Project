@@ -1,7 +1,11 @@
 # Presentation slides — course deliverable
 
-The final slides and the talk are in **English**. Export the deck here as
-`slides.pdf` so the graded slides live in the repo (not only in Canva).
+The final slides and the talk are in **English**.
+
+**Slides (Canva):** https://www.canva.com/design/DAHLs6gp6Nc/lZIh4jxHDx3zX-T0-T-xsw/view
+
+> TODO before submission: export the Canva deck as `slides.pdf` into this folder
+> so the graded slides also live in the repo (not only behind a Canva link).
 
 **Narrative:** fixed kernel scheduling isn't optimal for every workload → use an
 LLM as a *hint oracle* (the LLM proposes; the Algorithm Guard + xv6 decide whether
