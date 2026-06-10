@@ -165,11 +165,12 @@ the committed measured evidence behind every claim.
 
 ## 12. Team
 
-| Member | Role (from commit history) |
+| Member (student ID) | Role |
 |---|---|
-| Jeong Seonguk | integration · xv6 kernel & schedulers · orchestrator · dashboard |
-| Choi (hsChoi) | workload definitions · workload analyzer · metrics tooling |
-| ritalong | early scheduler-simulator prototype (the dev-time A/B engine, later removed) |
+| 정성욱 Jeong Seonguk · `2025270645` — team lead | integration · xv6 kernel & schedulers · orchestrator · dashboard |
+| 전재형 Jeon Jaehyeong · `2021270646` (GitHub: **JBR-313**) | LLM decision layer — advisor · Algorithm Guard · trace explainer · feedback loop · correction proposer |
+| 최현서 Choi Hyeonseo · `2025270605` (GitHub: hsChoi-cpu) | workload definitions · workload analyzer · metrics tooling |
+| 노상현 No Sanghyeon · `2020271307` (GitHub: ritalong) | early scheduler-simulator prototype (the dev-time A/B engine, later removed) |
 
 ## 13. License & credits
 

@@ -3,7 +3,7 @@
 ## Why
 Our measured negatives show the LLM is NOT a good *quantitative* scheduler
 (algorithm pick, mid-run switch, numeric burst prediction — classical methods win;
-see [[../docs/GOAL_burst_eval.md]] results). But those experiments deliberately
+see [GOAL_burst_eval.md](GOAL_burst_eval.md) results). But those experiments deliberately
 STRIPPED the semantic channel (`description`/`label`) to be fair to numeric
 baselines. The LLM's real, uncontested strength is exactly that channel:
 translating free-form human intent — and low-level traces — into/out of OS

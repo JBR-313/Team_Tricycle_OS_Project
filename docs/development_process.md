@@ -6,10 +6,11 @@ resolved.
 
 > Roles, weekly ownership, and meeting milestones below are reconstructed from the
 > actual commit history (authors, dates, and what each author touched) and are
-> accurate. The only items the team still needs to confirm are the **student IDs**
-> (shown as `⟨학번⟩`) and each member's **preferred display name** — replace those
-> tokens before submission. The technical issue log (section 5) is likewise
-> reconstructed from commits.
+> accurate. Student IDs and display names are filled in below. Note that GitHub
+> account **`JBR-313`** is team member **전재형 Jeon Jaehyeong** (the repo owner) —
+> the Role-B LLM/Guard commits authored under that account are his, not a bot or
+> org account. The technical issue log (section 5) is likewise reconstructed from
+> commits.
 
 ## 1. Team & roles
 
@@ -17,16 +18,17 @@ Team name: **Tricycle** · Repo: this repository (public).
 
 Roles are assigned from the area each member actually owned in the commit history.
 
-| Role | Member | Responsibility (from commits) |
+| Role | Member (student ID) | Responsibility (from commits) |
 |---|---|---|
-| Team lead / integration · kernel · dashboard | Jeong Seonguk `⟨학번⟩` | `scripts/orchestrator.py` host control plane; xv6 schedulers + syscalls + `schedtest`; React dashboard; determinism; LLM advisor/guard/correction wiring; submissions |
-| Workloads / analysis tooling | Choi (hsChoi) `⟨학번⟩` | `workloads/*.json` definitions; `workload_analyzer.py`; `metrics.py` refactor; synthetic RR baseline; architecture diagram |
-| Scheduler simulator (early prototype) | ritalong `⟨학번⟩` | `xv6-style-scheduler` Python simulator + trace format (the development-time A/B engine, later removed once xv6 was made reproducible — see issue #5 and `GOAL.md`) |
+| Team lead / integration · kernel · dashboard | 정성욱 Jeong Seonguk `2025270645` | `scripts/orchestrator.py` host control plane; xv6 schedulers + syscalls + `schedtest`; React dashboard; determinism; integration of advisor/guard/correction; submissions |
+| LLM decision layer / Guard / explanation (Role B) | 전재형 Jeon Jaehyeong `2021270646` (GitHub: **JBR-313**) | `tools/llm_advisor.py` + `solar_client.py`; `algorithm_guard.py`; `trace_explainer.py`; prompt feedback loop; `correction_proposer.py` (#77, #78) — authored under personal account **JBR-313** |
+| Workloads / analysis tooling | 최현서 Choi Hyeonseo `2025270605` (GitHub: hsChoi-cpu) | `workloads/*.json` definitions; `workload_analyzer.py`; `metrics.py` refactor; synthetic RR baseline; architecture diagram |
+| Scheduler simulator (early prototype) | 노상현 No Sanghyeon `2020271307` (GitHub: ritalong) | `xv6-style-scheduler` Python simulator + trace format (the development-time A/B engine, later removed once xv6 was made reproducible — see issue #5 and `GOAL.md`) |
 
-> Workload split reflects this repo's history: one member drove integration/kernel/
-> dashboard, one owned workloads + analysis tooling, one built the early simulator
-> that seeded the comparison harness. Adjust the names/IDs if the team prefers a
-> different attribution.
+> Split reflects this repo's history: one member drove integration/kernel/dashboard,
+> one owned the LLM decision layer (advisor/guard/explainer, committed as **JBR-313**),
+> one owned workloads + analysis tooling, and one built the early simulator that
+> seeded the comparison harness.
 
 ## 2. Planning
 
@@ -59,7 +61,7 @@ development sprint, 2026-04-30 → 2026-06-10).
 |---|---|---|
 | W18–20 (Apr 30 – May 15) | all | Repo bootstrap, Direction B scoping, restructure proposal (PR #1). |
 | W21 (May 18–24) | Seonguk | xv6 scheduler harness: RR/FCFS/Priority+Aging/MLFQ in `kernel/proc.c` + `setscheduler`/`setpriority`/… syscalls + `user/schedtest.c`; React/Vite dashboard scaffolding. |
-| W21 (May 19–21) | Seonguk (Role B) | `tools/` package: `llm_advisor` + Solar client + `algorithm_guard` + prompt feedback loop. |
+| W21–22 (May 19–28) | 전재형 (GitHub: JBR-313) | Role B `tools/` package: `llm_advisor` + Solar client + `algorithm_guard` + `trace_explainer` + prompt feedback loop + `correction_proposer` (#77, #78). Authored under personal account JBR-313. |
 | W21 (May 21–24) | hsChoi | `workloads/*.json` workload definitions; `workload_analyzer.py`; `metrics.py` refactor; synthetic RR baseline. |
 | W21–22 (May 21–27) | ritalong | `xv6-style-scheduler` Python simulator + trace format (the early A/B engine). |
 | W22 (May 25–30) | Seonguk | `scripts/orchestrator.py` host control plane; dashboard split (test/live) + data contract + strict validator; runtime-correction preview loop. |
@@ -102,7 +104,7 @@ add any minute-level detail the team kept separately.
 | Date (week) | Attendees | Decisions | Action items |
 |---|---|---|---|
 | Apr 30 (W18) | all | Direction B; topic = LLM hint oracle for xv6 scheduling | set up repo, assign roles |
-| May 18–21 (W21) | all | Role split: kernel+integration / workloads+analysis / simulator; restructure repo (PR #1) | stand up advisor+guard, kernel harness, workload set |
+| May 18–21 (W21) | all | Role split: kernel+integration (Seonguk) / LLM decision layer (전재형, JBR-313) / workloads+analysis (hsChoi) / simulator (ritalong); restructure repo (PR #1) | stand up advisor+guard, kernel harness, workload set |
 | May 25–30 (W22) | all | Adopt `orchestrator.py` as the single control plane; split dashboard into test/live; correction stays a **preview-only** host loop | wire validator strict mode; data contract |
 | Jun 3–7 (W23) | all | **Determinize xv6 and remove the Python simulator** once the gate passes (xv6 = sole authority); pivot the narrative to the honest negative result + safety-net story after measuring the LLM is information-bounded on raw selection | determinism probe gate; intent eval; RESULTS.md evidence |
 | Jun 8–10 (W24) | all | Add the retrieval-learning warm-start + dashboard Learning tab; final audit + doc/freeze before the demo | slides + recorded demo; fill names/IDs |

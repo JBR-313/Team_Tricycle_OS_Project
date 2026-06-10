@@ -5,7 +5,7 @@ Does the LLM's cold-start burst prior improve SJF/SRTF scheduling vs a blind EMA
 cold start — **leak-free, on real xv6, across a distribution of random
 workloads** (not 5-10 hand-made ones)? This is the project's first chance at a
 clean POSITIVE result for "the LLM improves the scheduler," now that xv6 is
-deterministic ([[../docs/GOAL.md]]).
+deterministic ([GOAL.md](GOAL.md)).
 
 ## Why this design
 The earlier simulator A/B win was contaminated three ways: a `description` leak

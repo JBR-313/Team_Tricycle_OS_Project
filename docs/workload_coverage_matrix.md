@@ -3,7 +3,7 @@
 This catalogs every workload under `workloads/` and classifies how it can be
 executed. It exists so the scheduling lab has enough workloads to demonstrate
 the differences between algorithms, and so it is always clear **which workloads
-run on the real xv6 kernel and which are simulator-only**.
+run on the real xv6 kernel and which are analysis-only**.
 
 ## Backends
 
@@ -24,19 +24,19 @@ run on the real xv6 kernel and which are simulator-only**.
 | `long_cpu_bound_first` | xv6-backed (`cpu_bound`) | avg_waiting_time | long-job-first head-of-line |
 | `mixed_workload` | xv6-backed (`mixed`) | avg_response_time | mixed CPU + interactive |
 | `priority_sensitive` | xv6-backed (`priority_sensitive`) | max_waiting_time | priority + aging |
-| `short_jobs` | simulator-only | avg_waiting_time | SJF setup (clustered shorts) |
-| `starvation_risk` | simulator-only | max_waiting_time | starvation under strict priority |
-| `cpu_bound_vs_io_bound` | simulator-only | avg_turnaround_time | CPU vs I/O interleave |
-| `ambiguous_mixed` | simulator-only | avg_response_time | ambiguous recommendation case |
-| `pure_batch` | simulator-only | avg_turnaround_time | batch throughput (FCFS-friendly) |
-| `bursty_long_tail` | simulator-only | avg_waiting_time | long-tail burst distribution |
-| `convoy_effect` | simulator-only | avg_waiting_time | **FCFS convoy** — one long job blocks shorts |
-| `fairness_rr` | simulator-only | avg_response_time | **RR fair time-slicing** over equal jobs |
-| `staggered_short_arrival` | simulator-only | avg_response_time | short jobs trickle in (RR/SRTF favour) |
-| `starvation_priority` | simulator-only | max_waiting_time | low-priority starvation vs aging/boost |
-| `burst_prediction_demo` | simulator-only | avg_waiting_time | bimodal bursts for the EMA predictor |
+| `short_jobs` | analysis-only | avg_waiting_time | SJF setup (clustered shorts) |
+| `starvation_risk` | analysis-only | max_waiting_time | starvation under strict priority |
+| `cpu_bound_vs_io_bound` | analysis-only | avg_turnaround_time | CPU vs I/O interleave |
+| `ambiguous_mixed` | analysis-only | avg_response_time | ambiguous recommendation case |
+| `pure_batch` | analysis-only | avg_turnaround_time | batch throughput (FCFS-friendly) |
+| `bursty_long_tail` | analysis-only | avg_waiting_time | long-tail burst distribution |
+| `convoy_effect` | analysis-only | avg_waiting_time | **FCFS convoy** — one long job blocks shorts |
+| `fairness_rr` | analysis-only | avg_response_time | **RR fair time-slicing** over equal jobs |
+| `staggered_short_arrival` | analysis-only | avg_response_time | short jobs trickle in (RR/SRTF favour) |
+| `starvation_priority` | analysis-only | max_waiting_time | low-priority starvation vs aging/boost |
+| `burst_prediction_demo` | analysis-only | avg_waiting_time | bimodal bursts for the EMA predictor |
 
-## Observed differentiation (generic guard, simulator)
+## Observed differentiation (generic guard, analysis baseline)
 
 Measured with a generic RR guard (no per-workload tuned params, EMA predictor
 cold-start). Differences widen further when the orchestrator runs the LLM
@@ -53,7 +53,7 @@ priors for that workload.
 
 ### Why SJF/SRTF sometimes match FCFS
 
-The simulator (like the kernel) seeds `predicted_burst` from the EMA `initial`
+The kernel seeds `predicted_burst` from the EMA `initial`
 prior at cold start — **it never reads `actual_bursts`** (the no-future-burst
 rule, [`system_limitations.md`](system_limitations.md)). Until the LLM advisor
 supplies per-process burst priors (or the EMA observes a few bursts), every
